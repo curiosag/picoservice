@@ -13,7 +13,7 @@ public class UnOp<T, V> extends Func {
     public UnOp(Function<T, V> op, Function<Object, T> converter) {
         this.op = op;
         this.converter = converter;
-        await(Name.arg);
+        paramsRequired(Name.arg);
     }
 
     @Override

@@ -13,4 +13,5 @@ public interface Name {
     String i2 = "i2";
     String sum = "sum";
     String product = "product";
+    String impl = "impl";
 }

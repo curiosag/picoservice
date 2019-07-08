@@ -5,21 +5,20 @@ import miso.Name;
 
 public class If<T> extends Func {
 
-    private String keyDecision = Name.decision;
-    private String keyOnTrue = Name.onTrue;
-    private String keyOnFalse = Name.onFalse;
-
+    private String keyDecision;
+    private String keyOnTrue;
+    private String keyOnFalse;
 
     public If<T> paramKeys(String keyDecision, String keyOnTrue, String keyOnFalse) {
         this.keyDecision = keyDecision;
         this.keyOnTrue = keyOnTrue;
         this.keyOnFalse = keyOnFalse;
-        await(keyDecision, keyOnTrue, keyOnFalse);
+        paramsRequired(keyDecision, keyOnTrue, keyOnFalse);
         return this;
     }
 
     private If() {
-        paramKeys(keyDecision, keyOnTrue, keyOnFalse);
+        paramKeys(Name.decision, Name.onTrue, Name.onFalse);
     }
 
     public static If branch() {

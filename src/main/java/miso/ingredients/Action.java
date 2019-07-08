@@ -15,6 +15,7 @@ public class Action extends Actress {
 
     @Override
     public void recieve(Message message) {
+        System.out.println("Action received " + message.toString());
         action.accept(message);
     }
 

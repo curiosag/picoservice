@@ -3,37 +3,36 @@ package miso.ingredients;
 import miso.Actress;
 import miso.Message;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Agg extends Actress {
 
-    protected Map<String, Object> received = new HashMap<>();
-    protected List<String> awaiting;
-
-
-    public Agg await(String... expected){
-        this.awaiting = Arrays.asList(expected);
-        return this;
-    }
+    protected Map<String, Object> paramsReceived = new HashMap<>();
 
     public static Agg agg(String... expected) {
-        return new Agg().await(expected);
+        Agg result = new Agg();
+        result.paramsRequired(expected);
+        return result;
+    }
+
+    public static Agg agg(Actress actress) {
+        Agg result = new Agg();
+        result.paramsRequired(actress.paramsRequired);
+        result.resultTo(actress);
+        return result;
     }
 
     @Override
     public void recieve(Message message) {
         System.out.println(this.getClass().getSimpleName() + " aggregating \n" + message.toString());
 
-        awaiting.stream()
+        paramsRequired.stream()
                 .filter(message::hasKey)
-                .forEach(e -> received.put(e, message.get(e)));
+                .forEach(e -> paramsReceived.put(e, message.get(e)));
 
-        if (received.size() == awaiting.size()) {
+        if (paramsReceived.size() == paramsRequired.size()) {
             super.recieve(toMessage());
-            received.clear();
+            paramsReceived.clear();
         }
     }
 
@@ -44,7 +43,7 @@ public class Agg extends Actress {
 
     private Message toMessage() {
         Message result = new Message(this);
-        result.params.putAll(received);
+        result.params.putAll(paramsReceived);
         return result;
     }
 

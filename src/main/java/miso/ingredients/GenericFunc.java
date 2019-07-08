@@ -9,16 +9,16 @@ import java.util.List;
 
 public class GenericFunc extends Func {
 
-    private final Actress implementation;
+    private final Func body;
 
-    protected GenericFunc(Func implementation) {
-        this.implementation = implementation;
-        implementation.resultTo(this);
-        implementation.resultKey(Name.impl);
+    private GenericFunc(Func body) {
+        this.body = body;
+        body.resultTo(this);
+        body.resultKey(Name.impl);
     }
 
-    public static final GenericFunc func(Func implementation) {
-        return new GenericFunc(implementation);
+    public static GenericFunc func(Func body) {
+        return new GenericFunc(body);
     }
 
     @Override
@@ -27,7 +27,7 @@ public class GenericFunc extends Func {
 
         Object result = message.get(Name.impl);
         if (result == null) {
-            List<Actress> allTargets = implementation.getAllTargets(this, new ArrayList<>());
+            List<Actress> allTargets = body.getAllTargets(this, new ArrayList<>());
             allTargets.forEach(t -> t.recieve(message));
         }
         else {
@@ -38,7 +38,7 @@ public class GenericFunc extends Func {
 
     @Override
     protected Message getNext() {
-       return getCurrent().orElseThrow(() -> new IllegalStateException());
+       return getCurrent().orElseThrow(IllegalStateException::new);
     }
 
     public GenericFunc params(String... params) {

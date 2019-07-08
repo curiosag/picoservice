@@ -12,4 +12,16 @@ public abstract class Func extends Actress {
         return this;
     }
 
+    @Override
+    public Func resultTo(Actress r) {
+        super.resultTo(r);
+        return this;
+    }
+
+    @Override
+    public Func resultTo(Actress... r) {
+        super.resultTo(r);
+        return this;
+    }
+
 }

@@ -15,6 +15,10 @@ public class Message {
         sender = null;
     }
 
+    public static Message message(){
+        return new Message();
+    }
+
     public Message(Actress sender) {
         this.sender = sender;
     }

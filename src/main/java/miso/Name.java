@@ -14,4 +14,5 @@ public interface Name {
     String sum = "sum";
     String product = "product";
     String impl = "impl";
+    String max = "max";
 }

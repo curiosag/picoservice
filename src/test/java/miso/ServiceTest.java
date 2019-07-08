@@ -1,9 +1,14 @@
 package miso;
 
+import miso.ingredients.Disperser;
+import miso.ingredients.Func;
 import org.junit.Test;
 
+import static miso.Message.message;
 import static miso.ingredients.Action.action;
 import static miso.ingredients.Agg.agg;
+import static miso.ingredients.Eq.eq;
+import static miso.ingredients.FAgg.fagg;
 import static miso.ingredients.GenericFunc.func;
 import static miso.ingredients.Gt.gt;
 import static miso.ingredients.If.branch;
@@ -16,7 +21,6 @@ public class ServiceTest {
     private static final Integer _8 = 8;
     private static final Integer _5 = 5;
     private static final Integer _4 = 4;
-    private static final Integer _3 = 3;
     private static final Integer _2 = 2;
     private static final Integer _1 = 1;
 
@@ -26,16 +30,39 @@ public class ServiceTest {
         /*
             function add(v1, v2) = v1 + v2
 
-         * output = if (i1 * i2 > i1 + i2)
-         *              mul
+            function max(v1, v2) = if (v1 > v2)
+                                        v1
+                                   else
+                                        v2
+
+         * main = if (i1 == i2)
+         *              add(i1, i2)
          *          else
-         *             add(i1, i2)
+         *             max(i1, i2)
          */
 
+        Disperser disp = new Disperser();
 
-        Actress add = agg(func(plus()).resultKey(Name.sum).paramsRequired(Name.leftArg, Name.rightArg).resultTo(expect(Name.sum, _3)));
-        add.recieve(Message.of(Name.leftArg, _1));
-        add.recieve(Message.of(Name.rightArg, _2));
+        Func add = func(fagg(plus().argKeys(Name.i1, Name.i2))).signOnTo(disp);
+        Func max = fagg(branch().paramKeys(Name.decision, Name.i1, Name.i2)).signOnTo(disp);
+
+        Func i1_gt_i2 = func(fagg(gt().argKeys(Name.i1, Name.i2))).resultKey(Name.decision).resultTo(max).signOnTo(disp);
+
+
+        Func main = fagg(branch().paramKeys(Name.decision, Name.onTrue, Name.onFalse)).signOnTo(disp);
+        Func i1_eq_i2 = fagg(eq().argKeys(Name.i1, Name.i2)).resultKey(Name.decision).resultTo(main).signOnTo(disp);
+        add.resultKey(Name.onTrue).resultTo(main);
+        max.resultKey(Name.onFalse).resultTo(main);
+
+        main.resultTo(expect(Name.result, _8));
+        disp.disperse(message()
+                .put(Name.i1, _4)
+                .put(Name.i2, _4));
+
+        main.resultTo(expect(Name.result, _5));
+        disp.disperse(message()
+                .put(Name.i1, _5)
+                .put(Name.i2, _4));
 
     }
 
@@ -78,6 +105,9 @@ public class ServiceTest {
     }
 
 
+    private Actress printMsg() {
+        return action(i -> System.out.println(i.toString()));
+    }
 
     private Actress expect(String key, Integer value) {
         return action(i -> {

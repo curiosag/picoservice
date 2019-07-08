@@ -1,5 +1,7 @@
 package miso;
 
+import miso.ingredients.Disperser;
+
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -26,13 +28,16 @@ public abstract class Actress {
     public Actress() {
     }
 
+    public <T extends Actress> T signOnTo(Disperser d){
+        d.add(this);
+        return (T) this;
+    }
+
     public Actress resultTo(Actress r) {
         targets.clear();
         targets.add(r);
         return this;
     }
-
-    ;
 
     public Actress resultTo(Actress... r) {
         targets.clear();

@@ -1,15 +1,21 @@
 package miso;
 
+import miso.ingredients.Address;
 import miso.ingredients.Disperser;
+import miso.message.Message;
+import miso.message.Name;
 
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static miso.ingredients.DNS.dns;
+
 public abstract class Actress {
 
     public final List<Actress> targets = new ArrayList<>();
     public List<String> paramsRequired = new ArrayList<>();
+    public final Address address;
 
     public Actress paramsRequired(List<String> params) {
         paramsRequired.clear();
@@ -17,18 +23,26 @@ public abstract class Actress {
         return this;
     }
 
-    public Actress paramsRequired(String ... params) {
+    public Actress paramsRequired(String... params) {
         return paramsRequired(Arrays.asList(params));
     }
 
-    protected Supplier NULL = () -> Message.of(this, Name.error, "message is null");
+    protected Supplier NULL = () -> Message.of(Name.error, "message is null");
 
     Message current = null;
 
+
     public Actress() {
+        address = new Address(UUID.randomUUID().toString());
+        dns().add(this);
     }
 
-    public <T extends Actress> T signOnTo(Disperser d){
+    public Actress(Address address) {
+        this.address = address;
+        dns().add(this);
+    }
+
+    public <T extends Actress> T signOnTo(Disperser d) {
         d.add(this);
         return (T) this;
     }
@@ -44,7 +58,6 @@ public abstract class Actress {
         targets.addAll(Arrays.asList(r));
         return this;
     }
-
 
     public Optional<Message> getCurrent() {
         return Optional.ofNullable(current);
@@ -64,7 +77,13 @@ public abstract class Actress {
     protected abstract Message getNext();
 
     protected void send(Message message) {
-        targets.forEach(r -> r.recieve(message));
+        Optional<Object> recipient = message.maybe(Name.recipient);
+        if (recipient.isPresent()) {
+            Address address = (Address) recipient.get();
+            dns().resolve(address).recieve(message);
+        } else {
+            targets.forEach(r -> r.recieve(message));
+        }
     }
 
 

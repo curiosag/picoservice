@@ -1,7 +1,7 @@
 package miso.ingredients;
 
 import miso.Actress;
-import miso.Name;
+import miso.message.Name;
 
 public abstract class Func extends Actress {
 

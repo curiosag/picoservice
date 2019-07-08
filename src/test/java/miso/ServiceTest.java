@@ -1,19 +1,22 @@
 package miso;
 
-import miso.ingredients.Disperser;
-import miso.ingredients.Func;
+import miso.ingredients.*;
+import miso.message.Adresses;
+import miso.message.CellWrite;
+import miso.message.Message;
+import miso.message.Name;
 import org.junit.Test;
 
-import static miso.Message.message;
+import static miso.message.Message.message;
 import static miso.ingredients.Action.action;
 import static miso.ingredients.Agg.agg;
 import static miso.ingredients.Eq.eq;
 import static miso.ingredients.FAgg.fagg;
-import static miso.ingredients.GenericFunc.func;
+import static miso.ingredients.Function.function;
 import static miso.ingredients.Gt.gt;
 import static miso.ingredients.If.branch;
 import static miso.ingredients.Mul.mul;
-import static miso.ingredients.Plus.plus;
+import static miso.ingredients.Add.add;
 import static org.junit.Assert.assertEquals;
 
 public class ServiceTest {
@@ -23,6 +26,29 @@ public class ServiceTest {
     private static final Integer _4 = 4;
     private static final Integer _2 = 2;
     private static final Integer _1 = 1;
+
+    @Test
+    public void testAddressResolution() {
+        DNS dns = DNS.dns();
+        new Cells();
+        Actress cells = dns.resolve(Adresses.cells);
+
+        Address v1 = Address.of(Name.v1);
+        Address v2 = Address.of(Name.v2);
+
+        cells.recieve(CellWrite.cellWrite(v1).value(_1));
+        cells.recieve(CellWrite.cellWrite(v2).value(_2));
+
+        Func f = function(fagg(add())).resultTo(printMsg());
+
+        Message m = message()
+                .put(Name.leftArg, v1)
+                .put(Name.rightArg, v2);
+
+        f.recieve(m);
+
+    }
+
 
     @Test
     public void testFunc() {
@@ -43,14 +69,21 @@ public class ServiceTest {
 
         Disperser disp = new Disperser();
 
-        Func add = func(fagg(plus().argKeys(Name.i1, Name.i2))).signOnTo(disp);
-        Func max = fagg(branch().paramKeys(Name.decision, Name.i1, Name.i2)).signOnTo(disp);
+        Func add = function(fagg(add().argKeys(Name.i1, Name.i2)))
+                .signOnTo(disp);
+        Func max = fagg(branch().paramKeys(Name.decision, Name.i1, Name.i2))
+                .signOnTo(disp);
 
-        Func i1_gt_i2 = func(fagg(gt().argKeys(Name.i1, Name.i2))).resultKey(Name.decision).resultTo(max).signOnTo(disp);
+        function(fagg(gt().argKeys(Name.i1, Name.i2))).resultKey(Name.decision)
+                .resultTo(max)
+                .signOnTo(disp);
 
+        Func main = fagg(branch().paramKeys(Name.decision, Name.onTrue, Name.onFalse))
+                .signOnTo(disp);
+        fagg(eq().argKeys(Name.i1, Name.i2)).resultKey(Name.decision)
+                .resultTo(main)
+                .signOnTo(disp);
 
-        Func main = fagg(branch().paramKeys(Name.decision, Name.onTrue, Name.onFalse)).signOnTo(disp);
-        Func i1_eq_i2 = fagg(eq().argKeys(Name.i1, Name.i2)).resultKey(Name.decision).resultTo(main).signOnTo(disp);
         add.resultKey(Name.onTrue).resultTo(main);
         max.resultKey(Name.onFalse).resultTo(main);
 
@@ -83,7 +116,7 @@ public class ServiceTest {
 
         Actress ageGtHeight = agg(gt().argKeys(Name.product, Name.sum).resultKey(Name.decision).resultTo(iff));
 
-        Actress add = agg(plus().argKeys(Name.i1, Name.i2).resultKey(Name.sum).resultTo(ageGtHeight, iff));
+        Actress add = agg(add().argKeys(Name.i1, Name.i2).resultKey(Name.sum).resultTo(ageGtHeight, iff));
         Actress mul = agg(mul().argKeys(Name.i1, Name.i2).resultKey(Name.product).resultTo(ageGtHeight, iff));
 
         branch.resultTo(expect(Name.result, _5));

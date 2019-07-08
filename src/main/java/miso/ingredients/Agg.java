@@ -1,7 +1,8 @@
 package miso.ingredients;
 
 import miso.Actress;
-import miso.Message;
+import miso.message.Message;
+import miso.message.Name;
 
 import java.util.*;
 
@@ -30,6 +31,12 @@ public class Agg extends Actress {
                 .filter(message::hasKey)
                 .forEach(e -> paramsReceived.put(e, message.get(e)));
 
+        Optional<String> symbol = message.maybe(Name.symbol).map(String::valueOf);
+        Optional<Object> value = message.maybe(Name.value);
+        if (symbol.isPresent() && value.isPresent() && paramsRequired.contains(symbol.get())){
+            paramsReceived.put(symbol.get(), value.get());
+        }
+
         if (paramsReceived.size() == paramsRequired.size()) {
             super.recieve(toMessage());
             paramsReceived.clear();
@@ -42,7 +49,7 @@ public class Agg extends Actress {
     }
 
     private Message toMessage() {
-        Message result = new Message(this);
+        Message result = new Message();
         result.params.putAll(paramsReceived);
         return result;
     }

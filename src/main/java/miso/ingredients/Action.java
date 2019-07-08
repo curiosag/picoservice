@@ -1,7 +1,7 @@
 package miso.ingredients;
 
 import miso.Actress;
-import miso.Message;
+import miso.message.Message;
 
 import java.util.function.Consumer;
 

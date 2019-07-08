@@ -1,49 +1,37 @@
-package miso;
+package miso.message;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class Message {
-    private final Actress sender;
-
     public Map<String, Object> params = new HashMap<>();
-
-    public Message(){
-        sender = null;
-    }
 
     public static Message message(){
         return new Message();
     }
-
-    public Message(Actress sender) {
-        this.sender = sender;
-    }
+    public static final Message NULL = new Message();
 
     public Object get(String key) {
         return params.get(key);
+    }
+
+    public Optional<Object> maybe(String key) {
+        return Optional.ofNullable(params.get(key));
     }
 
     public Boolean hasKey(String key) {
         return get(key) != null;
     }
 
-    public static Message of(Actress sender) {
-        return new Message(sender);
-    }
 
     public static Message of(String key, Object value) {
-        Message result = of(null);
+        Message result = new Message();
         result.put(key, value);
-        return result;
-    }
-
-    public static Message of(Actress sender, String key, Object value) {
-        Message result = new Message(sender);
-        result.params.put(key, value);
         return result;
     }
 

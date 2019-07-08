@@ -1,24 +1,24 @@
 package miso.ingredients;
 
 import miso.Actress;
-import miso.Message;
-import miso.Name;
+import miso.message.Message;
+import miso.message.Name;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class GenericFunc extends Func {
+public class Function extends Func {
 
     private final Func body;
 
-    private GenericFunc(Func body) {
+    private Function(Func body) {
         this.body = body;
         body.resultTo(this);
         body.resultKey(Name.impl);
     }
 
-    public static GenericFunc func(Func body) {
-        return new GenericFunc(body);
+    public static Function function(Func body) {
+        return new Function(body);
     }
 
     @Override
@@ -39,10 +39,6 @@ public class GenericFunc extends Func {
     @Override
     protected Message getNext() {
        return getCurrent().orElseThrow(IllegalStateException::new);
-    }
-
-    public GenericFunc params(String... params) {
-        return this;
     }
 
 

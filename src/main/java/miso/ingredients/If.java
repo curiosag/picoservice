@@ -1,7 +1,7 @@
 package miso.ingredients;
 
-import miso.Message;
-import miso.Name;
+import miso.message.Message;
+import miso.message.Name;
 
 public class If<T> extends Func {
 
@@ -36,7 +36,7 @@ public class If<T> extends Func {
     }
 
     private Message message(Object result) {
-        return Message.of(this, resultKey, result);
+        return Message.of(resultKey, result);
     }
 
 }

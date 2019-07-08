@@ -1,7 +1,7 @@
 package miso.ingredients;
 
-import miso.Message;
-import miso.Name;
+import miso.message.Message;
+import miso.message.Name;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -34,9 +34,9 @@ public class BinOp<T, V> extends Func {
                     try {
                         T left = converter.apply(m.get(leftKey));
                         T right = converter.apply(m.get(rightKey));
-                        return Message.of(this, resultKey, op.apply(left, right));
+                        return Message.of(resultKey, op.apply(left, right));
                     } catch (Exception e) {
-                        return Message.of(this, Name.error, e.toString());
+                        return Message.of(Name.error, e.toString());
                     }
                 })
                 .orElseGet(NULL);

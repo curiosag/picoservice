@@ -1,4 +1,4 @@
-package miso;
+package miso.message;
 
 public interface Name {
     String leftArg = "leftArg";
@@ -15,4 +15,11 @@ public interface Name {
     String product = "product";
     String impl = "impl";
     String max = "max";
+    String v1 = "v1";
+    String v2 = "v2";
+    String adress = "adress";
+    String value = "value";
+    String recipient = "recipient";
+    String ReadWrite = "ReadWrite";
+    String symbol = "symbol";
 }

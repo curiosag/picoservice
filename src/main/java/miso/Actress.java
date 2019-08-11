@@ -1,39 +1,22 @@
 package miso;
 
 import miso.ingredients.Address;
-import miso.ingredients.Disperser;
 import miso.message.Message;
-import miso.message.Name;
 
-import java.util.*;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
+import java.util.Queue;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static miso.ingredients.DNS.dns;
 
-public abstract class Actress {
+public abstract class Actress implements Runnable {
 
-    public final List<Actress> targets = new ArrayList<>();
-    public List<String> paramsRequired = new ArrayList<>();
     public final Address address;
 
-    public Actress paramsRequired(List<String> params) {
-        paramsRequired.clear();
-        paramsRequired.addAll(params);
-        return this;
-    }
-
-    public Actress paramsRequired(String... params) {
-        return paramsRequired(Arrays.asList(params));
-    }
-
-    protected Supplier NULL = () -> Message.of(Name.error, "message is null");
-
-    Message current = null;
-
+    private Queue<Message> current = new ConcurrentLinkedQueue<>();
 
     public Actress() {
-        address = new Address(UUID.randomUUID().toString());
+        address = new Address(this.getClass().getSimpleName() + "-" + UUID.randomUUID().toString());
         dns().add(this);
     }
 
@@ -42,62 +25,41 @@ public abstract class Actress {
         dns().add(this);
     }
 
-    public <T extends Actress> T signOnTo(Disperser d) {
-        d.add(this);
-        return (T) this;
-    }
-
-    public Actress resultTo(Actress r) {
-        targets.clear();
-        targets.add(r);
-        return this;
-    }
-
-    public Actress resultTo(Actress... r) {
-        targets.clear();
-        targets.addAll(Arrays.asList(r));
-        return this;
-    }
-
-    public Optional<Message> getCurrent() {
-        return Optional.ofNullable(current);
-    }
-
-    public Actress setCurrent(Message current) {
-        this.current = current;
-        return this;
-    }
-
     public void recieve(Message message) {
-        System.out.println(this.getClass().getSimpleName() + " receiving \n" + message.toString());
-        setCurrent(message);
-        send(getNext());
+        System.out.println(this.getClass().getSimpleName() + " <-" + message.toString());
+        current.add(message);
     }
 
-    protected abstract Message getNext();
-
-    protected void send(Message message) {
-        Optional<Object> recipient = message.maybe(Name.recipient);
-        if (recipient.isPresent()) {
-            Address address = (Address) recipient.get();
-            dns().resolve(address).recieve(message);
-        } else {
-            targets.forEach(r -> r.recieve(message));
-        }
+    public void send(Actress recipient, Message message) {
+        recipient.recieve(message);
     }
 
+    public void send(Address recipient, Message message) {
+        dns().resolve(recipient).recieve(message);
+    }
 
-    public List<Actress> getAllTargets(Actress caller, List<Actress> traced) {
-        if (traced.contains(this) || this == caller)
-            return traced;
-        else {
-            List<Actress> result = targets.stream()
-                    .flatMap(t -> t.getAllTargets(caller, traced).stream())
-                    .filter(a -> a != caller)
-                    .collect(Collectors.toList());
-            result.add(this);
-            result.addAll(traced);
-            return result;
-        }
+    protected abstract void process(Message message);
+
+    @Override
+    public void run() {
+        while (true)
+            try {
+                Message message = current.poll();
+                if (message != null) {
+                    System.out.println(this.getClass().getSimpleName() + " -> " + message.toString());
+                    System.out.flush();
+                    process(message);
+                } else {
+                    System.out.println(this.getClass().getSimpleName() + " /");
+                    try {
+                        Thread.sleep(100);
+                    } catch (Exception e) {
+                    }
+                }
+
+            } catch (Exception e) {
+                System.out.println(this.getClass().getSimpleName() + " " + e.toString());
+                return;
+            }
     }
 }

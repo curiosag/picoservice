@@ -1,5 +1,7 @@
 package miso.message;
 
+import java.util.Optional;
+
 public interface Name {
     String leftArg = "leftArg";
     String rightArg = "rightArg";
@@ -13,7 +15,7 @@ public interface Name {
     String i2 = "i2";
     String sum = "sum";
     String product = "product";
-    String impl = "impl";
+    String functionResult = "functionResult";
     String max = "max";
     String v1 = "v1";
     String v2 = "v2";
@@ -22,4 +24,7 @@ public interface Name {
     String recipient = "recipient";
     String ReadWrite = "ReadWrite";
     String symbol = "symbol";
+    String caller = "caller";
+    String a = "a";
+    String b = "b";
 }

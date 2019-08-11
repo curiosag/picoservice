@@ -1,30 +1,23 @@
 package miso.ingredients;
 
-import miso.Actress;
 import miso.message.Message;
 
 import java.util.function.Consumer;
 
-public class Action extends Actress {
+public class Action extends Func {
 
-    Consumer<Message> action;
+    private final Consumer<Message> action;
 
-    public Action(Consumer<Message> action) {
+    private Action(Consumer<Message> action) {
         this.action = action;
     }
 
     @Override
-    public void recieve(Message message) {
-        System.out.println("Action received " + message.toString());
-        action.accept(message);
+    protected void process(Message m) {
+        action.accept(m);
     }
 
-    @Override
-    protected Message getNext() {
-        return null;
-    }
-
-    public static Action action (Consumer<Message> action){
+    public static Action action(Consumer<Message> action) {
         return new Action(action);
     }
 }

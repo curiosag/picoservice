@@ -17,17 +17,12 @@ public class UnOp<T, V> extends Func {
     }
 
     @Override
-    protected Message getNext() {
-        return getCurrent()
-                .map(m -> {
-                    try {
-                        T arg = converter.apply(m.get(Name.arg));
-                        return Message.of(resultKey, op.apply(arg));
-                    } catch (Exception e) {
-                        return Message.of(Name.error, e);
-                    }
-                })
-                .orElseGet(() -> Message.of(Name.error, "null"));
-
+    protected void process(Message m) {
+        try {
+            T arg = converter.apply(m.value);
+            send(op.apply(arg), m.opId);
+        } catch (Exception e) {
+            send(null, m.opId);
+        }
     }
 }

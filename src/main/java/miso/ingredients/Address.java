@@ -3,6 +3,8 @@ package miso.ingredients;
 import java.util.Objects;
 
 public class Address {
+    public static final Address NONE = null;
+
     public final String value;
 
     public Address(String value) {

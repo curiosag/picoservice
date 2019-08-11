@@ -11,24 +11,22 @@ public class DNS {
 
     private static DNS instance;
 
-    public static DNS dns(){
-        if (instance == null)
-        {
+    public static DNS dns() {
+        if (instance == null) {
             instance = new DNS();
         }
         return instance;
     }
 
-    public DNS add(Actress actress){
+    public void add(Actress actress) {
         symbolMap.put(actress.address.value, actress);
-        return this;
     }
 
-    public Actress resolve(Address address){
+    public Actress resolve(Address address) {
         return resolve(address.value);
     }
 
-    public Actress resolve(String address){
+    public Actress resolve(String address) {
         Actress result = symbolMap.get(address);
         if (result == null)
             throw new IllegalStateException("not found: " + address);

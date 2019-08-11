@@ -2,43 +2,42 @@ package miso.message;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import miso.ingredients.Address;
+import miso.ingredients.OpId;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class Message {
-    public Map<String, Object> params = new HashMap<>();
+    public final Object value;
+    public final String key;
+    public final Address sender;
+    public final OpId opId;
 
-    public static Message message(){
-        return new Message();
-    }
-    public static final Message NULL = new Message();
-
-    public Object get(String key) {
-        return params.get(key);
-    }
-
-    public Optional<Object> maybe(String key) {
-        return Optional.ofNullable(params.get(key));
+    public Message(String key, Object value, Address sender, OpId opId) {
+        this.sender = sender;
+        this.opId = opId;
+        this.key = key;
+        this.value = value;
     }
 
-    public Boolean hasKey(String key) {
-        return get(key) != null;
+    public boolean hasKey(String value)
+    {
+        return key.equals(value);
+    };
+
+    public Message(String key, Object value, Address sender, Long executionId, Integer recursionLevel) {
+        this(key, value, sender, OpId.opId(executionId, recursionLevel));
     }
 
-
-    public static Message of(String key, Object value) {
-        Message result = new Message();
-        result.put(key, value);
-        return result;
+    public static Message of(String key, Object value, Address sender, OpId opId) {
+        return new Message(key, value, sender, opId);
     }
 
-    public Message put(String key, Object value) {
-        params.put(key, value);
-        return this;
+    public static Message of(String key, Object value, Address sender, Message trigger) {
+        return of(key, value, sender, trigger.opId);
     }
+
 
     public static Optional<Message> fromJson(String json) {
         ObjectMapper mapper = new ObjectMapper();
@@ -62,15 +61,7 @@ public class Message {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        params.forEach((k, v) -> {
-            sb.append("  ");
-            sb.append(k);
-            sb.append(": ");
-            sb.append(v);
-            sb.append("\n");
-        });
-
-        return sb.toString();
+        return " " + key + ":" + (value == null ? "NULL" : value.toString()) + " (" +  (sender == null ? "NULL" : sender.value)+ ")";
     }
+
 }

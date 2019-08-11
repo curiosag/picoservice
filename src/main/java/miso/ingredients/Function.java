@@ -1,45 +1,40 @@
 package miso.ingredients;
 
-import miso.Actress;
 import miso.message.Message;
 import miso.message.Name;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
-public class Function extends Func {
+public class Function<T> extends Func<T> {
 
-    private final Func body;
-
-    private Function(Func body) {
-        this.body = body;
-        body.resultTo(this);
-        body.resultKey(Name.impl);
+    private Function(Func<T> body) {
+        body.addTarget(Name.result,this);
     }
 
-    public static Function function(Func body) {
-        return new Function(body);
+    public static <T> Function function(Func<T> body) {
+        return new Function<>(body);
     }
 
     @Override
     public void recieve(Message message) {
-        System.out.println(this.getClass().getSimpleName() + " receiving \n" + message.toString());
+        System.out.println(this.getClass().getSimpleName() + " function call \n" + message.toString());
 
-        Object result = message.get(Name.impl);
-        if (result == null) {
-            List<Actress> allTargets = body.getAllTargets(this, new ArrayList<>());
-            allTargets.forEach(t -> t.recieve(message));
-        }
-        else {
-            setCurrent(Message.of(resultKey, result));
-            send(getNext());
+        if (message.hasKey(Name.result)) {
+            //TODO: vielleicht hier params verteilen?
+        } else {
+            super.recieve(message);
         }
     }
 
     @Override
-    protected Message getNext() {
-       return getCurrent().orElseThrow(IllegalStateException::new);
-    }
+    protected void process(Message message) {
+        if (!message.hasKey(Name.result)) {
+            throw new IllegalStateException();
+        }
 
+        targets.forEach((k, target) ->
+                send(target, message));
+
+    }
 
 }

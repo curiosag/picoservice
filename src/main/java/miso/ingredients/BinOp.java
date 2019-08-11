@@ -6,40 +6,50 @@ import miso.message.Name;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class BinOp<T, V> extends Func {
+public class BinOp<T, V> extends Func<V> {
 
     private final BiFunction<T, T, V> op;
     private final Function<Object, T> converter;
 
-    private String leftKey;
-    private String rightKey;
+    private Object leftArg;
+    private Object rightArg;
 
     public BinOp(BiFunction<T, T, V> op, Function<Object, T> converter) {
         this.op = op;
         this.converter = converter;
-        argKeys(Name.leftArg, Name.rightArg);
-    }
-
-    public BinOp<T,V> argKeys(String leftKey, String rightKey){
-        this.leftKey = leftKey;
-        this.rightKey = rightKey;
-        paramsRequired(leftKey, rightKey);
-        return this;
     }
 
     @Override
-    protected Message getNext() {
-        return getCurrent()
-                .map(m -> {
-                    try {
-                        T left = converter.apply(m.get(leftKey));
-                        T right = converter.apply(m.get(rightKey));
-                        return Message.of(resultKey, op.apply(left, right));
-                    } catch (Exception e) {
-                        return Message.of(Name.error, e.toString());
-                    }
-                })
-                .orElseGet(NULL);
-
+    protected void process(Message m) {
+        if (leftArg == null && m.hasKey(Name.leftArg)) {
+            leftArg = m.value;
+        }
+        if (rightArg == null && m.hasKey(Name.rightArg)) {
+            rightArg = m.value;
+        }
+        if (leftArg != null && rightArg != null) {
+            try {
+                T left = convert(leftArg);
+                T right = convert(rightArg);
+                try {
+                    send(op.apply(left, right), m.opId);
+                } catch (Exception e) {
+                    throw new IllegalStateException();
+                }
+                leftArg = null;
+                rightArg = null;
+            } catch (Exception e) {
+                throw new IllegalStateException();
+            }
+        }
     }
+
+    private T convert(Object leftArg) {
+        try {
+            return converter.apply(leftArg);
+        } catch (Exception e) {
+            throw new IllegalStateException();
+        }
+    }
+
 }

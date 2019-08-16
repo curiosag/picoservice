@@ -3,78 +3,84 @@ package miso.ingredients;
 import miso.message.Message;
 import miso.message.Name;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 public class If<T> extends Func<T> {
 
-    private class Params {
-        T onTrue;
-        T onFalse;
+    class StateIf extends State {
+        Object onTrue;
+        Object onFalse;
         Boolean decision;
-        boolean processed;
-    }
+        final Set<String> keysExpected;
 
-    public final Func<Boolean> cond;
-
-    private Map<OpId, Params> params = new HashMap<>();
-
-    private Params getParams(OpId opId) {
-        Params result = params.get(opId);
-        if (result == null) {
-            result = new Params();
-            params.put(opId, result);
+        StateIf(Source source, Set<String> keysExpected) {
+            super(source);
+            this.keysExpected = keysExpected;
         }
-        return result;
     }
 
-    private void clearParams(OpId opId) {
-        params.remove(opId);
+    private final List<String> keysExpected = Arrays.asList(Name.decision, Name.onFalse, Name.onTrue);
+
+    @Override
+    If.StateIf newState(Source source) {
+        Set<String> keys = propagationKeysExpected();
+        keys.addAll(keysExpected());
+        return new If.StateIf(source, keys);
     }
 
-    private If(Func<Boolean> cond) {
-        this.cond = cond;
-        cond.addTarget(Name.decision, this);
-        paramsRequired(Name.decision, Name.onTrue, Name.onFalse);
+    @Override
+    List<String> keysExpected() {
+        return keysExpected;
+    }
+
+    private If() {
     }
 
     public static If<Integer> condInt(Func<Boolean> cond) {
-        return new If<>(cond);
+        return new If<>();
     }
 
     @Override
     protected void process(Message m) {
-        Params p = getParams(m.opId);
+        If.StateIf state = (If.StateIf) getState(m.source);
 
-        if (p.decision == null && m.hasKey(Name.decision)) {
-            p.decision = (Boolean) m.value;
+        if (keysExpected.contains(m.key))
+        {
+            propagate(m);
+            return;
+        }
+
+        state.keysExpected.remove(m.key);
+
+        if (state.decision == null && m.hasKey(Name.decision)) {
+            state.decision = (Boolean) m.value;
         }
 
         if (m.hasKey(Name.onTrue)) {
-            p.onTrue = (T) m.value;
+            state.onTrue = m.value;
         }
 
         if (m.hasKey(Name.onFalse)) {
-            p.onFalse = (T) m.value;
+            state.onFalse = m.value;
         }
 
-        if (p.decision != null && !p.processed) {
-            if (p.decision) {
-                if (p.onTrue != null) {
-                    send(p.onTrue, m.opId);
-                    p.processed = true;
-                }
-            } else {
-                if (p.onFalse != null) {
-                    send(p.onFalse, m.opId);
-                    p.processed = true;
+        if (computed(state.decision)) {
+            if (state.decision && computed(state.onTrue)) {
+                returnResult((T) state.onTrue, m.source);
+
+            }
+            if (!state.decision && computed(state.onFalse)) {
+                {
+                    returnResult((T) state.onFalse, m.source);
                 }
             }
         }
-        if (p.decision != null && p.onFalse != null && p.onTrue != null) {
-            params.remove(m.opId);
+
+        if (keysExpected.size() == 0) {
+            removeState(m.source);
         }
     }
-
 
 }

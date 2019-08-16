@@ -9,74 +9,73 @@ import java.util.stream.Collectors;
 public class SIf<T> extends Func<T> {
     public final Func<Boolean> cond;
 
-    private class Propaganda {
-        final String keyReceived;
-        final String keyToPropagate;
-        final Func target;
+    class StateSIf extends State {
+        List<Message> pendingForPropagation = new ArrayList<>();
+        Func<?> branchChosen;
+        Map<String, String> branchKeyMap;
+        Object result;
 
-        Propaganda(String keyReceived, String keyToPropagate, Func target) {
-            this.keyReceived = keyReceived;
-            this.keyToPropagate = keyToPropagate;
-            this.target = target;
+        StateSIf(Source source) {
+            super(source);
         }
     }
 
-    private List<Propaganda> propagateOnTrue = new ArrayList<>();
-    private List<Propaganda> propagateOnFalse = new ArrayList<>();
+    @Override
+    SIf.StateSIf newState(Source source) {
+        return new SIf.StateSIf(source);
+    }
 
-    private List<Message> toPropagate = new ArrayList<>();
+    @Override
+    List<String> keysExpected() {
+        return Collections.emptyList();
+    }
 
     private SIf(Func<Boolean> f) {
-        f.addTarget(Name.decision, this);
-        this.cond = f;
+        f.returnTo(Name.decision, this);
+        cond = f;
     }
 
     public static SIf<Integer> condInt(Func<Boolean> f) {
         return new SIf<>(f);
     }
 
-    public void propagateOnTrue(String keyReceived, String keyToPropagate, Func target) {
-        propagateOnTrue.add(new Propaganda(keyReceived, keyToPropagate, target));
-    }
-
-    public void propagateOnFalse(String keyReceived, String keyToPropagate, Func target) {
-        propagateOnFalse.add(new Propaganda(keyReceived, keyToPropagate, target));
-    }
-
     @Override
     protected void process(Message m) {
+        SIf.StateSIf state = (SIf.StateSIf) getState(m.source);
+
         if (m.hasKey(Name.onTrue) || m.hasKey(Name.onFalse)) {
-            targets.forEach((key, target) -> send(target, new Message(key, m.value, this.address, m.opId)));
+            state.result = m.value;
+            returnResult((T) state.result, m.source);
+            removeState(m.source);
             return;
         }
 
         if (m.hasKey(Name.decision)) {
-            propagate(m.opId, (Boolean) m.value ? propagateOnTrue : propagateOnFalse);
+            Map.Entry<Func<?>, Map<String, String>> propagations = getBranch((Boolean) m.value ? Name.onTrue : Name.onFalse);
+            state.branchChosen = propagations.getKey();
+            state.branchKeyMap = propagations.getValue();
+
+            state.pendingForPropagation.forEach(p -> propagate(m, state.branchKeyMap, state.branchChosen));
             return;
         }
 
-        toPropagate.add(m);
+        if (state.branchChosen == null) {
+            state.pendingForPropagation.add(m);
+        } else {
+            propagate(m, state.branchKeyMap, state.branchChosen);
+        }
+
     }
 
-    private void propagate(OpId opId, List<Propaganda> propaganda) {
-        List<Message> todo = toPropagate.stream()
-                .peek(m -> System.out.println("dbg " + m.toString()))
-                .filter(m -> m.opId.equals(opId)) //TODO: sender?
+    private Map.Entry<Func<?>, Map<String, String>> getBranch(String returnKey) {
+        List<Map.Entry<Func<?>, Map<String, String>>> result = propagations.entrySet().stream()
+                .filter(e -> returnKey.equals(e.getKey().returnKey))
                 .collect(Collectors.toList());
 
-        for (Message m : todo) {
-            propagate(m, propaganda);
-            toPropagate.remove(m);
+        if (result.size() != 1) {
+            throw new IllegalStateException();
         }
-
-    }
-
-    private void propagate(Message m, List<Propaganda> propaganda) {
-        for (Propaganda p : propaganda) {
-            if (m.hasKey(p.keyReceived)) {
-                p.target.recieve(newMsg(p.keyToPropagate, m.value, m.opId));
-            }
-        }
+        return result.get(0);
     }
 
 }

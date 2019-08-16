@@ -2,21 +2,18 @@ package miso.message;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import miso.ingredients.Address;
-import miso.ingredients.OpId;
+import miso.ingredients.Source;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Optional;
 
 public class Message {
     public final Object value;
     public final String key;
-    public final Address sender;
-    public final OpId opId;
+    public final Source source;
 
-    public Message(String key, Object value, Address sender, OpId opId) {
-        this.sender = sender;
-        this.opId = opId;
+    public Message(String key, Object value, Source source) {
+        this.source = source;
         this.key = key;
         this.value = value;
     }
@@ -26,18 +23,13 @@ public class Message {
         return key.equals(value);
     };
 
-    public Message(String key, Object value, Address sender, Long executionId, Integer recursionLevel) {
-        this(key, value, sender, OpId.opId(executionId, recursionLevel));
+    public Message withSource(Source source){
+        return new Message(key, value, source);
     }
 
-    public static Message of(String key, Object value, Address sender, OpId opId) {
-        return new Message(key, value, sender, opId);
+    public static Message of(String key, Object value, Source source) {
+        return new Message(key, value, source);
     }
-
-    public static Message of(String key, Object value, Address sender, Message trigger) {
-        return of(key, value, sender, trigger.opId);
-    }
-
 
     public static Optional<Message> fromJson(String json) {
         ObjectMapper mapper = new ObjectMapper();
@@ -61,7 +53,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return " " + key + ":" + (value == null ? "NULL" : value.toString()) + " (" +  (sender == null ? "NULL" : sender.value)+ ")";
+        return " " + key + ":" + (value == null ? "NULL" : value.toString()) + " source:" + source.toString();
     }
 
 }

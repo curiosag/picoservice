@@ -3,6 +3,7 @@ package miso;
 import miso.ingredients.Address;
 import miso.message.Message;
 
+import java.util.Objects;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -13,7 +14,7 @@ public abstract class Actress implements Runnable {
 
     public final Address address;
 
-    private Queue<Message> current = new ConcurrentLinkedQueue<>();
+    private Queue<Message> inBox = new ConcurrentLinkedQueue<>();
 
     public Actress() {
         address = new Address(this.getClass().getSimpleName() + "-" + UUID.randomUUID().toString());
@@ -27,15 +28,7 @@ public abstract class Actress implements Runnable {
 
     public void recieve(Message message) {
         System.out.println(this.getClass().getSimpleName() + " <-" + message.toString());
-        current.add(message);
-    }
-
-    public void send(Actress recipient, Message message) {
-        recipient.recieve(message);
-    }
-
-    public void send(Address recipient, Message message) {
-        dns().resolve(recipient).recieve(message);
+        inBox.add(message);
     }
 
     protected abstract void process(Message message);
@@ -44,7 +37,7 @@ public abstract class Actress implements Runnable {
     public void run() {
         while (true)
             try {
-                Message message = current.poll();
+                Message message = inBox.poll();
                 if (message != null) {
                     System.out.println(this.getClass().getSimpleName() + " -> " + message.toString());
                     System.out.flush();
@@ -54,6 +47,7 @@ public abstract class Actress implements Runnable {
                     try {
                         Thread.sleep(100);
                     } catch (Exception e) {
+                        //
                     }
                 }
 
@@ -62,4 +56,18 @@ public abstract class Actress implements Runnable {
                 return;
             }
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Actress actress = (Actress) o;
+        return Objects.equals(address, actress.address);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(address);
+    }
+
 }

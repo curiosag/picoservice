@@ -3,38 +3,37 @@ package miso.ingredients;
 import miso.message.Message;
 import miso.message.Name;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 
 public class Function<T> extends Func<T> {
 
-    private Function(Func<T> body) {
-        body.addTarget(Name.result,this);
-    }
+    private final Func<T> body;
 
-    public static <T> Function function(Func<T> body) {
-        return new Function<>(body);
+    public Function(Func<T> body) {
+        body.returnTo(Name.result, this);
+        this.body = body;
     }
 
     @Override
-    public void recieve(Message message) {
-        System.out.println(this.getClass().getSimpleName() + " function call \n" + message.toString());
+    State newState(Source source) {
+        return new State(source);
+    }
 
-        if (message.hasKey(Name.result)) {
-            //TODO: vielleicht hier params verteilen?
+    @Override
+    List<String> keysExpected() {
+        return Collections.emptyList();
+    }
+
+    @Override
+    protected void process(Message m) {
+        State state = getState(m.source);
+
+        if (m.hasKey(Name.result)) {
+            state.source.host.recieve(new Message(Name.functionResult, m.value, m.source.withHost(this)));
         } else {
-            super.recieve(message);
+
         }
-    }
-
-    @Override
-    protected void process(Message message) {
-        if (!message.hasKey(Name.result)) {
-            throw new IllegalStateException();
-        }
-
-        targets.forEach((k, target) ->
-                send(target, message));
-
     }
 
 }

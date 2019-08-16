@@ -11,14 +11,10 @@ public interface Name {
     String onFalse = "onFalse";
     String decision = "decision";
     String error = "error";
-    String i1 = "i1";
-    String i2 = "i2";
     String sum = "sum";
     String product = "product";
     String functionResult = "functionResult";
     String max = "max";
-    String v1 = "v1";
-    String v2 = "v2";
     String adress = "adress";
     String value = "value";
     String recipient = "recipient";
@@ -27,4 +23,7 @@ public interface Name {
     String caller = "caller";
     String a = "a";
     String b = "b";
+    String zero = "zero";
+    String one = "one";
+    String ping = "ping";
 }

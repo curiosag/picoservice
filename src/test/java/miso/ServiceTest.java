@@ -1,7 +1,6 @@
 package miso;
 
 import miso.ingredients.*;
-import miso.message.Adresses;
 import miso.message.Message;
 import miso.message.Name;
 import org.junit.Ignore;
@@ -10,11 +9,11 @@ import org.junit.Test;
 import static miso.ingredients.Action.action;
 import static miso.ingredients.Add.add;
 import static miso.ingredients.Eq.eq;
-import static miso.ingredients.Function.function;
 import static miso.ingredients.Gt.gt;
 import static miso.ingredients.If.condInt;
 import static miso.ingredients.Mul.mul;
 import static miso.ingredients.Sub.sub;
+import static miso.message.Name.a;
 
 public class ServiceTest {
 
@@ -24,6 +23,7 @@ public class ServiceTest {
     private static final Integer _5 = 5;
     private static final Integer _4 = 4;
     private static final Integer _2 = 2;
+    private static final Integer _3 = 3;
     private static final Integer _1 = 1;
     private static final Integer _0 = 0;
 
@@ -35,65 +35,113 @@ public class ServiceTest {
     private static Address main = new Address("main");
 
     private Message message(String key, Object value) {
-        return Message.of(key, value, main, OpId.opId(0L, 0));
+        return Message.of(key, value, new Source(printMsg, 0L, 0));
     }
 
 
-    //@Test
-    public void testFunc() {
+    @Ignore
+    @Test
+    public void testPing() {
 
         /*
 
-            function add(v1, v2) = (v1 + v2);
-
-            function max(v1, v2) = if (v1 > v2)
-                                        v1
-                                   else
-                                        v2
-
-            function fac(v) = if (v = 0 )       // v, 0, 1, 1 -> v, i0, i11, i12
-                                        1
-                                   else
-                                        v * fac(v - 1);
-
-
-            const a = add(0, 0);                // addA
-            const b = add(add(0, 0),add(1, 1)); // addB (addB1, addB2)
-            const c = add(a, b);                // addC
-
-          r = if (i1 == i2)                         //  cond(cond_eq)
-                       max(i1 + a + c, a + i2)      //      cond_max(addM1(i1, addM11(a, c)), addM2(a, i2))
-                   else                             //
-                      fac(i1 + i2)                  //      fac...
-
+            print(1 + 2)
 
          */
 
-        If<Integer> facCond = start(condInt(start(eq())));
+        Func<Integer> add = start(add());
+        Action printMsg = action(i -> System.out.println(i.toString()));
+
+        add.returnTo("pingedResult", printMsg);
+
+        printMsg.addPing(add);
+
+        printMsg.recieve(new Message(Name.ping, null, new Source(printMsg, 0L,0)));
+
+
+    }
+
+    @Ignore
+    @Test
+    public void testFunctionCall() {
+
+        /*
+
+            function add(a, b) = (a + b);
+
+            print(add(1, 2))
+
+         */
+
+        Func<Integer> add = start(add());
+        Func<Integer> fAdd= start(new Function<>(add));
+
+        Func<Integer> callAddA = start(new FunctionCall<>(fAdd));
+        Func<Integer> callAddB = start(new FunctionCall<>(fAdd));
+
+        callAddA.returnTo("resultCallA", printMsg);
+        callAddB.returnTo("resultCallB", printMsg);
+
+        Source printMsgSource = new Source(printMsg, 0L, 0);
+        callAddA.recieve(new Message(Name.a, 1, printMsgSource));
+        callAddA.recieve(new Message(Name.b, 2, printMsgSource));
+
+        waitSome();
+    }
+
+    @Ignore
+    @Test
+    public void testRecursion() {
+
+        /*
+
+            function fac(a) = if (a = 0 )
+                                        1
+                                   else
+                                        a * fac(a - 1);
+
+
+            echo(fac(3));
+
+         */
+
+        Func<Boolean> eq = start(eq());
+
+        SIf<Integer> _if = start(SIf.condInt(eq));
+        Func<Integer> funcFac = start(new Function<>(_if));
 
         Func<Integer> sub = start(sub());
         Func<Integer> mul = start(mul());
 
-        facCond.cond.recieve(message(Name.leftArg, _0));
-        facCond.cond.recieve(message(Name.rightArg, _0));
+        Func<Integer> callFacRecursively = start(new FunctionCall<>(funcFac));
 
-        facCond.recieve(message(Name.onTrue, 1));
+        callFacRecursively.returnTo(Name.rightArg, mul);
+        _if.returnTo(Name.result, funcFac);
+        eq.returnTo(Name.decision, _if);
+        mul.returnTo(Name.onFalse, _if);
 
+        funcFac.addPropagation(a, _if.cond);
 
-        Func<Integer> fac = null;
+        // if (a = 0)
 
+        _if.addPropagation(Name.a, Name.leftArg, eq);
+        eq.addConst(Name.rightArg, 0);
+        // 1
+        _if.addConst(Name.onTrue, 1);
+        // else
+        //     a * fac(a - 1)
+        _if.addPropagation(Name.a, Name.leftArg, mul);
+        mul.addPropagation(Name.a, Name.a, callFacRecursively);
+        callFacRecursively.addPropagation(Name.a, Name.rightArg, sub);
+        sub.addConst(Name.rightArg, _1);
 
-        Func<Integer> a = add();
-        Func<Integer> b = add();
-        Func<Integer> b1 = add();
-        Func<Integer> b2 = add();
-        Func<Integer> c = add();
+        // echo(fac(3))
+        Func<?> callFac = start(new FunctionCall<>(funcFac));
+        callFac.returnTo("planFuncCallResult", printMsg);
+        Message m = new Message(Name.a, _3, new Source(printMsg, 0L, 0));
+        funcFac.recieve(m);
 
-        b1.addTarget(Name.leftArg, b);
-        b2.addTarget(Name.rightArg, b);
-        a.addTarget(Name.leftArg, c);
-        b.addTarget(Name.rightArg, c);
-
+        waitSome();
 
     }
 
@@ -123,7 +171,7 @@ public class ServiceTest {
     }
     @Ignore
     @Test
-    public void testIf() {
+    public void testSIf() {
 
         /*
          * const mul = a * b;
@@ -134,21 +182,21 @@ public class ServiceTest {
          *             a + b
          */
 
-
         Integer a = _1;
         Integer b = _4;
 
-        If<Integer> _if = start(condInt(start(gt())));
+        Func<Boolean> gt = start(gt());
+        If<Integer> _if = start(condInt(gt));
 
         Func add = start(add())
-                .addTarget(Name.rightArg, _if.cond)
-                .addTarget(Name.onFalse, _if);
+                .returnTo(Name.rightArg, gt)
+                .returnTo(Name.onFalse, _if);
 
         Func mul = start(mul())
-                .addTarget(Name.leftArg, _if.cond)
-                .addTarget(Name.onTrue, _if);
+                .returnTo(Name.leftArg, gt)
+                .returnTo(Name.onTrue, _if);
 
-        _if.addTarget(Name.result, printMsg);
+        _if.returnTo(Name.result, printMsg);
 
         add.recieve(message(Name.leftArg, a));
         add.recieve(message(Name.rightArg, b));
@@ -156,6 +204,10 @@ public class ServiceTest {
         mul.recieve(message(Name.leftArg, a));
         mul.recieve(message(Name.rightArg, b));
 
+        waitSome();
+    }
+
+    private void waitSome() {
         try {
             Thread.sleep(500);
         } catch (InterruptedException e) {
@@ -165,41 +217,40 @@ public class ServiceTest {
 
 
     @Test
-    public void testSif() {
+    public void testif() {
         /*
         
           output = if (a > b)
                        a - b
                    else
                       b - a
+
+          print(output)
+
          */
 
-        Integer a = _4;
-        Integer b = _2;
+        Func<Boolean> gt = start(gt());
 
-        SIf<Integer> _if = start(SIf.condInt(start(gt())));
-        _if.addTarget(Name.result, printMsg);
+        If<Integer> _if = start(If.condInt(gt));
 
-        Func onTrue = start(sub()).addTarget(Name.onTrue, _if);
-        Func onFalse = start(sub()).addTarget(Name.onFalse, _if);
+        Func<Integer> subTrueBranch = start(sub());
+        Func<Integer> subFalseBranch = start(sub());
 
-        _if.propagateOnTrue(Name.a, Name.leftArg, onTrue);
-        _if.propagateOnTrue(Name.b, Name.rightArg, onTrue);
+        gt.returnTo(Name.decision, _if);
+        subTrueBranch.returnTo(Name.onTrue, _if);
+        subFalseBranch.returnTo(Name.onFalse, _if);
+        _if.returnTo(Name.result, printMsg);
 
-        _if.propagateOnFalse(Name.b, Name.leftArg, onFalse);
-        _if.propagateOnFalse(Name.a, Name.rightArg, onFalse);
+        _if.addPropagation(Name.a, gt);
+        _if.addPropagation(Name.b, gt);
+        _if.addPropagation(Name.a, subTrueBranch);
+        _if.addPropagation(Name.b, subTrueBranch);
+        _if.addPropagation(Name.a, subFalseBranch);
+        _if.addPropagation(Name.b, subFalseBranch);
 
+        _if.recieve(new Message(Name.a, 4, new Source(printMsg, 0L, 0)));
 
-        _if.recieve(message(Name.a, a));
-        _if.recieve(message(Name.b, b));
-        _if.cond.recieve(message(Name.leftArg, a));
-        _if.cond.recieve(message(Name.rightArg, b));
-
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        waitSome();
     }
 
     private Action expect(String key, Integer value) {

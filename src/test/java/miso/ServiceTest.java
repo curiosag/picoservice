@@ -454,7 +454,7 @@ public class ServiceTest {
     @Test
     public void testSIfWithPresetParameters() {
         /*
-            // in this case propagation of a goes to > but also immediately to onTrue and onFalse params of if
+            // in this case propagation of "a" goes to ">" but also immediately to onTrue and onFalse params of if
 
          * output = if (a > b)
          *              a
@@ -514,11 +514,11 @@ public class ServiceTest {
     @Test
     public void testRecursion() {
 
-        /* function fac(a) = if (a = 0 )
+        /* function sum(a) = if (a = 1 )
                                         1
                                    else
-                                        a * fac(a - 1);
-            echo(fac(3));
+                                        a + sum(a - 1);
+            echo(sum(3));
          */
 
         Int result = Int(0);
@@ -528,58 +528,59 @@ public class ServiceTest {
         SIf<Integer> _if = start(SIf.condInt());
         _if.addConst(Name.onTrue, _1);
 
-        Function<Boolean> eq = start(eq()).addConst(Name.rightArg, _0);
+        Function<Boolean> eq = start(eq()).addConst(Name.rightArg, _1);
         Function<Integer> sub = start(sub()).addConst(Name.rightArg, _1);
-        Function<Integer> mul = start(mul());
-        Function<Integer> facCallTarget = start(new FunctionCallTarget<>(_if));
-        Function<Integer> facCallRec = start(new FunctionCall<>(facCallTarget));
-        Function<Integer> facCall = start(new FunctionCall<>(facCallTarget));
+        Function<Integer> add = start(add());
+        Function<Integer> sumCallTarget = start(new FunctionCallTarget<>(_if));
+        Function<Integer> sumCallRec = start(new FunctionCall<>(sumCallTarget));
+        Function<Integer> sumCall = start(new FunctionCall<>(sumCallTarget));
 
-        resultMonitor.addPropagation(Name.a, Name.a, facCall);
+        resultMonitor.addPropagation(Name.a, Name.a, sumCall);
 
-        facCallTarget.addPropagation(Name.a, Name.a, _if);
+        sumCallTarget.addPropagation(Name.a, Name.a, _if);
         _if.addPropagation(Name.a, Name.leftArg, eq);
-        _if.addPropagationOnFalse(Name.a, Name.leftArg, mul);
-        _if.addPropagationOnFalse(Name.a, Name.a, mul);
-        // can't propagate "a" to facCallRec directly, so that it passes "a" on to sub ("a - 1") alone. it doesen't.
+        _if.addPropagationOnFalse(Name.a, Name.leftArg, add);
+        _if.addPropagationOnFalse(Name.a, Name.a, add);
+        // can't propagate "a" to sumCallRec directly, so that it passes "a" on to sub ("a - 1") alone. it doesen't.
         // instead it causes another recursion with "a" alone rather than "a - 1" from sub (and maybe more mess, because
-        // fac(a) will also receive a second "a" from the "a - 1", but that doesen't matter any more then)
-        // one would have to distinguish somehow by key the "a" as the parameter in fac(a) from the a in "a - 1"
+        // sum(a) will also receive a second "a" from the "a - 1", but that doesen't matter any more then)
+        // one would have to distinguish somehow by key the "a" as the parameter in sum(a) from the a in "a - 1"
         // -> so this doesen't work:
-        // mul.addPropagation(Name.a, Name.a, facCallRec);
-        mul.addPropagation(Name.a, Name.leftArg, sub);
+        // mul.addPropagation(Name.a, Name.a, sumCallRec);
+        add.addPropagation(Name.a, Name.leftArg, sub);
 
         //TODO: the returning structure is symmetrical to the dependency structure, maybe setting up both can be unified
         eq.returnTo(Name.condition, _if);
-        sub.returnTo(Name.a, facCallRec);
-        facCallRec.returnTo(Name.rightArg, mul);
-        mul.returnTo(Name.onFalse, _if);
-        facCall.returnTo(Name.result, resultMonitor);
-//
-//        resultMonitor.addInitAndFinalize(facCall);
-//        facCallTarget.addInitAndFinalize(_if);
-//        _if.addInitAndFinalize(eq);
-//        _if.addInitAndFinalizeOnFalse(mul);
-//        mul.addInitAndFinalize(facCallRec);
-//        facCallRec.addInitAndFinalize(sub);
+        sub.returnTo(Name.a, sumCallRec);
+        sumCallRec.returnTo(Name.rightArg, add);
+        add.returnTo(Name.onFalse, _if);
+        sumCall.returnTo(Name.result, resultMonitor);
+
+        resultMonitor.addInitAndFinalize(sumCall);
+        sumCallTarget.addInitAndFinalize(_if);
+        _if.addInitAndFinalize(eq);
+        _if.addInitAndFinalizeOnFalse(add);
+        add.addInitAndFinalize(sumCallRec);
+        sumCallRec.addInitAndFinalize(sub);
 
         int runId = 0;
-        checkFac(result, resultMonitor, runId++, 0, 1);
-        checkFac(result, resultMonitor, runId++, 1, 1);
-        checkFac(result, resultMonitor, runId++, 2, 2);
-        checkFac(result, resultMonitor, runId++, 12, 479001600); // 13 would exceed int range
+        checksum(result, resultMonitor, runId++, 1, 1);
+        checksum(result, resultMonitor, runId++, 2, 3);
+        checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
+        checksum(result, resultMonitor, runId++, 10000, 10001 * 5000);
+        checksum(result, resultMonitor, runId, 40000, 40001 * 20000);
 
         resultMonitor.terminate();
         _if.terminate();
         eq.terminate();
         sub.terminate();
-        mul.terminate();
-        facCallTarget.terminate();
-        facCallRec.terminate();
-        facCall.terminate();
+        add.terminate();
+        sumCallTarget.terminate();
+        sumCallRec.terminate();
+        sumCall.terminate();
     }
 
-    private void checkFac(Int result, Action resultMonitor, int runId, int facOf, Integer expected) {
+    private void checksum(Int result, Action resultMonitor, int runId, int facOf, Integer expected) {
         Instant start = Instant.now();
 
         result.value = 0;
@@ -590,7 +591,7 @@ public class ServiceTest {
         await(() -> result.value != 0);
         assertEquals(expected, result.value);
         resultMonitor.recieve(new Message(Name.finalizeComputation, null, run));
-        System.out.println(String.format("faculty of %d took %d seconds", facOf, Duration.between(start, Instant.now()).getSeconds()));
+        System.out.println(String.format("sum for %d took %d seconds", facOf, Duration.between(start, Instant.now()).getSeconds()));
 
     }
 

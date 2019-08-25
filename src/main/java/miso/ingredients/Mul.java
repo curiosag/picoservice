@@ -2,7 +2,7 @@ package miso.ingredients;
 
 public class Mul extends BinOp<Integer, Integer> {
 
-    public Mul() {
+    private Mul() {
         super((n1, n2) -> n1 * n2, o -> (Integer) o);
     }
 

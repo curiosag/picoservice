@@ -3,23 +3,23 @@ package miso.ingredients;
 import java.util.Objects;
 
 public class Source {
-    public final Func<?> host;
+    public final Function<?> host;
     public final Long executionId;
     public final Integer callLevel;
 
-    public Source(Func<?> host, Long executionId, Integer callLevel) {
+    public Source(Function<?> host, Long executionId, Integer callLevel) {
         this.host = host;
         this.executionId = executionId;
         this.callLevel = callLevel;
     }
 
-    public static Source opId(Func<?> host, Long executionId, Integer callLevel, String resultKeyExpected) {
+    static Source opId(Function<?> host, Long executionId, Integer callLevel) {
         return new Source(host, executionId, callLevel);
     }
 
     @Override
     public String toString() {
-        return String.format("%s (%s) %d/%d -> %s", host.getClass().getSimpleName(), host.address.value, executionId, callLevel);
+        return String.format("Source: %s (%s) %d/%d ", host.getClass().getSimpleName(), host.address.value, executionId, callLevel);
     }
 
     @Override
@@ -37,19 +37,7 @@ public class Source {
         return Objects.hash(host, executionId, callLevel);
     }
 
-    public Source decCallLevel() {
-        return withCallLevel( callLevel - 1);
-    }
-
-    public Source incCallLevel() {
-        return withCallLevel( callLevel + 1);
-    }
-
-    public Source withHost(Func<?> host) {
+    Source withHost(Function<?> host) {
         return new Source(host, executionId, callLevel);
-    }
-
-    private Source withCallLevel(Integer level) {
-        return new Source(host, executionId, level);
     }
 }

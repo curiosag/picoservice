@@ -1,7 +1,7 @@
 package miso.ingredients;
 
 public class Eq extends BinOp<Integer, Boolean> {
-    public Eq() {
+    private Eq() {
         super(Integer::equals, o -> (Integer) o);
     }
 

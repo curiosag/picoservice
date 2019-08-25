@@ -2,13 +2,14 @@ package miso.ingredients;
 
 import miso.message.Message;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class Action extends Func {
+public class Action extends Function {
 
     private final Consumer<Message> action;
+    private final List<String> expectedParams = new ArrayList<>();
 
     private Action(Consumer<Message> action) {
 
@@ -16,7 +17,12 @@ public class Action extends Func {
     }
 
     @Override
-    protected void process(Message m) {
+    public boolean isParameter(String key) {
+        return expectedParams.contains(key);
+    }
+
+    @Override
+    protected void processInner(Message m, State s) {
         action.accept(m);
     }
 
@@ -29,8 +35,8 @@ public class Action extends Func {
         return new State(source);
     }
 
-    @Override
-    List<String> keysExpected() {
-        return Collections.emptyList();
+
+    public void expectParam(String key) {
+        expectedParams.add(key);
     }
 }

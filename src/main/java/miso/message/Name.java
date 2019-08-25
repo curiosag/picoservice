@@ -9,7 +9,7 @@ public interface Name {
     String arg = "arg";
     String onTrue = "onTrue";
     String onFalse = "onFalse";
-    String decision = "decision";
+    String condition = "condition";
     String error = "error";
     String sum = "sum";
     String product = "product";
@@ -25,5 +25,8 @@ public interface Name {
     String b = "b";
     String zero = "zero";
     String one = "one";
-    String ping = "ping";
+    String initializeComputation = "initializeComputation";
+    String finalizeComputation = "finalizeComputation";
+    String c = "c";
+    String y = "y";
 }

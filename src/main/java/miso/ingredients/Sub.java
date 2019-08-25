@@ -2,7 +2,7 @@ package miso.ingredients;
 
 public class Sub extends BinOp<Integer, Integer> {
 
-    public Sub() {
+    private Sub() {
         super((n1, n2) -> n1 - n2, o -> (Integer) o);
     }
 

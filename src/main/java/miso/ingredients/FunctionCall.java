@@ -3,15 +3,17 @@ package miso.ingredients;
 import miso.message.Message;
 import miso.message.Name;
 
-import java.util.Collections;
-import java.util.List;
+public class FunctionCall<T> extends Function<T> {
 
-public class FunctionCall<T> extends Func<T> {
+    private final Function<T> function;
 
-    private final Func<T> function;
-
-    public FunctionCall(Func<T> f) {
+    public FunctionCall(Function<T> f) {
         this.function = f;
+    }
+
+    @Override
+    protected boolean isParameter(String key) {
+        return key.equals(Name.functionResult);
     }
 
     @Override
@@ -20,19 +22,15 @@ public class FunctionCall<T> extends Func<T> {
     }
 
     @Override
-    List<String> keysExpected() {
-        return Collections.emptyList();
-    }
+    protected void processInner(Message m, State state) {
 
-    public static <T> FunctionCall call(Func<T> f) {
-        return new FunctionCall<>(f);
     }
 
     @Override
     protected void process(Message m) {
         if (m.hasKey(Name.functionResult)) {
-            Message functionResult = new Message(returnKey, m.value, new Source(this, m.source.executionId, m.source.callLevel - 1));
-            returnTo.recieve(functionResult);
+            Message result = new Message(returnKey, m.value, new Source(this, m.source.executionId, m.source.callLevel - 1));
+            returnTo.recieve(result);
         } else {
             Source source = new Source(this, m.source.executionId, m.source.callLevel + 1);
             Message callParameter = new Message(m.key, m.value, source);

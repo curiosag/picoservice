@@ -3,21 +3,19 @@ package miso.ingredients;
 import miso.message.Message;
 import miso.message.Name;
 
-import java.util.List;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
-public class BinOp<T, V> extends Func<V> {
+public class BinOp<T, V> extends Function<V> {
 
     private final BiFunction<T, T, V> op;
-    private final Function<Object, T> converter;
+    private final java.util.function.Function<Object, T> converter;
 
     public class BinOpState extends State {
 
         Object leftArg;
         Object rightArg;
 
-        public BinOpState(Source source) {
+        BinOpState(Source source) {
             super(source);
         }
     }
@@ -28,18 +26,19 @@ public class BinOp<T, V> extends Func<V> {
     }
 
     @Override
-    List<String> keysExpected() {
-        return null;
+    protected boolean isParameter(String key) {
+        return key.equals(Name.leftArg) || key.equals(Name.rightArg);
     }
 
-    public BinOp(BiFunction<T, T, V> op, Function<Object, T> converter) {
+    BinOp(BiFunction<T, T, V> op, java.util.function.Function<Object, T> converter) {
         this.op = op;
         this.converter = converter;
     }
 
     @Override
-    protected void process(Message m) {
-        BinOpState state = (BinOpState) getState(m.source);
+    @SuppressWarnings("unchecked")
+    protected void processInner(Message m, State s) {
+        BinOpState state = (BinOpState) s;
 
         if (state.leftArg == null) {
             state.leftArg = getValue(m, Name.leftArg);
@@ -52,11 +51,10 @@ public class BinOp<T, V> extends Func<V> {
                 T left = convert(state.leftArg);
                 T right = convert(state.rightArg);
                 try {
-                    returnResult(op.apply(left, right), m.source);
+                    returnResult(op.apply(left, right), m.source.withHost(this));
                 } catch (Exception e) {
                     throw new IllegalStateException();
                 }
-                removeState(state.source);
             } catch (Exception e) {
                 throw new IllegalStateException();
             }

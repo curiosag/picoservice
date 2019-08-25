@@ -53,7 +53,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return " " + key + ":" + (value == null ? "NULL" : value.toString()) + " source:" + source.toString();
+        return " " + key + ":" + (value == null ? "NULL" : value.toString()) + " " + source.toString();
     }
 
 }

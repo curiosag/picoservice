@@ -1,69 +1,72 @@
 package miso.ingredients;
 
-import miso.message.Message;
-import miso.message.Name;
+import miso.misc.Name;
 
 import java.util.*;
 
-public class SIf<T> extends Function<T> {
+import static miso.ingredients.Message.message;
+
+public class Iff<T> extends Function<T> {
 
     private static final List<String> params = Arrays.asList(Name.onTrue, Name.onFalse, Name.condition);
 
-    class StateSIf extends State {
+    class StateIff extends State {
         // messages must not be propagated to branches before decision has been calculated
         List<Message> pendingForBranchPropagation = new ArrayList<>();
         Object onTrue;
         Object onFalse;
         Boolean decision;
 
-        StateSIf(Source source) {
+        StateIff(Source source) {
             super(source);
         }
     }
 
     private Map<Function<?>, Map<String, List<String>>> propagationsOnTrue = new HashMap<>();
     private Map<Function<?>, Map<String, List<String>>> propagationsOnFalse = new HashMap<>();
-    private List<Function> initAndFinalizeOnTrue = new ArrayList<>();
-    private List<Function> initAndFinalizeOnFalse = new ArrayList<>();
+    private List<Function> kickOffOnTrue = new ArrayList<>();
+    private List<Function> kickOffOnFalse = new ArrayList<>();
 
-    public void addPropagationOnFalse(String keyReceived, String keyToPropagate, Function target) {
-        addPropagation(keyReceived, keyToPropagate, target, propagationsOnFalse);
+    public void propagateOnFalse(String keyReceived, String keyToPropagate, Function target) {
+        propagate(keyReceived, keyToPropagate, target, propagationsOnFalse);
     }
 
-    public void addPropagationOnTrue(String keyReceived, String keyToPropagate, Function target) {
-        addPropagation(keyReceived, keyToPropagate, target, propagationsOnTrue);
+    public void propagateOnTrue(String keyReceived, String keyToPropagate, Function target) {
+        propagate(keyReceived, keyToPropagate, target, propagationsOnTrue);
     }
 
-    public void addInitAndFinalizeOnTrue(Function f) {
-        initAndFinalizeOnTrue.add(f);
+    public void kickOffOnTrue(Function f) {
+        kickOffOnTrue.add(f);
     }
 
-    public void addInitAndFinalizeOnFalse(Function f) {
-        initAndFinalizeOnFalse.add(f);
+    public void kickOffOnFalse(Function f) {
+        kickOffOnFalse.add(f);
     }
 
     private Map<Function<?>, Map<String, List<String>>> getBranchPropagations(Boolean branch) {
         return branch ? propagationsOnTrue : propagationsOnFalse;
     }
 
-    private List<Function> getBranchInitsAndFinalizations(Boolean branch) {
-        return branch ? initAndFinalizeOnTrue : initAndFinalizeOnFalse;
+    private List<Function> getBranchKickOffs(Boolean branch) {
+        return branch ? kickOffOnTrue : kickOffOnFalse;
     }
 
     @Override
-    SIf.StateSIf newState(Source source) {
-        return new SIf.StateSIf(source);
+    StateIff newState(Source source) {
+        return new StateIff(source);
     }
 
     @Override
     protected boolean isParameter(String key) {
-        // a hack. keep super.process from propagating anything except
-        // initialization and finalization of the decision part
+        // a hack. make super.process only kickOf the decision part
+        // nothing else, no propagation or anything
         return true;
     }
 
-    public static SIf<Integer> condInt() {
-        return new SIf<>();
+    public static Iff<Integer> iff() {
+        Iff<Integer> result = new Iff<>();
+        start(result);
+        return result;
     }
 
     @Override
@@ -71,7 +74,7 @@ public class SIf<T> extends Function<T> {
     protected void processInner(Message m, State s) {
         //TODO: there's a bad dependecy on the implemenation of If, they should be logically separated
         // see also the use of Sif.isParameter
-        SIf.StateSIf state = (SIf.StateSIf) s;
+        StateIff state = (StateIff) s;
 
         if (hdlIncomingParams(m, state)) {
             return;
@@ -80,7 +83,7 @@ public class SIf<T> extends Function<T> {
         hdlPropagations(m, state);
     }
 
-    private void hdlPropagations(Message m, StateSIf state) {
+    private void hdlPropagations(Message m, StateIff state) {
         if (!computed(state.decision)) {
             propagateToConditionOnSpec(m);
             state.pendingForBranchPropagation.add(m);
@@ -95,7 +98,7 @@ public class SIf<T> extends Function<T> {
         propagate(m);
     }
 
-    private boolean hdlIncomingParams(Message m, StateSIf state) {
+    private boolean hdlIncomingParams(Message m, StateIff state) {
         // onTrue/onFalse values may be set not only by the execution of a branch but also directly as parameters for if
         // propagated by an enclosing function.
         // so although propagation and execution of the proper branch only happens once the condition has bee calculated,
@@ -108,7 +111,7 @@ public class SIf<T> extends Function<T> {
         }
         if (m.hasKey(Name.condition)) {
             state.decision = (Boolean) m.value;
-            initializeBranch(state);
+            kickOffBranch(state);
         }
         if (isTrue(state.decision) && computed(state.onTrue)) {
             returnResult((T) state.onTrue, m.source.withHost(this));
@@ -122,17 +125,17 @@ public class SIf<T> extends Function<T> {
         return params.contains(m.key);
     }
 
-    private void initializeBranch(StateSIf state) {
-        Message initialize = new Message(Name.initializeComputation, null, state.source.withHost(this));
-        getBranchInitsAndFinalizations(state.decision).forEach(d -> d.recieve(initialize));
+    private void kickOffBranch(StateIff state) {
+        Message kickOff = message(Name.kickOff, null, state.source.withHost(this));
+        getBranchKickOffs(state.decision).forEach(d -> d.recieve(kickOff));
 
         state.pendingForBranchPropagation.forEach(p -> propagate(p, getBranchPropagations(state.decision)));
         state.pendingForBranchPropagation.clear();
     }
 
-    private void finalizeBranch(StateSIf state) {
-        Message finalize = new Message(Name.finalizeComputation, null, state.source.withHost(this));
-        getBranchInitsAndFinalizations(state.decision)
+    private void finalizeBranch(StateIff state) {
+        Message finalize = message(Name.finalizeComputation, null, state.source.withHost(this));
+        getBranchKickOffs(state.decision)
                 .forEach(d -> d.recieve(finalize));
     }
 

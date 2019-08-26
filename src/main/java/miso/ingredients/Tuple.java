@@ -3,8 +3,8 @@ package miso.ingredients;
 import java.util.Objects;
 
 public class Tuple<U,V> {
-    public final U left;
-    public final V right;
+    public  U left;
+    public  V right;
 
     public Tuple(U left, V right) {
         this.left = left;

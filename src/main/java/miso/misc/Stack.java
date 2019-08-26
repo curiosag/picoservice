@@ -1,4 +1,4 @@
-package miso.message;
+package miso.misc;
 
 import miso.ingredients.Address;
 

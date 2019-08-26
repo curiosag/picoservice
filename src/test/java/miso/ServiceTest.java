@@ -1,26 +1,27 @@
 package miso;
 
 import miso.ingredients.*;
-import miso.message.Message;
-import miso.message.Name;
+import miso.misc.Name;
 import org.junit.Test;
-import org.junit.rules.Stopwatch;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 import static miso.ingredients.Action.action;
-import static miso.ingredients.Add.add;
-import static miso.ingredients.CallSync.callSync;
-import static miso.ingredients.Const.constVal;
-import static miso.ingredients.Eq.eq;
-import static miso.ingredients.Gt.gt;
-import static miso.ingredients.Mul.mul;
-import static miso.ingredients.Sub.sub;
+import static miso.ingredients.BinOp.add;
+import static miso.ingredients.BinOp.sub;
+import static miso.ingredients.Call.call;
+import static miso.ingredients.CallSync.sync;
+import static miso.ingredients.CallTarget.callTarget;
+import static miso.ingredients.Const.constant;
+import static miso.ingredients.BinOp.eq;
+import static miso.ingredients.BinOp.gt;
+import static miso.ingredients.BinOp.mul;
+import static miso.ingredients.Iff.iff;
+import static miso.ingredients.Message.message;
+import static miso.ingredients.Source.source;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -31,8 +32,6 @@ public class ServiceTest {
     private static final Integer _2 = 2;
     private static final Integer _1 = 1;
     private static final Integer _0 = 0;
-
-    private static Action printMsg = action(i -> System.out.println(i.toString()));
 
     private class Int {
         public Integer value;
@@ -50,7 +49,7 @@ public class ServiceTest {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Int anInt = (Int) o;
-            return value == anInt.value;
+            return value.equals(anInt.value);
         }
 
         @Override
@@ -61,14 +60,6 @@ public class ServiceTest {
 
     Int Int(int i) {
         return new Int(i);
-    }
-
-    static {
-        new Thread(printMsg).start();
-    }
-
-    private Message message(String key, Object value) {
-        return Message.of(key, value, createSource(printMsg));
     }
 
     /*
@@ -87,19 +78,19 @@ public class ServiceTest {
 
          */
 
-        Function<Integer> add = start(add());
+        Function<Integer> add = add();
 
-        assertEquals(_1, callSync(add)
+        assertEquals(_1, sync(add)
                 .param(Name.leftArg, 0)
                 .param(Name.rightArg, 1)
                 .call());
 
-        add.addConst(Name.rightArg, 3);
-        assertEquals(_5, callSync(add)
+        add.constant(Name.rightArg, 3);
+        assertEquals(_5, sync(add)
                 .param(Name.leftArg, 2)
                 .call());
 
-        add.terminate();
+        Actress.shutdown();
     }
 
 
@@ -114,7 +105,7 @@ public class ServiceTest {
 
          */
 
-        assertEquals(_1, callSync(constVal(1)).call());
+        assertEquals(_1, sync(constant(1)).call());
     }
 
     @Test
@@ -125,38 +116,34 @@ public class ServiceTest {
          */
 
         Int result = Int(0);
+        Action resultListener = action(i -> result.setValue((Integer) i.value));
 
-        Action resultListener = startAction(action(i -> result.setValue((Integer) i.value)));
-        resultListener.expectParam(Name.result);
+        resultListener.param(Name.result);
         Function<Integer> add = add()
-                .returnTo(Name.result, resultListener)
-                .addConst(Name.leftArg, 1)
-                .addConst(Name.rightArg, 2);
-        start(add);
+                .returnTo(resultListener, Name.result)
+                .constant(Name.leftArg, 1)
+                .constant(Name.rightArg, 2);
 
-
-        resultListener.addInitAndFinalize(add);
-
-        assertTrue(resultListener.states.isEmpty());
-        assertTrue(add.states.isEmpty());
+        resultListener.kickOff(add);
+        assertTrue(resultListener.executionStates.isEmpty());
+        assertTrue(add.executionStates.isEmpty());
 
         Source source = createSource(resultListener);
-        resultListener.recieve(new Message(Name.initializeComputation, null, source));
+        resultListener.recieve(message(Name.kickOff, null, source));
 
-        await(() -> add.states.size() > 0);
-        assertEquals(1, resultListener.states.size());
-        assertEquals(1, add.states.size());
+        await(() -> add.executionStates.size() > 0);
+        assertEquals(1, resultListener.executionStates.size());
+        assertEquals(1, add.executionStates.size());
 
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
-        resultListener.recieve(new Message(Name.finalizeComputation, null, source));
-        await(() -> add.states.size() < 1);
+        resultListener.recieve(message(Name.finalizeComputation, null, source));
+        await(() -> add.executionStates.size() < 1);
 
-        assertEquals(0, resultListener.states.size());
-        assertEquals(0, add.states.size());
+        assertEquals(0, resultListener.executionStates.size());
+        assertEquals(0, add.executionStates.size());
 
-        resultListener.terminate();
-        add.terminate();
+        Actress.shutdown();
     }
 
     @Test
@@ -176,35 +163,37 @@ public class ServiceTest {
 
         */
         Int result = Int(0);
-        Action resultListener = startAction(action(i -> result.setValue((Integer) i.value)));
+        Action resultListener = action(i -> result.setValue((Integer) i.value));
 
-        Function<Integer> mul = start(mul());  // mul's return key and dependency are handled in FunctionCallTarget constructor
-        Function<Integer> functionCallTarget = start(new FunctionCallTarget<>(mul));
+        Function<Integer> mul = mul();  // mul's return key and dependency are handled in CallTarget constructor
+        Function<Integer> functionCallTarget = callTarget(mul);
 
-        Function<Integer> constOne = new Const(_1).returnTo(Name.a, functionCallTarget);
+        Function<Integer> constOne = new Const(_1).returnTo(functionCallTarget, Name.a);
 
-        Function<Integer> add = start(add())
-                .returnTo(Name.b, functionCallTarget)
-                .addConst(Name.rightArg, _2);
+        Function<Integer> add = add()
+                .returnTo(functionCallTarget, Name.b)
+                .constant(Name.rightArg, _2);
 
 
         functionCallTarget
-                .addInitAndFinalize(constOne) // const must be dependent too but needs no propagations
-                .addInitAndFinalize(add)
-                .addInitAndFinalize(mul)
-                .addPropagation(Name.a, Name.leftArg, add)
-                .addPropagation(Name.b, Name.leftArg, mul)
-                .addPropagation(Name.b, Name.rightArg, mul);
+                .kickOff(constOne) // const must be dependent too but needs no propagations
+                .kickOff(add)
+                .kickOff(mul)
+                .propagate(Name.a, Name.leftArg, add)
+                .propagate(Name.b, Name.leftArg, mul)
+                .propagate(Name.b, Name.rightArg, mul);
 
-        Function<Integer> functionCall = start(new FunctionCall<>(functionCallTarget))
-                .returnTo(Name.result, resultListener);
-        resultListener.addInitAndFinalize(functionCall);
-        resultListener.expectParam(Name.result);
+        Function<Integer> functionCall = call(functionCallTarget)
+                .returnTo(resultListener, Name.result);
+        resultListener.kickOff(functionCall);
+        resultListener.param(Name.result);
 
-        resultListener.recieve(new Message(Name.initializeComputation, null, createSource(resultListener)));
+        resultListener.recieve(message(Name.kickOff, null, createSource(resultListener)));
 
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(9), result.value);
+
+        Actress.shutdown();
     }
 
     @Test
@@ -218,31 +207,30 @@ public class ServiceTest {
 
          */
         Int result = Int(0);
-        Action resultReceiver = startAction(action(i -> result.setValue((int) i.value)));
-        Const constOne = constVal(1);
-        Function<Integer> callee = start(new FunctionCallTarget<>(constOne));
-        Function<Integer> caller = start(new FunctionCall<>(callee));
-        caller.returnTo(Name.result, resultReceiver);
-        resultReceiver.addInitAndFinalize(caller);
+        Action resultReceiver = action(i -> result.setValue((int) i.value));
 
-        caller.addInitAndFinalize(callee);
-        callee.addInitAndFinalize(constOne);
+        Const constOne = constant(1);
+        Function<Integer> callee = callTarget(constOne);
+        Function<Integer> caller = call(callee);
+        caller.returnTo(resultReceiver, Name.result);
+        resultReceiver.kickOff(caller);
 
-        resultReceiver.expectParam(Name.result);
+        caller.kickOff(callee);
+        callee.kickOff(constOne);
 
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, createSource(resultReceiver)));
+        resultReceiver.param(Name.result);
+
+        resultReceiver.recieve(message(Name.kickOff, null, createSource(resultReceiver)));
         await(() -> result.value != 0);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, createSource(resultReceiver)));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, createSource(resultReceiver)));
 
         assertEquals(_1, result.value);
 
-        callee.terminate();
-        caller.terminate();
-        resultReceiver.terminate();
+        Actress.shutdown();
     }
 
     private Source createSource(Action printMsg) {
-        return new Source(printMsg, 0L, 0);
+        return source(printMsg, 0L, 0);
     }
 
     @Test
@@ -258,46 +246,40 @@ public class ServiceTest {
          */
         Map<String, Integer> results = new HashMap<>();
 
-        Function<Integer> add = start(add());
-        Function<Integer> callTarget = start(new FunctionCallTarget<>(add));
-        callTarget.addPropagation(Name.a, Name.leftArg, add);
-        callTarget.addPropagation(Name.b, Name.rightArg, add);
+        Function<Integer> add = add();
+        Function<Integer> callee = callTarget(add);
+        callee.propagate(Name.a, Name.leftArg, add);
+        callee.propagate(Name.b, Name.rightArg, add);
 
 
-        Function<Integer> callAddA = start(new FunctionCall<>(callTarget));
-        Function<Integer> callAddB = start(new FunctionCall<>(callTarget));
+        Function<Integer> callerA = call(callee);
+        Function<Integer> callerB = call(callee);
 
         String resultCallA = "resultCallA";
         String resultCallB = "resultCallB";
 
-        Action resultReceiver = startAction(action(i -> results.put(i.key, (int) i.value)));
+        Action resultReceiver = action(i -> results.put(i.key, (int) i.value));
 
-        callAddA.returnTo(resultCallA, resultReceiver);
-        callAddB.returnTo(resultCallB, resultReceiver);
+        callerA.returnTo(resultReceiver, resultCallA);
+        callerB.returnTo(resultReceiver, resultCallB);
 
-        resultReceiver.expectParam(resultCallA);
-        resultReceiver.expectParam(resultCallB);
+        resultReceiver.param(resultCallA);
+        resultReceiver.param(resultCallB);
 
-        Source sourceA = new Source(resultReceiver, 0L, 0);
-        callAddA.recieve(new Message(Name.a, 1, sourceA));
-        callAddA.recieve(new Message(Name.b, 2, sourceA));
+        Source sourceA = source(resultReceiver, 0L, 0);
+        callerA.recieve(message(Name.a, 1, sourceA));
+        callerA.recieve(message(Name.b, 2, sourceA));
 
-        Source sourceB = new Source(resultReceiver, 1L, 0);
-        callAddB.recieve(new Message(Name.a, 3, sourceB));
-        callAddB.recieve(new Message(Name.b, 4, sourceB));
+        Source sourceB = source(resultReceiver, 1L, 0);
+        callerB.recieve(message(Name.a, 3, sourceB));
+        callerB.recieve(message(Name.b, 4, sourceB));
 
 
         await(() -> results.size() == 2);
-
         assertEquals(results.get(resultCallA), _3);
         assertEquals(results.get(resultCallB), Integer.valueOf(7));
 
-        add.terminate();
-        resultReceiver.terminate();
-        callTarget.terminate();
-        callAddA.terminate();
-        callAddB.terminate();
-
+        Actress.shutdown();
     }
 
 
@@ -315,66 +297,58 @@ public class ServiceTest {
          *             b - a
          */
 
-        Function<Integer> _if = start(If.condInt());
+        Function<Integer> _if = If.createIf();
 
         Int result = Int(0);
-        Action resultReceiver = startAction(action(i -> result.setValue((int) i.value)));
-        resultReceiver.expectParam(Name.result);
+        Action resultReceiver = action(i -> result.setValue((int) i.value));
+        resultReceiver.param(Name.result);
 
-        Function<Boolean> gt = start(gt())
-                .returnTo(Name.condition, _if);
-        Function subT = start(sub())
-                .returnTo(Name.onTrue, _if);
-        Function subF = start(sub())
-                .returnTo(Name.onFalse, _if);
+        Function<Boolean> gt = gt().returnTo(_if, Name.condition);
+        Function subT = sub().returnTo(_if, Name.onTrue);
+        Function subF = sub().returnTo(_if, Name.onFalse);
 
-        _if.returnTo(Name.result, resultReceiver);
+        _if.returnTo(resultReceiver, Name.result);
 
-        _if.addPropagation(Name.a, Name.leftArg, gt);
-        _if.addPropagation(Name.b, Name.rightArg, gt);
-        _if.addPropagation(Name.a, Name.leftArg, subT);
+        _if.propagate(Name.a, Name.leftArg, gt);
+        _if.propagate(Name.b, Name.rightArg, gt);
+        _if.propagate(Name.a, Name.leftArg, subT);
         // propagation in this case can, but must not go through if
-        resultReceiver.addPropagation(Name.b, Name.rightArg, subT);
-        resultReceiver.addPropagation(Name.b, Name.leftArg, subF);
-        resultReceiver.addPropagation(Name.a, Name.rightArg, subF);
+        resultReceiver.propagate(Name.b, Name.rightArg, subT);
+        resultReceiver.propagate(Name.b, Name.leftArg, subF);
+        resultReceiver.propagate(Name.a, Name.rightArg, subF);
 
-        resultReceiver.addPropagation(Name.a, Name.a, _if);
-        resultReceiver.addPropagation(Name.b, Name.b, _if);
+        resultReceiver.propagate(Name.a, Name.a, _if);
+        resultReceiver.propagate(Name.b, Name.b, _if);
 
-        // InitAndFinalize not explicitly needed here, since if, gt, subT and subF get messages anyway to get them going
-        resultReceiver.addInitAndFinalize(_if);
-        _if.addInitAndFinalize(gt);
-        _if.addInitAndFinalize(subT);
-        _if.addInitAndFinalize(subF);
+        resultReceiver.kickOff(_if);
+        _if.kickOff(gt);
+        _if.kickOff(subT);
+        _if.kickOff(subF);
 
         // True-path
-        Source sourceA = new Source(resultReceiver, 0L, 0);
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, sourceA));
-        resultReceiver.recieve(new Message(Name.a, _4, sourceA));
-        resultReceiver.recieve(new Message(Name.b, _1, sourceA));
+        Source sourceA = source(resultReceiver, 0L, 0);
+        resultReceiver.recieve(message(Name.kickOff, null, sourceA));
+        resultReceiver.recieve(message(Name.a, _4, sourceA));
+        resultReceiver.recieve(message(Name.b, _1, sourceA));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, sourceA));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceA));
 
         // False-path
         result.setValue(0);
-        Source sourceB = new Source(resultReceiver, 1L, 0);
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, sourceB));
-        resultReceiver.recieve(new Message(Name.a, _1, sourceB));
-        resultReceiver.recieve(new Message(Name.b, _4, sourceB));
+        Source sourceB = source(resultReceiver, 1L, 0);
+        resultReceiver.recieve(message(Name.kickOff, null, sourceB));
+        resultReceiver.recieve(message(Name.a, _1, sourceB));
+        resultReceiver.recieve(message(Name.b, _4, sourceB));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, sourceB));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceB));
 
 
-        _if.terminate();
-        gt.terminate();
-        subF.terminate();
-        subT.terminate();
-        resultReceiver.terminate();
-
+        Actress.shutdown();
     }
+
 
     @Test
     public void testSequentialIf() {
@@ -392,63 +366,58 @@ public class ServiceTest {
          *             b - a
          */
 
-        SIf<Integer> _if = start(SIf.condInt());
+        Iff<Integer> iff = iff();
 
         Int result = Int(0);
-        Action resultReceiver = startAction(action(i -> result.setValue((int) i.value)));
-        resultReceiver.expectParam(Name.result);
+        Action resultReceiver = action(i -> result.setValue((int) i.value));
+        resultReceiver.param(Name.result);
 
-        Function<Boolean> gt = start(gt())
-                .returnTo(Name.condition, _if);
-        Function subT = start(sub())
-                .returnTo(Name.onTrue, _if);
-        Function subF = start(sub())
-                .returnTo(Name.onFalse, _if);
+        Function<Boolean> gt = gt()
+                .returnTo(iff, Name.condition);
+        Function subT = sub()
+                .returnTo(iff, Name.onTrue);
+        Function subF = sub()
+                .returnTo(iff, Name.onFalse);
 
-        _if.returnTo(Name.result, resultReceiver);
+        iff.returnTo(resultReceiver, Name.result);
         // condition may propagate, init and finalize as usual
-        _if.addPropagation(Name.a, Name.leftArg, gt);
-        _if.addPropagation(Name.b, Name.rightArg, gt);
-        _if.addInitAndFinalize(gt);
+        iff.propagate(Name.a, Name.leftArg, gt);
+        iff.propagate(Name.b, Name.rightArg, gt);
+        iff.kickOff(gt);
         // true and false branches must propagate, init and finalize differently, and also separately from the condition
-        _if.addPropagationOnTrue(Name.a, Name.leftArg, subT);
-        _if.addPropagationOnTrue(Name.b, Name.rightArg, subT);
-        _if.addInitAndFinalizeOnTrue(subT);
+        iff.propagateOnTrue(Name.a, Name.leftArg, subT);
+        iff.propagateOnTrue(Name.b, Name.rightArg, subT);
+        iff.kickOffOnTrue(subT);
 
-        _if.addPropagationOnFalse(Name.b, Name.leftArg, subF);
-        _if.addPropagationOnFalse(Name.a, Name.rightArg, subF);
-        _if.addInitAndFinalizeOnFalse(subF);
+        iff.propagateOnFalse(Name.b, Name.leftArg, subF);
+        iff.propagateOnFalse(Name.a, Name.rightArg, subF);
+        iff.kickOffOnFalse(subF);
 
-        resultReceiver.addInitAndFinalize(_if);
-        resultReceiver.addPropagation(Name.a, Name.a, _if);
-        resultReceiver.addPropagation(Name.b, Name.b, _if);
+        resultReceiver.kickOff(iff);
+        resultReceiver.propagate(Name.a, Name.a, iff);
+        resultReceiver.propagate(Name.b, Name.b, iff);
 
         // True-path
-        Source computationA = new Source(resultReceiver, 0L, 0);
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, computationA));
-        resultReceiver.recieve(new Message(Name.a, _4, computationA));
-        resultReceiver.recieve(new Message(Name.b, _1, computationA));
+        Source computationA = source(resultReceiver, 0L, 0);
+        resultReceiver.recieve(message(Name.kickOff, null, computationA));
+        resultReceiver.recieve(message(Name.a, _4, computationA));
+        resultReceiver.recieve(message(Name.b, _1, computationA));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, computationA));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, computationA));
 
         // False-path
         result.setValue(0);
-        Source computationB = new Source(resultReceiver, 1L, 0);
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, computationB));
-        resultReceiver.recieve(new Message(Name.a, _1, computationB));
-        resultReceiver.recieve(new Message(Name.b, _4, computationB));
+        Source computationB = source(resultReceiver, 1L, 0);
+        resultReceiver.recieve(message(Name.kickOff, null, computationB));
+        resultReceiver.recieve(message(Name.a, _1, computationB));
+        resultReceiver.recieve(message(Name.b, _4, computationB));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, computationB));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, computationB));
 
-        _if.terminate();
-        gt.terminate();
-        subF.terminate();
-        subT.terminate();
-        resultReceiver.terminate();
-
+        Actress.shutdown();
     }
 
     @Test
@@ -462,53 +431,49 @@ public class ServiceTest {
          *              b
          */
 
-        Function<Integer> _if = SIf.condInt();
-        start(_if);
+        Function<Integer> _if = iff();
 
         Int result = Int(0);
-        Action resultReceiver = startAction(action(i -> result.setValue((int) i.value)));
-        resultReceiver.expectParam(Name.result);
+        Action resultReceiver = action(i -> result.setValue((int) i.value));
+        resultReceiver.param(Name.result);
 
-        Function<Boolean> gt = start(gt());
+        Function<Boolean> gt = gt();
 
-        gt.returnTo(Name.condition, _if);
+        gt.returnTo(_if, Name.condition);
 
-        _if.returnTo(Name.result, resultReceiver);
-        _if.addInitAndFinalize(gt);
+        _if.returnTo(resultReceiver, Name.result);
+        _if.kickOff(gt);
 
         // an example how init/finalize could deviate from propagations, which reduces communication,
         // but may be confusing
 
-        resultReceiver.addPropagation(Name.a, Name.leftArg, gt);
-        resultReceiver.addPropagation(Name.b, Name.rightArg, gt);
-        resultReceiver.addPropagation(Name.a, Name.onTrue, _if);
-        resultReceiver.addPropagation(Name.b, Name.onFalse, _if);
-        resultReceiver.addInitAndFinalize(_if);
+        resultReceiver.propagate(Name.a, Name.leftArg, gt);
+        resultReceiver.propagate(Name.b, Name.rightArg, gt);
+        resultReceiver.propagate(Name.a, Name.onTrue, _if);
+        resultReceiver.propagate(Name.b, Name.onFalse, _if);
+        resultReceiver.kickOff(_if);
 
         // True-path
-        Source sourceA = new Source(resultReceiver, 0L, 0);
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, sourceA));
-        resultReceiver.recieve(new Message(Name.a, _4, sourceA));
-        resultReceiver.recieve(new Message(Name.b, _1, sourceA));
+        Source sourceA = source(resultReceiver, 0L, 0);
+        resultReceiver.recieve(message(Name.kickOff, null, sourceA));
+        resultReceiver.recieve(message(Name.a, _4, sourceA));
+        resultReceiver.recieve(message(Name.b, _1, sourceA));
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, sourceA));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceA));
 
         // False-path
         result.setValue(0);
-        Source sourceB = new Source(resultReceiver, 1L, 0);
-        resultReceiver.recieve(new Message(Name.initializeComputation, null, sourceB));
-        resultReceiver.recieve(new Message(Name.a, _1, sourceB));
-        resultReceiver.recieve(new Message(Name.b, _4, sourceB));
+        Source sourceB = source(resultReceiver, 1L, 0);
+        resultReceiver.recieve(message(Name.kickOff, null, sourceB));
+        resultReceiver.recieve(message(Name.a, _1, sourceB));
+        resultReceiver.recieve(message(Name.b, _4, sourceB));
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
         result.setValue(0);
-        resultReceiver.recieve(new Message(Name.finalizeComputation, null, sourceB));
+        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceB));
 
-        _if.terminate();
-        gt.terminate();
-        resultReceiver.terminate();
-
+        Actress.shutdown();
     }
 
     @Test
@@ -522,121 +487,102 @@ public class ServiceTest {
          */
 
         Int result = Int(0);
-        Action resultMonitor = startAction(action(i -> result.setValue((int) i.value)));
-        resultMonitor.expectParam(Name.result);
+        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        resultMonitor.param(Name.result);
 
-        SIf<Integer> _if = start(SIf.condInt());
-        _if.addConst(Name.onTrue, _1);
+        Iff<Integer> _if = iff();
+        _if.constant(Name.onTrue, _1);
 
-        Function<Boolean> eq = start(eq()).addConst(Name.rightArg, _1);
-        Function<Integer> sub = start(sub()).addConst(Name.rightArg, _1);
-        Function<Integer> add = start(add());
-        Function<Integer> sumCallTarget = start(new FunctionCallTarget<>(_if));
-        Function<Integer> sumCallRec = start(new FunctionCall<>(sumCallTarget));
-        Function<Integer> sumCall = start(new FunctionCall<>(sumCallTarget));
+        Function<Boolean> eq = eq().constant(Name.rightArg, _1);
+        Function<Integer> sub = sub().constant(Name.rightArg, _1);
+        Function<Integer> add = add();
+        Function<Integer> sumCallTarget = callTarget(_if);
+        Function<Integer> sumCallRec = call(sumCallTarget);
+        Function<Integer> sumCall = call(sumCallTarget);
 
-        resultMonitor.addPropagation(Name.a, Name.a, sumCall);
+        resultMonitor.propagate(Name.a, Name.a, sumCall);
 
-        sumCallTarget.addPropagation(Name.a, Name.a, _if);
-        _if.addPropagation(Name.a, Name.leftArg, eq);
-        _if.addPropagationOnFalse(Name.a, Name.leftArg, add);
-        _if.addPropagationOnFalse(Name.a, Name.a, add);
+        sumCallTarget.propagate(Name.a, Name.a, _if);
+        _if.propagate(Name.a, Name.leftArg, eq);
+        _if.propagateOnFalse(Name.a, Name.leftArg, add);
+        _if.propagateOnFalse(Name.a, Name.a, add);
         // can't propagate "a" to sumCallRec directly, so that it passes "a" on to sub ("a - 1") alone. it doesen't.
         // instead it causes another recursion with "a" alone rather than "a - 1" from sub (and maybe more mess, because
         // sum(a) will also receive a second "a" from the "a - 1", but that doesen't matter any more then)
         // one would have to distinguish somehow by key the "a" as the parameter in sum(a) from the a in "a - 1"
         // -> so this doesen't work:
-        // mul.addPropagation(Name.a, Name.a, sumCallRec);
-        add.addPropagation(Name.a, Name.leftArg, sub);
+        // mul.propagate(Name.a, Name.a, sumCallRec);
+        add.propagate(Name.a, Name.leftArg, sub);
 
         //TODO: the returning structure is symmetrical to the dependency structure, maybe setting up both can be unified
-        eq.returnTo(Name.condition, _if);
-        sub.returnTo(Name.a, sumCallRec);
-        sumCallRec.returnTo(Name.rightArg, add);
-        add.returnTo(Name.onFalse, _if);
-        sumCall.returnTo(Name.result, resultMonitor);
+        eq.returnTo(_if, Name.condition);
+        sub.returnTo(sumCallRec, Name.a);
+        sumCallRec.returnTo(add, Name.rightArg);
+        add.returnTo(_if, Name.onFalse);
+        sumCall.returnTo(resultMonitor, Name.result);
 
-        resultMonitor.addInitAndFinalize(sumCall);
-        sumCallTarget.addInitAndFinalize(_if);
-        _if.addInitAndFinalize(eq);
-        _if.addInitAndFinalizeOnFalse(add);
-        add.addInitAndFinalize(sumCallRec);
-        sumCallRec.addInitAndFinalize(sub);
+        resultMonitor.kickOff(sumCall);
+        sumCallTarget.kickOff(_if);
+        _if.kickOff(eq);
+        _if.kickOffOnFalse(add);
+        add.kickOff(sumCallRec);
+        sumCallRec.kickOff(sub);
 
         int runId = 0;
         checksum(result, resultMonitor, runId++, 1, 1);
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
-        checksum(result, resultMonitor, runId++, 10000, 10001 * 5000);
+        checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
         checksum(result, resultMonitor, runId, 40000, 40001 * 20000);
 
-        resultMonitor.terminate();
-        _if.terminate();
-        eq.terminate();
-        sub.terminate();
-        add.terminate();
-        sumCallTarget.terminate();
-        sumCallRec.terminate();
-        sumCall.terminate();
+        Actress.shutdown();
     }
 
     private void checksum(Int result, Action resultMonitor, int runId, int facOf, Integer expected) {
-        Instant start = Instant.now();
+        Long start = System.nanoTime();
 
         result.value = 0;
 
-        Source run = new Source(resultMonitor, (long) runId, 0);
-        resultMonitor.recieve(new Message(Name.a, facOf, run));
+        Source run = source(resultMonitor, (long) runId, 0);
+        resultMonitor.recieve(message(Name.a, facOf, run));
 
         await(() -> result.value != 0);
         assertEquals(expected, result.value);
-        resultMonitor.recieve(new Message(Name.finalizeComputation, null, run));
-        System.out.println(String.format("sum for %d took %d seconds", facOf, Duration.between(start, Instant.now()).getSeconds()));
+        resultMonitor.recieve(message(Name.finalizeComputation, null, run));
 
+        Long stop = System.nanoTime();
+        long elapsed = (stop - start) / 1000000;
+
+        System.out.println(String.format("sum for %d took %d millis", facOf, elapsed));
+
+    }
+
+    private Integer sum(Integer i) {
+        if (i == 1) {
+            return 1;
+        }
+        return i + sum(i - 1);
+    }
+
+    @Test
+    public void recursiveSumInJava() {
+        Long start = System.nanoTime();
+        Integer max = 7000;
+        Integer sum = sum(max);
+        Long stop = System.nanoTime();
+        long elapsed = (stop - start) / 1000000;
+
+        System.out.println(String.format("java function: sum of %d (%d) in %d millis", max, sum, elapsed));
     }
 
     private void await(Supplier<Boolean> condition) {
         while (!condition.get()) {
             try {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
                 //
             }
         }
     }
 
-    private Eq start(Eq f) {
-        new Thread(f).start();
-        return f;
-    }
-
-    private Function<Boolean> start(Gt f) {
-        new Thread(f).start();
-        return f;
-    }
-
-    private Function<Integer> start(Function<Integer> f) {
-        new Thread(f).start();
-        return f;
-    }
-
-    private Action startAction(Action f) {
-        new Thread(f).start();
-        return f;
-    }
-
-    private FunctionCallTarget<Integer> start(FunctionCallTarget<Integer> f) {
-        new Thread(f).start();
-        return f;
-    }
-
-    private If<Integer> start(If<Integer> f) {
-        new Thread(f).start();
-        return f;
-    }
-
-    private SIf<Integer> start(SIf<Integer> f) {
-        new Thread(f).start();
-        return f;
-    }
 }

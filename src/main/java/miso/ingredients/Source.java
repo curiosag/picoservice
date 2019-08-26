@@ -7,13 +7,13 @@ public class Source {
     public final Long executionId;
     public final Integer callLevel;
 
-    public Source(Function<?> host, Long executionId, Integer callLevel) {
+    private Source(Function<?> host, Long executionId, Integer callLevel) {
         this.host = host;
         this.executionId = executionId;
         this.callLevel = callLevel;
     }
 
-    static Source opId(Function<?> host, Long executionId, Integer callLevel) {
+    public static Source source(Function<?> host, Long executionId, Integer callLevel) {
         return new Source(host, executionId, callLevel);
     }
 
@@ -38,6 +38,6 @@ public class Source {
     }
 
     Source withHost(Function<?> host) {
-        return new Source(host, executionId, callLevel);
+        return source(host, executionId, callLevel);
     }
 }

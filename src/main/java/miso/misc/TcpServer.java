@@ -1,4 +1,4 @@
-package miso;
+package miso.misc;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -22,9 +22,9 @@ public class TcpServer implements Runnable {
     }
 
 /*iCg*U#5L6F%XycLH0$wTQ8t5$A8FX22OHzBAr@Xe
-miso.Service FOO:fth
-* FOO_SERVICE_HOST=<the host the miso.Service is running on>
-  FOO_SERVICE_PORT=<the port the miso.Service is running on>
+miso.misc.Service FOO:fth
+* FOO_SERVICE_HOST=<the host the miso.misc.Service is running on>
+  FOO_SERVICE_PORT=<the port the miso.misc.Service is running on>
 * */
 
     private void talk(String value){

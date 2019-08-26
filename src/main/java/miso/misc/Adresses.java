@@ -1,4 +1,4 @@
-package miso.message;
+package miso.misc;
 
 public interface Adresses {
     String DNS = "dns";

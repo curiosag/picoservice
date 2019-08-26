@@ -1,7 +1,5 @@
 package miso.ingredients;
 
-import miso.Actress;
-
 import java.util.HashMap;
 import java.util.Map;
 

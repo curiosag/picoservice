@@ -1,10 +1,12 @@
 package miso.ingredients;
 
-import miso.message.Message;
-import miso.message.Name;
+import miso.misc.Name;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static miso.ingredients.Message.message;
+import static miso.ingredients.Source.source;
 
 public class CallSync extends Function<Integer> {
 
@@ -15,11 +17,11 @@ public class CallSync extends Function<Integer> {
     private Map<String, Integer> params = new HashMap<>();
 
     private CallSync(Function<Integer> f) {
-        f.returnTo(Name.result, this);
+        f.returnTo(this, Name.result);
         this.f = f;
     }
 
-    public static CallSync callSync(Function<Integer> f) {
+    public static CallSync sync(Function<Integer> f) {
         return new CallSync(f);
     }
 
@@ -29,16 +31,16 @@ public class CallSync extends Function<Integer> {
     }
 
     public Integer call() {
-        Source source = new Source(f, executions++, 0);
+        Source source = source(f, executions++, 0);
         if (params.size() == 0) {
-            f.recieve(new Message(Name.initializeComputation, null, source));
+            f.recieve(message(Name.kickOff, null, source));
         } else {
-            params.forEach((k, v) -> f.recieve(new Message(k, v, source)));
+            params.forEach((k, v) -> f.recieve(message(k, v, source)));
         }
 
         while (true) {
             if (result != null) {
-                f.recieve(new Message(Name.finalizeComputation, null, source));
+                f.recieve(message(Name.finalizeComputation, null, source));
                 return result;
             }
             waitSome(100L);

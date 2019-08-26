@@ -1,0 +1,22 @@
+SIf **  a:0 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1
+Eq **  leftArg:0 Source: SIf (SIf-2) 0/1        von sif
+Eq <- Eq  rightArg:0 Source: Eq (Eq-3) 0/1      init state und const
+SIf <- Eq  condition:true Source: Eq (Eq-3) 0/1 ???
+Eq **  rightArg:0 Source: Eq (Eq-3) 0/1 
+SIf <- Eq  condition:true Source: Eq (Eq-3) 0/1 
+SIf **  condition:true Source: Eq (Eq-3) 0/1 
+FunctionCallTarget <- SIf  functionResult:1 Source: SIf (SIf-2) 0/1 
+SIf **  condition:true Source: Eq (Eq-3) 0/1 
+FunctionCallTarget <- SIf  functionResult:1 Source: SIf (SIf-2) 0/1 
+FunctionCallTarget **  functionResult:1 Source: SIf (SIf-2) 0/1 
+FunctionCall <- FunctionCallTarget  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
+FunctionCallTarget **  functionResult:1 Source: SIf (SIf-2) 0/1 
+FunctionCall <- FunctionCallTarget  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
+FunctionCall **  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
+Action <- FunctionCall  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
+FunctionCall **  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
+Action <- FunctionCall  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
+Action **  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
+Action **  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
+Action <- Action  finalizeComputation:NULL Source: Action (Action-1) 0/0 
+faculty of 0 took 64 seconds

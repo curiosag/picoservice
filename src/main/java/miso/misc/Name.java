@@ -1,6 +1,4 @@
-package miso.message;
-
-import java.util.Optional;
+package miso.misc;
 
 public interface Name {
     String leftArg = "leftArg";
@@ -25,7 +23,7 @@ public interface Name {
     String b = "b";
     String zero = "zero";
     String one = "one";
-    String initializeComputation = "initializeComputation";
+    String kickOff = "kickOff";
     String finalizeComputation = "finalizeComputation";
     String c = "c";
     String y = "y";

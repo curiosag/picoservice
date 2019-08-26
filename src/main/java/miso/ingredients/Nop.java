@@ -1,7 +1,5 @@
 package miso.ingredients;
 
-import miso.message.Message;
-
 public class Nop<V> extends Function<V> {
 
     public static Nop nop = new Nop<>();

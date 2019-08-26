@@ -1,7 +1,6 @@
 package miso.ingredients;
 
-import miso.message.Message;
-import miso.message.Name;
+import miso.misc.Name;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,8 +29,10 @@ public class If<T> extends Function<T> {
         return parameters.contains(key);
     }
 
-    public static If<Integer> condInt() {
-        return new If<>();
+    public static If<Integer> createIf() {
+        If<Integer> result = new If<>();
+        start(result);
+        return result;
     }
 
     @Override

@@ -1,4 +1,4 @@
-package miso;
+package miso.misc;
 
 public class Service {
 

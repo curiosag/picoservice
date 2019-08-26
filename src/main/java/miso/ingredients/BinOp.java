@@ -1,7 +1,6 @@
 package miso.ingredients;
 
-import miso.message.Message;
-import miso.message.Name;
+import miso.misc.Name;
 
 import java.util.function.BiFunction;
 
@@ -69,5 +68,59 @@ public class BinOp<T, V> extends Function<V> {
         }
     }
 
+    static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
 
+    public static miso.ingredients.BinOp<Integer, Boolean> eq() {
+        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 == n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Boolean> lt() {
+        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 < n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Boolean> gt() {
+        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 > n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Boolean> lteq() {
+        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 <= n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Boolean> gteq() {
+        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 >= n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Integer> add() {
+        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 + n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Integer> sub() {
+        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 - n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Integer> mul() {
+        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 * n2, intConverter);
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Integer> div() {
+        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 / n2, intConverter);
+        start(result);
+        return result;
+    }
 }

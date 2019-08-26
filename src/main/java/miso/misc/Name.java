@@ -1,6 +1,4 @@
-package miso.message;
-
-import java.util.Optional;
+package miso.misc;
 
 public interface Name {
     String leftArg = "leftArg";

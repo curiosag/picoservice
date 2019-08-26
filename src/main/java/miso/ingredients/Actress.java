@@ -1,17 +1,38 @@
-package miso;
+package miso.ingredients;
 
-import miso.ingredients.Address;
-import miso.message.Message;
-
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import static miso.ingredients.DNS.dns;
 
 public abstract class Actress implements Runnable {
-    private AtomicBoolean terminated = new AtomicBoolean(false);
+
+    private static final List<Actress> actresses = new ArrayList<>();
+
+    public static void start(Actress a) {
+        new Thread(a).start();
+        actresses.add(a);
+    }
+
+    public static void shutdown() {
+        actresses.forEach(Actress::stop);
+        await(() -> actresses.stream().allMatch(a -> a.stopped));
+        actresses.clear();
+    }
+
+    private AtomicBoolean stopping = new AtomicBoolean(false);
+
+    public boolean isStopped() {
+        return stopped;
+    }
+
+    private boolean stopped;
+
     private static int maxAddress = 0;
 
     public final Address address;
@@ -30,13 +51,16 @@ public abstract class Actress implements Runnable {
 
     protected abstract void process(Message message);
 
-    public void terminate() {
-        terminated.compareAndSet(false, true);
+    public void stop() {
+        stopping.compareAndSet(false, true);
     }
 
     @Override
     public void run() {
-        while (!terminated.get())
+        stopped = false;
+        stopping.set(false);
+
+        while (!stopping.get())
             try {
                 Message message = inBox.poll();
                 if (message != null) {
@@ -50,6 +74,7 @@ public abstract class Actress implements Runnable {
                 debug(this.getClass().getSimpleName() + " " + e.toString());
                 return;
             }
+        stopped = true;
     }
 
     @Override
@@ -69,4 +94,13 @@ public abstract class Actress implements Runnable {
         //System.out.println(s);
     }
 
+    private static void await(Supplier<Boolean> condition) {
+        while (!condition.get()) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                //
+            }
+        }
+    }
 }

@@ -1,23 +1,23 @@
 package miso.ingredients;
 
-import miso.Actress;
-import miso.message.Message;
-import miso.message.Name;
+import miso.misc.Name;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Map.Entry;
+
+import static miso.ingredients.Message.message;
 
 public abstract class Function<T> extends Actress {
     Function<?> returnTo;
     String returnKey;
 
     // Tuple<ExecutionId, CallLevel> -> State
-    public final Map<Tuple<Long, Integer>, State> states = new HashMap<>();
+    public final Map<Tuple<Long, Integer>, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
 
     private void removeState(Source source) {
-        states.remove(new Tuple<>(source.executionId, source.callLevel));
+        executionStates.remove(new Tuple<>(source.executionId, source.callLevel));
     }
 
     abstract State newState(Source source);
@@ -36,7 +36,7 @@ public abstract class Function<T> extends Actress {
     private List<Function> dependent = new ArrayList<>();
 
     private State getState(Tuple<Long, Integer> callId) {
-        return states.get(callId);
+        return executionStates.get(callId);
     }
 
     State getState(Source source) {
@@ -44,7 +44,7 @@ public abstract class Function<T> extends Actress {
         State result = getState(OpId);
         if (result == null) {
             result = newState(source);
-            states.put(Tuple.of(source.executionId, source.callLevel), result);
+            executionStates.put(Tuple.of(source.executionId, source.callLevel), result);
             fowardConsts(source, consts);
             initializeDependent(source, dependent);
         }
@@ -53,29 +53,29 @@ public abstract class Function<T> extends Actress {
     }
 
     protected void fowardConsts(Source source, Map<String, Object> consts) {
-        consts.forEach((key, value) -> recieve(new Message(key, value, source.withHost(this))));
+        consts.forEach((key, value) -> recieve(message(key, value, source.withHost(this))));
     }
 
-    public Function<T> addInitAndFinalize(Function target) {
+    public Function<T> initAndFinalize(Function target) {
         dependent.add(target);
         return this;
     }
 
     protected void initializeDependent(Source source, List<Function> dependent) {
-        dependent.forEach(p -> p.recieve(new Message(Name.initializeComputation, null, source)));
+        dependent.forEach(p -> p.recieve(message(Name.initializeComputation, null, source)));
     }
 
     protected void terminateDependent(Source source, List<Function> dependent) {
-        dependent.forEach(p -> p.recieve(new Message(Name.finalizeComputation, null, source)));
+        dependent.forEach(p -> p.recieve(message(Name.finalizeComputation, null, source)));
     }
 
-    public Function<T> returnTo(String returnKey, Function<?> f) {
+    public Function<T> returnTo(Function<?> f, String returnKey) {
         returnTo = f;
         this.returnKey = returnKey;
         return this;
     }
 
-    protected Function<T> addPropagation(String keyReceived, String keyToPropagate, Function target, Map<Function<?>, Map<String, List<String>>> propagations) {
+    protected Function<T> propagate(String keyReceived, String keyToPropagate, Function target, Map<Function<?>, Map<String, List<String>>> propagations) {
         Map<String, List<String>> prop = propagations.get(target);
         if (prop == null) {
             propagations.put(target, new HashMap<>());
@@ -93,8 +93,8 @@ public abstract class Function<T> extends Actress {
         return this;
     }
 
-    public Function<T> addPropagation(String keyReceived, String keyToPropagate, Function target) {
-        addPropagation(keyReceived, keyToPropagate, target, propagations);
+    public Function<T> propagate(String keyReceived, String keyToPropagate, Function target) {
+        propagate(keyReceived, keyToPropagate, target, propagations);
         return this;
     }
 
@@ -106,7 +106,7 @@ public abstract class Function<T> extends Actress {
         for (Entry<Function<?>, Map<String, List<String>>> prop : propagations.entrySet()) {
             for (Entry<String, List<String>> keyMapping : prop.getValue().entrySet()) {
                 if (keyMapping.getKey().equals(m.key)) {
-                    keyMapping.getValue().forEach(targetName -> prop.getKey().recieve(new Message(targetName, m.value, m.source.withHost(this))));
+                    keyMapping.getValue().forEach(targetName -> prop.getKey().recieve(message(targetName, m.value, m.source.withHost(this))));
                 }
             }
         }
@@ -135,7 +135,7 @@ public abstract class Function<T> extends Actress {
 
     protected abstract void processInner(Message m, State state);
 
-    public Function<T> addConst(String key, Object value) {
+    public Function<T> constant(String key, Object value) {
         consts.put(key, value);
         return this;
     }
@@ -152,7 +152,7 @@ public abstract class Function<T> extends Actress {
     }
 
     private Message newMsg(String key, Object value, Source source) {
-        return new Message(key, value, source);
+        return message(key, value, source);
     }
 
     boolean computed(Object value) {

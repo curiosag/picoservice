@@ -37,10 +37,8 @@ public class Call<T> extends Function<T> {
     @Override
     protected void process(Message m) {
         if (m.hasKey(Name.functionResult)) {
-            this.recieve(message(Name.finalizeComputation, null, m.source));
             Message result = message(returnKey, m.value, source(this, m.source.executionId, m.source.callLevel - 1));
             returnTo.recieve(result);
-
         } else {
             Source source = source(this, m.source.executionId, m.source.callLevel + 1);
             Message callParameter = message(m.key, m.value, source);

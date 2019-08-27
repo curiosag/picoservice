@@ -131,14 +131,8 @@ public class ServiceTest {
         Source source = createSource(resultListener);
         resultListener.recieve(message(Name.kickOff, null, source));
 
-        await(() -> add.executionStates.size() > 0);
-        assertEquals(1, resultListener.executionStates.size());
-        assertEquals(1, add.executionStates.size());
-
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
-        resultListener.recieve(message(Name.finalizeComputation, null, source));
-        await(() -> add.executionStates.size() < 1);
 
         assertEquals(0, resultListener.executionStates.size());
         assertEquals(0, add.executionStates.size());
@@ -222,7 +216,6 @@ public class ServiceTest {
 
         resultReceiver.recieve(message(Name.kickOff, null, createSource(resultReceiver)));
         await(() -> result.value != 0);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, createSource(resultReceiver)));
 
         assertEquals(_1, result.value);
 
@@ -279,6 +272,12 @@ public class ServiceTest {
         assertEquals(results.get(resultCallA), _3);
         assertEquals(results.get(resultCallB), Integer.valueOf(7));
 
+        assertEquals(0, add.executionStates.size());
+        assertEquals(0, callee.executionStates.size());
+        assertEquals(0, callerA.executionStates.size());
+        assertEquals(0, callerB.executionStates.size());
+        assertEquals(0, resultReceiver.executionStates.size());
+
         Actress.shutdown();
     }
 
@@ -332,7 +331,6 @@ public class ServiceTest {
         resultReceiver.recieve(message(Name.b, _1, sourceA));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceA));
 
         // False-path
         result.setValue(0);
@@ -343,7 +341,6 @@ public class ServiceTest {
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceB));
 
 
         Actress.shutdown();
@@ -404,7 +401,6 @@ public class ServiceTest {
         resultReceiver.recieve(message(Name.b, _1, computationA));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, computationA));
 
         // False-path
         result.setValue(0);
@@ -415,7 +411,6 @@ public class ServiceTest {
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, computationB));
 
         Actress.shutdown();
     }
@@ -460,7 +455,6 @@ public class ServiceTest {
         resultReceiver.recieve(message(Name.b, _1, sourceA));
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceA));
 
         // False-path
         result.setValue(0);
@@ -471,7 +465,6 @@ public class ServiceTest {
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
         result.setValue(0);
-        resultReceiver.recieve(message(Name.finalizeComputation, null, sourceB));
 
         Actress.shutdown();
     }
@@ -533,7 +526,17 @@ public class ServiceTest {
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
         checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
-        checksum(result, resultMonitor, runId, 40000, 40001 * 20000);
+       // checksum(result, resultMonitor, runId, 40000, 40001 * 20000);
+
+        assertEquals(0, _if.executionStates.size());
+        assertEquals(0, add.executionStates.size());
+        assertEquals(0, sub.executionStates.size());
+        assertEquals(0, eq.executionStates.size());
+        assertEquals(0, sumCallTarget.executionStates.size());
+        assertEquals(0, sumCall.executionStates.size());
+        assertEquals(0, sumCallRec.executionStates.size());
+        assertEquals(0, resultMonitor.executionStates.size());
+
 
         Actress.shutdown();
     }
@@ -548,7 +551,6 @@ public class ServiceTest {
 
         await(() -> result.value != 0);
         assertEquals(expected, result.value);
-        resultMonitor.recieve(message(Name.finalizeComputation, null, run));
 
         Long stop = System.nanoTime();
         long elapsed = (stop - start) / 1000000;

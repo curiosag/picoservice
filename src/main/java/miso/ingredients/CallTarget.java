@@ -29,6 +29,7 @@ public class CallTarget<T> extends Function<T> {
     @Override
     protected void processInner(Message m, State state) {
         if (m.hasKey(Name.functionResult)) {
+            removeState(state.source);
             state.source.host.recieve(message(Name.functionResult, m.value, m.source.withHost(this)));
         }
     }

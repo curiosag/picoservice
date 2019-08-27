@@ -15,8 +15,12 @@ public abstract class Function<T> extends Actress {
     public final Map<Tuple<Long, Integer>, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
 
-    private void removeState(Source source) {
-        executionStates.remove(new Tuple<>(source.executionId, source.callLevel));
+    private final Tuple execution = Tuple.of(0L, 0);
+
+    void removeState(Source source) {
+        execution.left = source.executionId;
+        execution.right = source.callLevel;
+        executionStates.remove(execution);
     }
 
     abstract State newState(Source source);
@@ -38,7 +42,6 @@ public abstract class Function<T> extends Actress {
         return executionStates.get(callId);
     }
 
-    private final Tuple execution = Tuple.of(0L, 0);
 
     State getState(Source source) {
         execution.left = source.executionId;
@@ -48,9 +51,8 @@ public abstract class Function<T> extends Actress {
             result = newState(source);
             executionStates.put(Tuple.of(source.executionId, source.callLevel), result);
             fowardConsts(source, consts);
-            forwardDependent(source, dependent);
+            forwardDependent(source, Name.kickOff, dependent);
         }
-        result.lastRequested = System.nanoTime();
         return result;
     }
 
@@ -63,12 +65,8 @@ public abstract class Function<T> extends Actress {
         return this;
     }
 
-    protected void forwardDependent(Source source, List<Function> dependent) {
-        dependent.forEach(p -> p.recieve(message(Name.kickOff, null, source)));
-    }
-
-    protected void finalizeDependent(Source source, List<Function> dependent) {
-        dependent.forEach(p -> p.recieve(message(Name.finalizeComputation, null, source)));
+    protected void forwardDependent(Source source, String key, List<Function> dependent) {
+        dependent.forEach(p -> p.recieve(message(key, null, source)));
     }
 
     public Function<T> returnTo(Function<?> f, String returnKey) {
@@ -121,9 +119,8 @@ public abstract class Function<T> extends Actress {
             return;// initializeComputation happens in getState() on new state
         }
 
-        if (m.key.equals(Name.finalizeComputation)) {
-            removeState(m.source);
-            finalizeDependent(state.source, dependent);
+        if (m.key.equals(Name.cleanup)) {
+            // TODO
             return;
         }
         if (!isParameter(m.key)) {
@@ -131,6 +128,12 @@ public abstract class Function<T> extends Actress {
             return;
         }
         processInner(m, state);
+    }
+
+    @Override
+    void onStopped() {
+        if(executionStates.size() > 0)
+            debug(this.address.toString() +  " execution states left over after stop: " + executionStates.size());
     }
 
     protected abstract boolean isParameter(String key);
@@ -150,22 +153,26 @@ public abstract class Function<T> extends Actress {
     }
 
     void returnResult(T result, Source source) {
-        returnTo.recieve(newMsg(returnKey, result, source));
+        returnTo.recieve(message(returnKey, result, source));
     }
 
-    private Message newMsg(String key, Object value, Source source) {
-        return message(key, value, source);
-    }
-
-    boolean computed(Object value) {
+    static boolean computed(Object value) {
         return value != null;
     }
 
-    protected boolean isTrue(Boolean decision) {
+    static boolean computed(Object... value) {
+        for (Object o : value) {
+            if (o == null)
+                return false;
+        }
+        return true;
+    }
+
+    static protected boolean isTrue(Boolean decision) {
         return decision != null && decision;
     }
 
-    protected boolean isFalse(Boolean decision) {
+    static protected boolean isFalse(Boolean decision) {
         return decision != null && !decision;
     }
 }

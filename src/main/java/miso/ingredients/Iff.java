@@ -115,11 +115,11 @@ public class Iff<T> extends Function<T> {
         }
         if (isTrue(state.decision) && computed(state.onTrue)) {
             returnResult((T) state.onTrue, m.source.withHost(this));
-            finalizeBranch(state);
+            removeState(state.source);
         }
         if (isFalse(state.decision) && computed(state.onFalse)) {
             returnResult((T) state.onFalse, m.source);
-            finalizeBranch(state);
+            removeState(state.source);
         }
 
         return params.contains(m.key);
@@ -133,10 +133,5 @@ public class Iff<T> extends Function<T> {
         state.pendingForBranchPropagation.clear();
     }
 
-    private void finalizeBranch(StateIff state) {
-        Message finalize = message(Name.finalizeComputation, null, state.source.withHost(this));
-        getBranchKickOffs(state.decision)
-                .forEach(d -> d.recieve(finalize));
-    }
 
 }

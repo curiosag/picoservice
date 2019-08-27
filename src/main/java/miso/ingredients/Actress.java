@@ -75,7 +75,10 @@ public abstract class Actress implements Runnable {
                 return;
             }
         stopped = true;
+        onStopped();
     }
+
+    abstract void onStopped();
 
     @Override
     public boolean equals(Object o) {
@@ -90,8 +93,8 @@ public abstract class Actress implements Runnable {
         return Objects.hash(address);
     }
 
-    private void debug(String s) {
-        //System.out.println(s);
+    protected void debug(String s) {
+        // System.out.println(s);
     }
 
     private static void await(Supplier<Boolean> condition) {

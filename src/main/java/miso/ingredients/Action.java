@@ -21,6 +21,7 @@ public class Action extends Function {
     @Override
     protected void processInner(Message m, State s) {
         action.accept(m);
+        removeState(s.source);
     }
 
     public static Action action(Consumer<Message> action) {

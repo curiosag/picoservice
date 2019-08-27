@@ -7,7 +7,8 @@ import java.util.List;
 
 public class If<T> extends Function<T> {
 
-    private static final List<String> parameters = Arrays.asList(Name.condition, Name.onFalse, Name.onTrue);
+
+    private static final List<String> parameters = Arrays. asList(Name.condition, Name.onFalse, Name.onTrue);
 
     class StateIf extends State {
         Object onTrue;
@@ -16,6 +17,10 @@ public class If<T> extends Function<T> {
 
         StateIf(Source source) {
             super(source);
+        }
+
+        public boolean allComputed(){
+            return computed(onFalse, onTrue, decision);
         }
     }
 
@@ -60,6 +65,9 @@ public class If<T> extends Function<T> {
             returnResult((T) state.onFalse, m.source);
         }
 
+        if (state.allComputed()){
+            removeState(state.source);
+        }
     }
 
 

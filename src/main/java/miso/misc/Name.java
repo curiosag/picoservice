@@ -24,7 +24,7 @@ public interface Name {
     String zero = "zero";
     String one = "one";
     String kickOff = "kickOff";
-    String finalizeComputation = "finalizeComputation";
+    String cleanup = "cleanup";
     String c = "c";
     String y = "y";
 }

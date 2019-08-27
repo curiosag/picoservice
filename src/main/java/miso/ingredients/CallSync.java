@@ -40,7 +40,6 @@ public class CallSync extends Function<Integer> {
 
         while (true) {
             if (result != null) {
-                f.recieve(message(Name.finalizeComputation, null, source));
                 return result;
             }
             waitSome(100L);

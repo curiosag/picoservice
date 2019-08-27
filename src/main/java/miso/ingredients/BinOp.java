@@ -51,6 +51,7 @@ public class BinOp<T, V> extends Function<V> {
                 T right = convert(state.rightArg);
                 try {
                     returnResult(op.apply(left, right), m.source.withHost(this));
+                    removeState(state.source);
                 } catch (Exception e) {
                     throw new IllegalStateException();
                 }

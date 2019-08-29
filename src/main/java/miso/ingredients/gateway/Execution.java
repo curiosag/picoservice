@@ -8,13 +8,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Source.source;
 
 public class Execution<T> implements Future<T> {
-    private static Long maxExecutionId = 0L;
+    private static AtomicLong maxExecutionId = new AtomicLong(0);
 
     private final Function<T> f;
     private T result;
@@ -31,13 +32,7 @@ public class Execution<T> implements Future<T> {
     public Execution(Function<T> f, Consumer<T> onFinished) {
         this.f = f;
         this.onFinished = onFinished;
-        source = source(f, getNextExecutionId(), 0);
-    }
-
-    private Long getNextExecutionId() {
-        synchronized (maxExecutionId) {
-            return maxExecutionId++;
-        }
+        source = source(f, maxExecutionId.addAndGet(1), 0);
     }
 
     public Execution<T> param(String key, Integer value) {

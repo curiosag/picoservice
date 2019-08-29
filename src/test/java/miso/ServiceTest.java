@@ -65,7 +65,7 @@ public class ServiceTest {
         ex = gateway.execute(mul(), result::setValue)
                 .param(Name.leftArg, 2)
                 .param(Name.rightArg, 2);
-        await(() -> result.value == _4);
+        await(() -> result.value.equals(_4));
         assertEquals(_4, ex.get());
 
 
@@ -86,7 +86,7 @@ public class ServiceTest {
                 .forEach(i -> gateway
                         .execute(mul, resultCollector::add)
                         .param(Name.leftArg, i)
-                        .param(Name.rightArg, i).get()
+                        .param(Name.rightArg, i)
                 );
         await(() -> resultCollector.size() == 6);
         assertEquals(Arrays.asList(0, 1, 4, 9, 16, 25),

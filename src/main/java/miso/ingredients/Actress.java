@@ -14,6 +14,12 @@ public abstract class Actress implements Runnable {
 
     private static final List<Actress> cast = new ArrayList<>();
 
+    private boolean debug;
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
     public static void start(Actress a) {
         new Thread(a).start();
         cast.add(a);
@@ -94,7 +100,9 @@ public abstract class Actress implements Runnable {
     }
 
     protected void debug(String s) {
-        // System.out.println(s);
+        if (debug) {
+            System.out.println(s);
+        }
     }
 
     private static void await(Supplier<Boolean> condition) {

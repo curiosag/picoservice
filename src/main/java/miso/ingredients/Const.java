@@ -27,7 +27,7 @@ public class Const extends Call<Integer> {
     }
 
     @Override
-    State newState(Source source) {
+    protected State newState(Source source) {
         throw new IllegalStateException();
     }
 

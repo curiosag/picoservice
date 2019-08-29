@@ -52,7 +52,7 @@ public class Iff<T> extends Function<T> {
     }
 
     @Override
-    StateIff newState(Source source) {
+    protected StateIff newState(Source source) {
         return new StateIff(source);
     }
 

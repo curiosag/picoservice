@@ -25,7 +25,7 @@ public class If<T> extends Function<T> {
     }
 
     @Override
-    If.StateIf newState(Source source) {
+    protected If.StateIf newState(Source source) {
         return new If.StateIf(source);
     }
 

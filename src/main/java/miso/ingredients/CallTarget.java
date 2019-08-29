@@ -17,7 +17,7 @@ public class CallTarget<T> extends Function<T> {
     }
 
     @Override
-    State newState(Source source) {
+    protected State newState(Source source) {
         return new State(source);
     }
 

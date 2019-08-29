@@ -1,31 +1,37 @@
 package miso;
 
 import miso.ingredients.*;
+import miso.ingredients.gateway.Execution;
+import miso.ingredients.gateway.Gateway;
 import miso.misc.Name;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static miso.Int.Int;
 import static miso.ingredients.Action.action;
-import static miso.ingredients.BinOp.add;
-import static miso.ingredients.BinOp.sub;
+import static miso.ingredients.BinOp.*;
 import static miso.ingredients.Call.call;
 import static miso.ingredients.CallSync.sync;
 import static miso.ingredients.CallTarget.callTarget;
 import static miso.ingredients.Const.constant;
-import static miso.ingredients.BinOp.eq;
-import static miso.ingredients.BinOp.gt;
-import static miso.ingredients.BinOp.mul;
 import static miso.ingredients.Iff.iff;
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Source.source;
+import static miso.ingredients.gateway.Gateway.intGateway;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class ServiceTest {
+    private static final Integer _6 = 6;
     private static final Integer _5 = 5;
     private static final Integer _4 = 4;
     private static final Integer _3 = 3;
@@ -33,34 +39,7 @@ public class ServiceTest {
     private static final Integer _1 = 1;
     private static final Integer _0 = 0;
 
-    private class Int {
-        public Integer value;
 
-        public void setValue(Integer value) {
-            this.value = value;
-        }
-
-        public Int(Integer value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Int anInt = (Int) o;
-            return value.equals(anInt.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(value);
-        }
-    }
-
-    Int Int(int i) {
-        return new Int(i);
-    }
 
     /*
     quickSort []     = []                           -- Sort an empty list
@@ -69,6 +48,53 @@ public class ServiceTest {
                    quickSort (filter (>=x) xs)  -- Sort the right part of the list
 
     */
+
+    @Test
+    public void testGateway() throws ExecutionException, InterruptedException {
+        Gateway<Integer> gateway = intGateway();
+        BinOp<Integer, Integer> mul = mul();
+
+        Execution<Integer> ex = gateway
+                .execute(mul)
+                .param(Name.leftArg, 3)
+                .param(Name.rightArg, 2);
+        assertEquals(_6, ex.get());
+
+
+        Int result = Int(0);
+        ex = gateway.execute(mul(), result::setValue)
+                .param(Name.leftArg, 2)
+                .param(Name.rightArg, 2);
+        await(() -> result.value == _4);
+        assertEquals(_4, ex.get());
+
+
+        List<Integer> results = Stream.of(0, 1, 2, 3, 4, 5)
+                .parallel()
+                .map(i -> gateway
+                        .execute(mul)
+                        .param(Name.leftArg, i)
+                        .param(Name.rightArg, i).get()
+
+                ).sorted(Integer::compareTo)
+                .collect(Collectors.toList());
+        assertEquals(Arrays.asList(0, 1, 4, 9, 16, 25), results);
+
+        ConcurrentLinkedQueue<Integer> resultCollector = new ConcurrentLinkedQueue<>();
+        Stream.of(0, 1, 2, 3, 4, 5)
+                .parallel()
+                .forEach(i -> gateway
+                        .execute(mul, resultCollector::add)
+                        .param(Name.leftArg, i)
+                        .param(Name.rightArg, i).get()
+                );
+        await(() -> resultCollector.size() == 6);
+        assertEquals(Arrays.asList(0, 1, 4, 9, 16, 25),
+                resultCollector.stream()
+                        .sorted(Integer::compareTo)
+                        .collect(Collectors.toList()));
+    }
+
 
     @Test
     public void testCallSync() {
@@ -526,7 +552,7 @@ public class ServiceTest {
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
         checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
-       // checksum(result, resultMonitor, runId, 40000, 40001 * 20000);
+        // checksum(result, resultMonitor, runId, 40000, 40001 * 20000);
 
         assertEquals(0, _if.executionStates.size());
         assertEquals(0, add.executionStates.size());

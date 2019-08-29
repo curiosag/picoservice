@@ -14,7 +14,7 @@ public class Nop<V> extends Function<V> {
     }
 
     @Override
-    State newState(Source source) {
+    protected State newState(Source source) {
         throw new IllegalStateException();
     }
 

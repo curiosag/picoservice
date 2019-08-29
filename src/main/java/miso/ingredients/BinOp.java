@@ -1,5 +1,6 @@
 package miso.ingredients;
 
+
 import miso.misc.Name;
 
 import java.util.function.BiFunction;
@@ -20,7 +21,7 @@ public class BinOp<T, V> extends Function<V> {
     }
 
     @Override
-    State newState(Source source) {
+    protected State newState(Source source) {
         return new BinOpState(source);
     }
 
@@ -53,10 +54,10 @@ public class BinOp<T, V> extends Function<V> {
                     returnResult(op.apply(left, right), m.source.withHost(this));
                     removeState(state.source);
                 } catch (Exception e) {
-                    throw new IllegalStateException();
+                    throw e;
                 }
             } catch (Exception e) {
-                throw new IllegalStateException();
+                throw e;
             }
         }
     }

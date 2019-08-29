@@ -1,5 +1,7 @@
 package miso.ingredients;
 
+
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -31,7 +33,7 @@ public class Action extends Function {
     }
 
     @Override
-    State newState(Source source) {
+    protected State newState(Source source) {
         return new State(source);
     }
 

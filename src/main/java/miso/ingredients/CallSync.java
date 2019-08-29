@@ -68,7 +68,7 @@ public class CallSync extends Function<Integer> {
     }
 
     @Override
-    State newState(Source source) {
+    protected State newState(Source source) {
         throw new IllegalArgumentException();
     }
 

@@ -23,7 +23,7 @@ public abstract class Function<T> extends Actress {
         executionStates.remove(execution);
     }
 
-    abstract State newState(Source source);
+    protected abstract State newState(Source source);
 
     /*
      *   propagation data structure:

@@ -1,24 +1,22 @@
 package miso.ingredients;
 
 import static miso.ingredients.Message.message;
-import static miso.ingredients.Nop.nop;
 
-public class Const extends Call<Integer> {
+public class Const extends Function<Integer> {
 
     private Integer value;
 
     public Const(Integer value) {
-        super(new Nop<>());
         this.value = value;
     }
 
-    public static Const constant(Integer value){
+    public static Const constant(Integer value) {
         return new Const(value);
     }
 
     @Override
-    public void recieve(Message message) {
-        returnTo.recieve(message(returnKey, value, message.source.withHost(this)));
+    public void receive(Message message) {
+        returnTo.receive(message(returnKey, value, message.origin.sender(this)));
     }
 
     @Override
@@ -27,7 +25,12 @@ public class Const extends Call<Integer> {
     }
 
     @Override
-    protected State newState(Source source) {
+    protected State newState(Origin origin) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    protected boolean isParameter(String key) {
         throw new IllegalStateException();
     }
 

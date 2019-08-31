@@ -1,28 +1,26 @@
 package miso.ingredients;
 
-import miso.misc.Name;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import static miso.ingredients.Message.message;
-import static miso.ingredients.Source.source;
+import static miso.ingredients.Nop.nop;
 
-public class CallSync extends Function<Integer> {
+public class CallSync<T> extends Function<T> {
 
-    private final Function<Integer> f;
-    private Integer result;
+    private final Function<T> f;
+    private T result;
     private static Long executions = 0L;
 
     private Map<String, Integer> params = new HashMap<>();
 
-    private CallSync(Function<Integer> f) {
+    private CallSync(Function<T> f) {
         f.returnTo(this, Name.result);
         this.f = f;
     }
 
-    public static CallSync sync(Function<Integer> f) {
-        return new CallSync(f);
+    public static <T> CallSync<T> sync(Function<T> f) {
+        return new CallSync<>(f);
     }
 
     public CallSync param(String key, Integer value) {
@@ -30,36 +28,36 @@ public class CallSync extends Function<Integer> {
         return this;
     }
 
-    public Integer call() {
-        Source source = source(f, executions++, 0);
+    public T call() {
+        Origin origin = Origin.origin(f, nop, executions++, 0);
         if (params.size() == 0) {
-            f.recieve(message(Name.kickOff, null, source));
+            f.receive(message(Name.kickOff, null, origin));
         } else {
-            params.forEach((k, v) -> f.recieve(message(k, v, source)));
+            params.forEach((k, v) -> f.receive(message(k, v, origin)));
         }
 
         while (true) {
             if (result != null) {
                 return result;
             }
-            waitSome(100L);
+            waitSome();
         }
     }
 
-    private void waitSome(Long millis) {
+    private void waitSome() {
         try {
-            Thread.sleep(millis);
+            Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
     @Override
-    synchronized public void recieve(Message message) {
-        if (message.value == null || !message.hasKey(Name.result) || !(message.value instanceof Integer)) {
+    synchronized public void receive(Message message) {
+        if (message.value == null || !message.hasKey(Name.result)) {
             throw new IllegalStateException();
         }
-        result = (Integer) message.value;
+        result = (T) message.value;
     }
 
     @Override
@@ -68,7 +66,7 @@ public class CallSync extends Function<Integer> {
     }
 
     @Override
-    protected State newState(Source source) {
+    protected State newState(Origin origin) {
         throw new IllegalArgumentException();
     }
 

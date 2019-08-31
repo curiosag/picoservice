@@ -1,9 +1,10 @@
 package miso.ingredients;
 
 public class State {
-    final Source source;
+    final Origin origin;
 
-    public State(Source source) {
-        this.source = source;
+    public State(Origin origin) {
+        this.origin = origin;
     }
+
 }

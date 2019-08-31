@@ -1,8 +1,14 @@
 package miso.ingredients;
 
-public class Nop<V> extends Function<V> {
+public class Nop extends Function<Object> {
 
-    public static Nop nop = new Nop<>();
+    public static Nop nop = createNop();
+
+    private static Nop createNop() {
+        Nop result = new Nop();
+        result.address.value = "nop";
+        return result;
+    }
 
     @Override
     protected boolean isParameter(String key) {
@@ -10,16 +16,17 @@ public class Nop<V> extends Function<V> {
     }
 
     @Override
-    public void recieve(Message message) {
+    public void receive(Message message) {
     }
 
     @Override
-    protected State newState(Source source) {
+    protected State newState(Origin origin) {
         throw new IllegalStateException();
     }
 
     @Override
     protected void processInner(Message m, State s) {
     }
+
 
 }

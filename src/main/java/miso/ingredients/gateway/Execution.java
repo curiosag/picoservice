@@ -1,18 +1,17 @@
 package miso.ingredients.gateway;
 
 import miso.ingredients.Function;
-import miso.ingredients.Source;
-import miso.misc.Name;
+import miso.ingredients.Origin;
+import miso.ingredients.Name;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static miso.ingredients.Message.message;
-import static miso.ingredients.Source.source;
+import static miso.ingredients.Nop.nop;
+import static miso.ingredients.Origin.origin;
 
 public class Execution<T> implements Future<T> {
     private static AtomicLong maxExecutionId = new AtomicLong(0);
@@ -20,7 +19,7 @@ public class Execution<T> implements Future<T> {
     private final Function<T> f;
     private T result;
     private final Consumer<T> onFinished;
-    final Source source;
+    final Origin origin;
 
     public void setResult(T result) {
         this.result = result;
@@ -32,16 +31,16 @@ public class Execution<T> implements Future<T> {
     public Execution(Function<T> f, Consumer<T> onFinished) {
         this.f = f;
         this.onFinished = onFinished;
-        source = source(f, maxExecutionId.addAndGet(1), 0);
+        origin = Origin.origin(f, nop, maxExecutionId.addAndGet(1), 0);
     }
 
     public Execution<T> param(String key, Integer value) {
-        f.recieve(message(key, value, source));
+        f.receive(message(key, value, origin));
         return this;
     }
 
     private Execution<T> kickOff() {
-        f.recieve(message(Name.kickOff, null, source));
+        f.receive(message(Name.kickOff, null, origin));
         return this;
     }
 

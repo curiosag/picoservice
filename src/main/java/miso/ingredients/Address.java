@@ -3,16 +3,17 @@ package miso.ingredients;
 import java.util.Objects;
 
 public class Address {
-    public static final Address NONE = null;
 
-    public final String value;
+    public String value;
 
-    public Address(String value) {
+    String sticker = "";
+
+    Address(String value) {
         this.value = value;
     }
 
-    public static Address of(String name){
-        return new Address(name);
+    void setSticker(String sticker) {
+        this.sticker = " " + sticker;
     }
 
     @Override
@@ -30,8 +31,6 @@ public class Address {
 
     @Override
     public String toString() {
-        return "Address{" +
-                "value='" + value + '\'' +
-                '}';
+        return "{" + value + sticker + '}';
     }
 }

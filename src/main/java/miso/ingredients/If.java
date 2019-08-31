@@ -1,7 +1,5 @@
 package miso.ingredients;
 
-import miso.misc.Name;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,8 +13,8 @@ public class If<T> extends Function<T> {
         Object onFalse;
         Boolean decision;
 
-        StateIf(Source source) {
-            super(source);
+        StateIf(Origin origin) {
+            super(origin);
         }
 
         public boolean allComputed(){
@@ -25,8 +23,8 @@ public class If<T> extends Function<T> {
     }
 
     @Override
-    protected If.StateIf newState(Source source) {
-        return new If.StateIf(source);
+    protected If.StateIf newState(Origin origin) {
+        return new If.StateIf(origin);
     }
 
     @Override
@@ -58,15 +56,15 @@ public class If<T> extends Function<T> {
         }
 
         if (isTrue(state.decision) && computed(state.onTrue)) {
-            returnResult((T) state.onTrue, m.source);
+            returnResult((T) state.onTrue, m.origin);
         }
 
         if (isFalse(state.decision) && computed(state.onFalse)) {
-            returnResult((T) state.onFalse, m.source);
+            returnResult((T) state.onFalse, m.origin);
         }
 
         if (state.allComputed()){
-            removeState(state.source);
+            removeState(state.origin);
         }
     }
 

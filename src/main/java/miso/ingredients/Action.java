@@ -23,7 +23,7 @@ public class Action extends Function {
     @Override
     protected void processInner(Message m, State s) {
         action.accept(m);
-        removeState(s.source);
+        removeState(s.origin);
     }
 
     public static Action action(Consumer<Message> action) {
@@ -33,12 +33,13 @@ public class Action extends Function {
     }
 
     @Override
-    protected State newState(Source source) {
-        return new State(source);
+    protected State newState(Origin origin) {
+        return new State(origin);
     }
 
 
-    public void param(String key) {
+    public Action param(String key) {
         expectedParams.add(key);
+        return this;
     }
 }

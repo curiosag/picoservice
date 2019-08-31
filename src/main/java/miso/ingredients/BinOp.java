@@ -1,28 +1,27 @@
 package miso.ingredients;
 
 
-import miso.misc.Name;
-
 import java.util.function.BiFunction;
 
-public class BinOp<T, V> extends Function<V> {
+public class BinOp<T, U, V> extends Function<V> {
 
-    private final BiFunction<T, T, V> op;
-    private final java.util.function.Function<Object, T> converter;
+    private final BiFunction<T, U, V> op;
+    private final java.util.function.Function<Object, T> tConverter;
+    private final java.util.function.Function<Object, U> uConverter;
 
     public class BinOpState extends State {
 
         Object leftArg;
         Object rightArg;
 
-        BinOpState(Source source) {
-            super(source);
+        BinOpState(Origin origin) {
+            super(origin);
         }
     }
 
     @Override
-    protected State newState(Source source) {
-        return new BinOpState(source);
+    protected State newState(Origin origin) {
+        return new BinOpState(origin);
     }
 
     @Override
@@ -30,9 +29,10 @@ public class BinOp<T, V> extends Function<V> {
         return key.equals(Name.leftArg) || key.equals(Name.rightArg);
     }
 
-    BinOp(BiFunction<T, T, V> op, java.util.function.Function<Object, T> converter) {
+    BinOp(BiFunction<T, U, V> op, java.util.function.Function<Object, T> tConverter, java.util.function.Function<Object, U> uConverter) {
         this.op = op;
-        this.converter = converter;
+        this.tConverter = tConverter;
+        this.uConverter = uConverter;
     }
 
     @Override
@@ -48,81 +48,99 @@ public class BinOp<T, V> extends Function<V> {
         }
         if (state.leftArg != null && state.rightArg != null) {
             try {
-                T left = convert(state.leftArg);
-                T right = convert(state.rightArg);
-                try {
-                    returnResult(op.apply(left, right), m.source.withHost(this));
-                    removeState(state.source);
-                } catch (Exception e) {
-                    throw e;
-                }
+                T left = t(state.leftArg);
+                U right = u(state.rightArg);
+                removeState(state.origin);
+                returnResult(op.apply(left, right), m.origin.sender(this));
             } catch (Exception e) {
                 throw e;
             }
         }
     }
 
-    private T convert(Object leftArg) {
-        try {
-            return converter.apply(leftArg);
-        } catch (Exception e) {
-            throw new IllegalStateException();
-        }
+    private T t(Object leftArg) {
+        return tConverter.apply(leftArg);
     }
 
-    static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
+    private U u(Object rightArg) {
+        return uConverter.apply(rightArg);
+    }
 
-    public static miso.ingredients.BinOp<Integer, Boolean> eq() {
-        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 == n2, intConverter);
+    public static miso.ingredients.BinOp<Boolean, Boolean, Boolean> and() {
+        BinOp<Boolean, Boolean, Boolean> result = new BinOp<>((n1, n2) -> n1 && n2, boolConverter, boolConverter);
+        result.label("&");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Boolean> lt() {
-        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 < n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Boolean> eq() {
+        BinOp<Integer, Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 == n2, intConverter, intConverter);
+        result.label("==");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Boolean> gt() {
-        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 > n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Boolean> lt() {
+        BinOp<Integer, Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 < n2, intConverter, intConverter);
+        result.label("<");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Boolean> lteq() {
-        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 <= n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Boolean> gt() {
+        BinOp<Integer, Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 > n2, intConverter, intConverter);
+        result.label(">");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Boolean> gteq() {
-        BinOp<Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 >= n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Boolean> lteq() {
+        BinOp<Integer, Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 <= n2, intConverter, intConverter);
+        result.label("<=");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Integer> add() {
-        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 + n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Boolean> gteq() {
+        BinOp<Integer, Integer, Boolean> result = new BinOp<>((n1, n2) -> n1 >= n2, intConverter, intConverter);
+        result.label(">=");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Integer> sub() {
-        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 - n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Integer> add() {
+        BinOp<Integer, Integer, Integer> result = new BinOp<>((n1, n2) -> n1 + n2, intConverter, intConverter);
+        result.label("+");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Integer> mul() {
-        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 * n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Integer> sub() {
+        BinOp<Integer, Integer, Integer> result = new BinOp<>((n1, n2) -> n1 - n2, intConverter, intConverter);
+        result.label("-");
         start(result);
         return result;
     }
 
-    public static miso.ingredients.BinOp<Integer, Integer> div() {
-        BinOp<Integer, Integer> result = new BinOp<>((n1, n2) -> n1 / n2, intConverter);
+    public static miso.ingredients.BinOp<Integer, Integer, Integer> mul() {
+        BinOp<Integer, Integer, Integer> result = new BinOp<>((n1, n2) -> n1 * n2, intConverter, intConverter);
+        result.label("*");
         start(result);
         return result;
     }
+
+    public static miso.ingredients.BinOp<Integer, Integer, Integer> div() {
+        BinOp<Integer, Integer, Integer> result = new BinOp<>((n1, n2) -> n1 / n2, intConverter, intConverter);
+        result.label("div");
+        start(result);
+        return result;
+    }
+
+    public static miso.ingredients.BinOp<Integer, Integer, Integer> mod() {
+        BinOp<Integer, Integer, Integer> result = new BinOp<>((n1, n2) -> n1 % n2, intConverter, intConverter);
+        result.label("mod");
+        start(result);
+        return result;
+    }
+
 }

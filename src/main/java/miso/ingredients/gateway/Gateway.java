@@ -1,10 +1,7 @@
 package miso.ingredients.gateway;
 
-import miso.ingredients.Function;
-import miso.ingredients.Message;
-import miso.ingredients.Source;
-import miso.ingredients.State;
-import miso.misc.Name;
+import miso.ingredients.*;
+import miso.ingredients.Origin;
 
 import java.util.Optional;
 import java.util.Queue;
@@ -35,9 +32,9 @@ public class Gateway<T> extends Function<T> {
     }
 
     @Override
-    public void recieve(Message message) {
+    public void receive(Message message) {
         Optional<Execution<T>> ex = executions.stream()
-                .filter(e -> e.source.executionId.equals(message.source.executionId))
+                .filter(e -> e.origin.executionId.equals(message.origin.executionId))
                 .findAny();
         if (! ex.isPresent())
         {
@@ -54,7 +51,7 @@ public class Gateway<T> extends Function<T> {
     }
 
     @Override
-    protected State newState(Source source) {
+    protected State newState(Origin origin) {
         throw new IllegalStateException();
     }
 

@@ -14,21 +14,41 @@ public abstract class Actress implements Runnable {
 
     private static final List<Actress> cast = new ArrayList<>();
 
-    private boolean debug;
-
-    public void setDebug(boolean debug) {
-        this.debug = debug;
-    }
+    static public boolean debug = false;
 
     public static void start(Actress a) {
         new Thread(a).start();
         cast.add(a);
     }
 
+    public static void cleanupFunctions(Long runId) {
+        cast.forEach(c -> {
+            if (c instanceof Function) {
+                ((Function) c).cleanup(runId);
+            }
+        });
+    }
+
+    public void checkSanityOnStop() {
+
+    }
+
+    ;
+
+    public static void debug() {
+        debug = true;
+    }
+
+    public static void noDebug() {
+        debug = true;
+    }
+
     public static void shutdown() {
         cast.forEach(Actress::stop);
         await(() -> cast.stream().allMatch(Actress::isStopped));
+        cast.forEach(Actress::checkSanityOnStop);
         cast.clear();
+        maxAddress = 0;
     }
 
     private AtomicBoolean stopping = new AtomicBoolean(false);
@@ -43,15 +63,19 @@ public abstract class Actress implements Runnable {
 
     public final Address address;
 
-    private Queue<Message> inBox = new ConcurrentLinkedQueue<>();
+    Queue<Message> inBox = new ConcurrentLinkedQueue<>();
 
     public Actress() {
         address = new Address(this.getClass().getSimpleName() + "-" + maxAddress++);
         dns().add(this);
     }
 
-    public void recieve(Message message) {
-        debug(this.getClass().getSimpleName() + " <- " + message.source.host.getClass().getSimpleName() + " " + message.toString());
+    public void label(String sticker) {
+        address.setSticker(sticker);
+    }
+
+    public void receive(Message message) {
+        debug(this.address.toString() + " <- " + message.origin.sender.address.toString() + " " + message.toString());
         inBox.add(message);
     }
 
@@ -70,21 +94,18 @@ public abstract class Actress implements Runnable {
             try {
                 Message message = inBox.poll();
                 if (message != null) {
-                    debug(this.getClass().getSimpleName() + " ** " + message.toString());
+                    debug(this.address + " !! " + message.toString());
                     process(message);
                 } else {
                     Thread.yield();
                 }
 
             } catch (Exception e) {
-                debug(this.getClass().getSimpleName() + " " + e.toString());
-                return;
+                debug(this.address + " " + e.toString());
+                throw e;
             }
         stopped = true;
-        onStopped();
     }
-
-    abstract void onStopped();
 
     @Override
     public boolean equals(Object o) {
@@ -99,7 +120,7 @@ public abstract class Actress implements Runnable {
         return Objects.hash(address);
     }
 
-    protected void debug(String s) {
+    protected static void debug(String s) {
         if (debug) {
             System.out.println(s);
         }

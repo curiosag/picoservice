@@ -1,12 +1,11 @@
 package miso.ingredients;
 
-import miso.misc.Name;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import static miso.ingredients.Message.message;
-import static miso.ingredients.Source.source;
+import static miso.ingredients.Nop.nop;
+import static miso.ingredients.Origin.origin;
 
 public class CallSync extends Function<Integer> {
 
@@ -31,11 +30,11 @@ public class CallSync extends Function<Integer> {
     }
 
     public Integer call() {
-        Source source = source(f, executions++, 0);
+        Origin origin = Origin.origin(f, nop, executions++, 0);
         if (params.size() == 0) {
-            f.recieve(message(Name.kickOff, null, source));
+            f.receive(message(Name.kickOff, null, origin));
         } else {
-            params.forEach((k, v) -> f.recieve(message(k, v, source)));
+            params.forEach((k, v) -> f.receive(message(k, v, origin)));
         }
 
         while (true) {
@@ -55,7 +54,7 @@ public class CallSync extends Function<Integer> {
     }
 
     @Override
-    synchronized public void recieve(Message message) {
+    synchronized public void receive(Message message) {
         if (message.value == null || !message.hasKey(Name.result) || !(message.value instanceof Integer)) {
             throw new IllegalStateException();
         }
@@ -68,7 +67,7 @@ public class CallSync extends Function<Integer> {
     }
 
     @Override
-    protected State newState(Source source) {
+    protected State newState(Origin origin) {
         throw new IllegalArgumentException();
     }
 

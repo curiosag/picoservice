@@ -1,7 +1,5 @@
 package miso.ingredients;
 
-import miso.misc.Name;
-
 import java.util.*;
 
 import static miso.ingredients.Message.message;
@@ -17,8 +15,8 @@ public class Iff<T> extends Function<T> {
         Object onFalse;
         Boolean decision;
 
-        StateIff(Source source) {
-            super(source);
+        StateIff(Origin origin) {
+            super(origin);
         }
     }
 
@@ -52,8 +50,8 @@ public class Iff<T> extends Function<T> {
     }
 
     @Override
-    protected StateIff newState(Source source) {
-        return new StateIff(source);
+    protected StateIff newState(Origin origin) {
+        return new StateIff(origin);
     }
 
     @Override
@@ -65,6 +63,18 @@ public class Iff<T> extends Function<T> {
 
     public static Iff<Integer> iff() {
         Iff<Integer> result = new Iff<>();
+        start(result);
+        return result;
+    }
+
+    public static Iff<Boolean> iffBool() {
+        Iff<Boolean> result = new Iff<>();
+        start(result);
+        return result;
+    }
+
+    public static Iff<List<Integer>> iffList() {
+        Iff<List<Integer>> result = new Iff<>();
         start(result);
         return result;
     }
@@ -114,20 +124,20 @@ public class Iff<T> extends Function<T> {
             kickOffBranch(state);
         }
         if (isTrue(state.decision) && computed(state.onTrue)) {
-            returnResult((T) state.onTrue, m.source.withHost(this));
-            removeState(state.source);
+            returnResult((T) state.onTrue, m.origin.sender(this));
+            removeState(state.origin);
         }
         if (isFalse(state.decision) && computed(state.onFalse)) {
-            returnResult((T) state.onFalse, m.source);
-            removeState(state.source);
+            returnResult((T) state.onFalse, m.origin);
+            removeState(state.origin);
         }
 
         return params.contains(m.key);
     }
 
     private void kickOffBranch(StateIff state) {
-        Message kickOff = message(Name.kickOff, null, state.source.withHost(this));
-        getBranchKickOffs(state.decision).forEach(d -> d.recieve(kickOff));
+        Message kickOff = message(Name.kickOff, null, state.origin.sender(this));
+        getBranchKickOffs(state.decision).forEach(d -> d.receive(kickOff));
 
         state.pendingForBranchPropagation.forEach(p -> propagate(p, getBranchPropagations(state.decision)));
         state.pendingForBranchPropagation.clear();

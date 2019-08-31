@@ -1,22 +1,42 @@
-SIf **  a:0 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1
-Eq **  leftArg:0 Source: SIf (SIf-2) 0/1        von sif
-Eq <- Eq  rightArg:0 Source: Eq (Eq-3) 0/1      init state und const
-SIf <- Eq  condition:true Source: Eq (Eq-3) 0/1 ???
-Eq **  rightArg:0 Source: Eq (Eq-3) 0/1 
-SIf <- Eq  condition:true Source: Eq (Eq-3) 0/1 
-SIf **  condition:true Source: Eq (Eq-3) 0/1 
-FunctionCallTarget <- SIf  functionResult:1 Source: SIf (SIf-2) 0/1 
-SIf **  condition:true Source: Eq (Eq-3) 0/1 
-FunctionCallTarget <- SIf  functionResult:1 Source: SIf (SIf-2) 0/1 
-FunctionCallTarget **  functionResult:1 Source: SIf (SIf-2) 0/1 
-FunctionCall <- FunctionCallTarget  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
-FunctionCallTarget **  functionResult:1 Source: SIf (SIf-2) 0/1 
-FunctionCall <- FunctionCallTarget  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
-FunctionCall **  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
-Action <- FunctionCall  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
-FunctionCall **  functionResult:1 Source: FunctionCallTarget (FunctionCallTarget-6) 0/1 
-Action <- FunctionCall  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
-Action **  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
-Action **  result:1 Source: FunctionCall (FunctionCall-8) 0/0 
-Action <- Action  finalizeComputation:NULL Source: Action (Action-1) 0/0 
-faculty of 0 took 64 seconds
+{FunctionSignature-3 DOUBLE} <- {FunctionCall-6 double}  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){FunctionCall-6 double} (0 states left)
+{FunctionSignature-3 DOUBLE} <- {FunctionCall-6 double}  a:3 Source:(0/1){FunctionCall-6 double} (0 states left)
+{FunctionSignature-3 DOUBLE} !!  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){FunctionCall-6 double} (0 states left)
+{FunctionSignature-3 DOUBLE} !!  a:3 Source:(0/1){FunctionCall-6 double} (0 states left)
+
+{BinOp-2 +} <- {FunctionSignature-3 DOUBLE}  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){FunctionSignature-3 DOUBLE} (1 states left)
+{BinOp-2 +} !!  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){FunctionSignature-3 DOUBLE} (1 states left)
+{BinOp-2 +} <- {FunctionSignature-3 DOUBLE}  a:3 Source:(0/1){FunctionSignature-3 DOUBLE} (1 states left)
+{BinOp-2 +} !!  a:3 Source:(0/1){FunctionSignature-3 DOUBLE} (1 states left)
+
+{FunctionStub-5 stubRight} <- {BinOp-2 +}  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){BinOp-2 +} (1 states left)
+{FunctionStub-5 stubRight} !!  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){BinOp-2 +} (1 states left)
+{FunctionStub-5 stubRight} <- {BinOp-2 +}  a:3 Source:(0/1){BinOp-2 +} (1 states left)
+{FunctionStub-5 stubRight} !!  a:3 Source:(0/1){BinOp-2 +} (1 states left)
+
+{FunctionStub-4 stubLeft} <- {BinOp-2 +}  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){BinOp-2 +} (1 states left)
+{FunctionStub-4 stubLeft} !!  func:miso.ingredients.FunctionSignature@a695f582 Source:(0/1){BinOp-2 +} (1 states left)
+{FunctionStub-4 stubLeft} <- {BinOp-2 +}  a:3 Source:(0/1){BinOp-2 +} (1 states left)
+{FunctionStub-4 stubLeft} !!  a:3 Source:(0/1){BinOp-2 +} (1 states left)
+
+{FunctionSignature-1 MUL} <- {FunctionCall-8  mul}  a:3 Source:(0/2){FunctionCall-8  mul} (0 states left)
+{FunctionSignature-1 MUL} <- {FunctionCall-9  mul}  a:3 Source:(0/2){FunctionCall-9  mul} (0 states left)
+{FunctionSignature-1 MUL} !!  a:3 Source:(0/2){FunctionCall-8  mul} (0 states left)
+{FunctionSignature-1 MUL} !!  a:3 Source:(0/2){FunctionCall-9  mul} (0 states left)
+
+{BinOp-0 *} <- {FunctionSignature-1 MUL}  leftArg:3 Source:(0/2){FunctionSignature-1 MUL} (1 states left)
+{BinOp-0 *} <- {FunctionSignature-1 MUL}  leftArg:3 Source:(0/2){FunctionSignature-1 MUL} (1 states left)
+{BinOp-0 *} !!  leftArg:3 Source:(0/2){FunctionSignature-1 MUL} (1 states left)
+{BinOp-0 *} <- {BinOp-0 *}  rightArg:2 Source:(0/2){BinOp-0 *} (1 states left)
+{BinOp-0 *} !!  leftArg:3 Source:(0/2){FunctionSignature-1 MUL} (1 states left)
+{BinOp-0 *} !!  rightArg:2 Source:(0/2){BinOp-0 *} (1 states left)
+-->  {BinOp-0 *}:0 States. Removed (0/2) {FunctionSignature-1 MUL}
+
+
+{FunctionSignature-1 MUL} <- {BinOp-0 *}  result:6 Source:(0/2){BinOp-0 *} (0 states left)
+{FunctionSignature-1 MUL} !!  result:6 Source:(0/2){BinOp-0 *} (0 states left)
+{FunctionStub-5 stubRight} <- {FunctionCall-8  mul}  result:6 Source:(0/1){FunctionCall-8  mul} (0 states left)
+{FunctionStub-5 stubRight} !!  result:6 Source:(0/1){FunctionCall-8  mul} (0 states left)
+-->  {FunctionSignature-1 MUL}:0 States. Removed (0/2) {FunctionCall-8  mul}
+
+{BinOp-2 +} <- {FunctionStub-5 stubRight}  rightArg:6 Source:(0/1){FunctionStub-5 stubRight} (1 states left)
+{BinOp-2 +} !!  rightArg:6 Source:(0/1){FunctionStub-5 stubRight} (1 states left)

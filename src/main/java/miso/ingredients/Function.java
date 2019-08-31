@@ -1,29 +1,43 @@
 package miso.ingredients;
 
-import miso.misc.Name;
-
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static miso.ingredients.Message.message;
+import static miso.ingredients.OriginMatcher.matcher;
 
 public abstract class Function<T> extends Actress {
     Function<?> returnTo;
-    String returnKey;
+    public String returnKey;
 
-    // Tuple<ExecutionId, CallLevel> -> State
-    public final Map<Tuple<Long, Integer>, State> executionStates = new HashMap<>();
+    public final Map<OriginMatcher, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
 
-    private final Tuple execution = Tuple.of(0L, 0);
-
-    void removeState(Source source) {
-        execution.left = source.executionId;
-        execution.right = source.callLevel;
-        executionStates.remove(execution);
+    void removeState(Origin origin) {
+        executionStates.remove(matcher(origin));
+        debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
-    protected abstract State newState(Source source);
+    void cleanup(Long runId){
+        List<OriginMatcher> toRemove = executionStates.keySet().stream()
+                .filter(k -> k.executionId.equals(runId))
+                .collect(Collectors.toList());
+        toRemove.forEach(executionStates::remove);
+    }
+
+    @Override
+    public void checkSanityOnStop() {
+        super.checkSanityOnStop();
+        if (! executionStates.isEmpty() ) {
+            throw new IllegalStateException(String.format("-->  %s %s: %d execution states left after stop", address.toString(), address.toString(), executionStates.size()));
+        }
+        if (!inBox.isEmpty()) {
+            throw new IllegalStateException(String.format("%s: %d left in inbox", address.toString(), inBox.size()));
+        }
+    }
+
+    protected abstract State newState(Origin origin);
 
     /*
      *   propagation data structure:
@@ -34,39 +48,33 @@ public abstract class Function<T> extends Actress {
      *
      * */
 
-    Map<Function<?>, Map<String, List<String>>> propagations = new HashMap<>();
+    private Map<Function<?>, Map<String, List<String>>> propagations = new HashMap<>();
 
-    private List<Function> dependent = new ArrayList<>();
+    private List<Function> kicks = new ArrayList<>();
 
-    private State getState(Tuple<Long, Integer> callId) {
-        return executionStates.get(callId);
-    }
-
-
-    State getState(Source source) {
-        execution.left = source.executionId;
-        execution.right = source.callLevel;
-        State result = getState(execution);
+    State getState(Origin origin) {
+        OriginMatcher matcher = matcher(origin);
+        State result = executionStates.get(matcher);
         if (result == null) {
-            result = newState(source);
-            executionStates.put(Tuple.of(source.executionId, source.callLevel), result);
-            fowardConsts(source, consts);
-            forwardDependent(source, Name.kickOff, dependent);
+            result = newState(origin);
+            executionStates.put(matcher, result);
+            fowardConsts(origin, consts);
+            forwardKickOff(origin);
         }
         return result;
     }
 
-    protected void fowardConsts(Source source, Map<String, Object> consts) {
-        consts.forEach((key, value) -> recieve(message(key, value, source.withHost(this))));
+    private void fowardConsts(Origin origin, Map<String, Object> consts) {
+        consts.forEach((key, value) -> receive(message(key, value, origin.sender(this))));
     }
 
     public Function<T> kickOff(Function target) {
-        dependent.add(target);
+        kicks.add(target);
         return this;
     }
 
-    protected void forwardDependent(Source source, String key, List<Function> dependent) {
-        dependent.forEach(p -> p.recieve(message(key, null, source)));
+    private void forwardKickOff(Origin origin) {
+        kicks.forEach(p -> p.receive(message(Name.kickOff, null, origin.sender(this))));
     }
 
     public Function<T> returnTo(Function<?> f, String returnKey) {
@@ -75,7 +83,7 @@ public abstract class Function<T> extends Actress {
         return this;
     }
 
-    protected Function<T> propagate(String keyReceived, String keyToPropagate, Function target, Map<Function<?>, Map<String, List<String>>> propagations) {
+    void propagate(String keyReceived, String keyToPropagate, Function target, Map<Function<?>, Map<String, List<String>>> propagations) {
         Map<String, List<String>> prop = propagations.get(target);
         if (prop == null) {
             propagations.put(target, new HashMap<>());
@@ -89,8 +97,6 @@ public abstract class Function<T> extends Actress {
         }
 
         targets.add(keyToPropagate);
-
-        return this;
     }
 
     public Function<T> propagate(String keyReceived, String keyToPropagate, Function target) {
@@ -98,15 +104,15 @@ public abstract class Function<T> extends Actress {
         return this;
     }
 
-    protected void propagate(Message m) {
+    void propagate(Message m) {
         propagate(m, propagations);
     }
 
-    protected void propagate(Message m, Map<Function<?>, Map<String, List<String>>> propagations) {
+    void propagate(Message m, Map<Function<?>, Map<String, List<String>>> propagations) {
         for (Entry<Function<?>, Map<String, List<String>>> prop : propagations.entrySet()) {
             for (Entry<String, List<String>> keyMapping : prop.getValue().entrySet()) {
                 if (keyMapping.getKey().equals(m.key)) {
-                    keyMapping.getValue().forEach(targetName -> prop.getKey().recieve(message(targetName, m.value, m.source.withHost(this))));
+                    keyMapping.getValue().forEach(targetName -> prop.getKey().receive(message(targetName, m.value, m.origin.sender(this))));
                 }
             }
         }
@@ -114,13 +120,13 @@ public abstract class Function<T> extends Actress {
 
     @Override
     protected void process(Message m) {
-        State state = getState(m.source);
+        State state = getState(m.origin);
         if (m.key.equals(Name.kickOff)) {
             return;// initializeComputation happens in getState() on new state
         }
 
         if (m.key.equals(Name.cleanup)) {
-            // TODO
+            removeState(m.origin);
             return;
         }
         if (!isParameter(m.key)) {
@@ -128,12 +134,6 @@ public abstract class Function<T> extends Actress {
             return;
         }
         processInner(m, state);
-    }
-
-    @Override
-    void onStopped() {
-        if(executionStates.size() > 0)
-            debug(this.address.toString() +  " execution states left over after stop: " + executionStates.size());
     }
 
     protected abstract boolean isParameter(String key);
@@ -152,8 +152,8 @@ public abstract class Function<T> extends Actress {
         return null;
     }
 
-    void returnResult(T result, Source source) {
-        returnTo.recieve(message(returnKey, result, source));
+    void returnResult(T result, Origin origin) {
+        returnTo.receive(message(returnKey, result, origin));
     }
 
     static boolean computed(Object value) {
@@ -168,11 +168,16 @@ public abstract class Function<T> extends Actress {
         return true;
     }
 
-    static protected boolean isTrue(Boolean decision) {
+    static boolean isTrue(Boolean decision) {
         return decision != null && decision;
     }
 
-    static protected boolean isFalse(Boolean decision) {
+    static boolean isFalse(Boolean decision) {
         return decision != null && !decision;
     }
+
+    static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
+    static java.util.function.Function<Object, Boolean> boolConverter = o -> (Boolean) o;
+    static java.util.function.Function<Object, List<Integer>> listConverter = o -> (List<Integer>) o;
+
 }

@@ -1,6 +1,9 @@
 package miso.ingredients;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -16,7 +19,7 @@ public abstract class Function<T> extends Actress {
 
     void removeState(Origin origin) {
         executionStates.remove(matcher(origin));
-        debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
+        //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
     void cleanup(Long runId) {
@@ -39,6 +42,7 @@ public abstract class Function<T> extends Actress {
 
     protected abstract State newState(Origin origin);
 
+
     /*
      *   propagation data structure:
      *
@@ -47,7 +51,6 @@ public abstract class Function<T> extends Actress {
      *   all targetFunc know the keyValue used for returning results
      *
      * */
-
     private Map<Function<?>, Map<String, List<String>>> propagations = new HashMap<>();
 
     private List<Function> kicks = new ArrayList<>();
@@ -120,6 +123,7 @@ public abstract class Function<T> extends Actress {
 
     @Override
     protected void process(Message m) {
+        maybeTrace(m);
         if (!(this instanceof FunctionSignature) && (returnTo == null || returnKey == null)) {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
         }
@@ -178,9 +182,8 @@ public abstract class Function<T> extends Actress {
     static boolean isFalse(Boolean decision) {
         return decision != null && !decision;
     }
-
     static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
     static java.util.function.Function<Object, Boolean> boolConverter = o -> (Boolean) o;
-    static java.util.function.Function<Object, List<Integer>> listConverter = o -> (List<Integer>) o;
 
+    static java.util.function.Function<Object, List<Integer>> listConverter = o -> (List<Integer>) o;
 }

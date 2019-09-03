@@ -3,32 +3,30 @@ package miso;
 import miso.ingredients.*;
 import miso.ingredients.gateway.Execution;
 import miso.ingredients.gateway.Gateway;
-import miso.ingredients.Name;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static miso.Int.Int;
 import static miso.ingredients.Action.action;
+import static miso.ingredients.Actresses.await;
 import static miso.ingredients.BinOp.*;
-import static miso.ingredients.BinOp.mul;
-import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.CallSync.sync;
-import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Const.constant;
-import static miso.ingredients.Iff.*;
+import static miso.ingredients.FunctionCall.functionCall;
+import static miso.ingredients.FunctionSignature.functionSignature;
+import static miso.ingredients.Iff.iff;
+import static miso.ingredients.Iff.iffList;
 import static miso.ingredients.ListBinOp.cons;
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Nop.nop;
 import static miso.ingredients.Origin.origin;
-import static miso.ingredients.UnOp.*;
+import static miso.ingredients.UnOp.head;
+import static miso.ingredients.UnOp.tail;
 import static miso.ingredients.gateway.Gateway.intGateway;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -63,7 +61,8 @@ public class ServiceTest {
 
     @After
     public void after() {
-        Actress.shutdown();
+        Actresses.shutdown();
+        Actresses.reset();
     }
 
     @Test
@@ -170,6 +169,7 @@ public class ServiceTest {
          */
 
         //  function mul(a) = a * 2
+
         Function<Integer> mul = mul().constant(Name.rightArg, 2);
         mul.label("*");
         FunctionSignature<Integer> functionSignatureMul = functionSignature(mul);
@@ -248,7 +248,6 @@ public class ServiceTest {
 
     }
 
-    @Ignore
     @Test
     public void testFilter() {
         /*
@@ -256,14 +255,13 @@ public class ServiceTest {
             check(filter(input, a -> iff (a == null) {false} else {a mod 2 == 0}))
             */
 
-        Actress.debug();
 
         Function<List<Integer>> filterCall = functionCall(getFilterSignature());
         filterCall.label("filter");
         FunctionSignature<Boolean> predicate = getModTwoEqZero();
         //checkFilter(Collections.singletonList(2), Collections.singletonList(2), filterCall, predicate);
-        //checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
-        checkFilter(Collections.emptyList(), Collections.singletonList(3), filterCall, predicate);
+        checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
+        //checkFilter(Collections.emptyList(), Collections.singletonList(3), filterCall, predicate);
 
     }
 
@@ -366,26 +364,14 @@ public class ServiceTest {
     }
 
     private FunctionSignature<Boolean> getModTwoEqZero() {
-        // a -> iff (a == null)
-        //           {false}
-        //      else
-        //          {a mod 2 == 0}))
+        // a -> (a mod 2) == 0
 
-        Iff<Boolean> iff = iffBool();
-        iff.label("iffMod");
-        iff.constant(Name.onTrue, False);
-        Function<Boolean> isNull = isNull().returnTo(iff, Name.condition);
-        iff.propagate(Name.arg, Name.arg, isNull);
+        Function<Boolean> eqZero = eq().constant(Name.rightArg, _0);
+        Function<Integer> modTwo = mod().constant(Name.rightArg, _2).returnTo(eqZero, Name.leftArg);
 
-        Function<Integer> modTwo = mod().constant(Name.rightArg, _2);
-        iff.propagate(Name.arg, Name.leftArg, modTwo);
-
-        Function<Boolean> eqZero = eq().constant(Name.rightArg, _0).returnTo(iff, Name.onFalse);
-        modTwo.returnTo(eqZero, Name.leftArg);
-
-        FunctionSignature<Boolean> signature = functionSignature(iff);
-        signature.label("IFFMOD");
-        signature.propagate(Name.arg, Name.arg, iff);
+        FunctionSignature<Boolean> signature = functionSignature(eqZero);
+        signature.label("MOD2==0");
+        signature.propagate(Name.arg, Name.leftArg, modTwo);
         return signature;
     }
 
@@ -397,7 +383,7 @@ public class ServiceTest {
     }
 
     @Test
-    public void testGateway() throws ExecutionException, InterruptedException {
+    public void testGateway() {
         Gateway<Integer> gateway = intGateway();
         BinOp<Integer, Integer, Integer> mul = mul();
 
@@ -671,6 +657,7 @@ public class ServiceTest {
         resultMonitor.receive(message(Name.a, _1, origin));
 
         await(() -> result.value == 4);
+
     }
 
 
@@ -687,23 +674,28 @@ public class ServiceTest {
         Int result = Int(0);
 
         Function<Integer> mul = mul();
-        Function<Integer> callee = functionSignature(mul);
-        callee.propagate(Name.a, Name.leftArg, mul);
-        callee.propagate(Name.a, Name.rightArg, mul);
+        Function<Integer> mulSignature = functionSignature(mul);
+        mulSignature.propagate(Name.a, Name.leftArg, mul);
+        mulSignature.propagate(Name.a, Name.rightArg, mul);
 
-        Function<Integer> callerInner = functionCall(callee).constant(Name.a, 2);
-        Function<Integer> callerOuter = functionCall(callee);
-        callerInner.returnTo(callerOuter, Name.a);
+        Function<Integer> innerCaller = functionCall(mulSignature).constant(Name.a, 2);
+        Function<Integer> outerCaller = functionCall(mulSignature);
+        innerCaller.returnTo(outerCaller, Name.a);
 
         Action resultMonitor = action(i -> result.setValue((int) i.value));
         resultMonitor.param(Name.result);
-        callerOuter.returnTo(resultMonitor, Name.result);
+        outerCaller.returnTo(resultMonitor, Name.result);
+
+        mul.label("mul");
+        mulSignature.label("MUL");
+        resultMonitor.label("gateway");
+        outerCaller.label("outerCaller");
+        innerCaller.label("innerCaller");
 
         Origin origin = standardOrigin(resultMonitor, 0L);
-        callerInner.receive(message(Name.a, _2, origin));
+        innerCaller.receive(message(Name.a, _2, origin));
 
         await(() -> result.value == 16);
-
     }
 
 
@@ -1017,15 +1009,6 @@ public class ServiceTest {
         System.out.println(String.format("java function: sum of %d (%d) in %d millis", max, sum, elapsed));
     }
 
-    private void await(Supplier<Boolean> condition) {
-        while (!condition.get()) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                //
-            }
-        }
-    }
 
     private Origin standardOrigin(Action gateway, Long runId) {
         return origin(gateway, nop, runId, 0);

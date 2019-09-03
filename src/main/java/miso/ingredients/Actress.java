@@ -1,87 +1,66 @@
 package miso.ingredients;
 
-import java.util.ArrayList;
-import java.util.List;
+import miso.ingredients.trace.Trace;
+import miso.misc.Adresses;
+
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
-import static miso.ingredients.DNS.dns;
+import static miso.ingredients.Actresses.resolve;
+import static miso.ingredients.trace.TraceMessage.traced;
 
 public abstract class Actress implements Runnable {
 
-    private static final List<Actress> cast = new ArrayList<>();
+    boolean debug = false;
+    boolean trace = false;
+    boolean idle = true;
+    protected final Actress tracer = resolveTracer();
 
-    static public boolean debug = false;
-
-    public static void start(Actress a) {
-        new Thread(a).start();
-        cast.add(a);
+    private Actress resolveTracer() {
+        if (this instanceof Trace) {
+            return this;
+        } else {
+            return resolve(Adresses.trace);
+        }
     }
 
-    public static void cleanupFunctions(Long runId) {
-        cast.forEach(c -> {
-            if (c instanceof Function) {
-                ((Function) c).cleanup(runId);
-            }
-        });
-    }
+    public final Address address;
+    Queue<Message> inBox = new ConcurrentLinkedQueue<>();
 
-    public void checkSanityOnStop() {
-
-    }
-
-    ;
-
-    public static void debug() {
-        debug = true;
-    }
-
-    public static void noDebug() {
-        debug = true;
-    }
-
-    public static void shutdown() {
-        cast.forEach(Actress::stop);
-        await(() -> cast.stream().allMatch(Actress::isStopped));
-        cast.forEach(Actress::checkSanityOnStop);
-        cast.clear();
-        maxAddress = 0;
+    public boolean idle(){
+        return inBox.size() == 0 && idle;
     }
 
     private AtomicBoolean stopping = new AtomicBoolean(false);
 
-    public boolean isStopped() {
+    private boolean stopped = true;
+
+    boolean isStopped() {
         return stopped;
     }
 
-    private boolean stopped;
+    protected Actress(Address address) {
+        this.address = address;
+    }
 
-    private static int maxAddress = 0;
-
-    public final Address address;
-
-    Queue<Message> inBox = new ConcurrentLinkedQueue<>();
-
-    public Actress() {
-        address = new Address(this.getClass().getSimpleName() + "-" + maxAddress++);
-        dns().add(this);
+    protected Actress() {
+        address = new Address(this.getClass().getSimpleName() + "-" + Actresses.nextAddress());
     }
 
     public void label(String sticker) {
-        address.setSticker(sticker);
+        address.setLabel(sticker);
     }
 
     public void receive(Message message) {
-        debug(this.address.toString() + " <- " + message.origin.sender.address.toString() + " " + message.toString());
+        //debug(this.address.toString() + " <- " + message.origin.sender.address.toString() + " " + message.toString());
         inBox.add(message);
     }
 
     protected abstract void process(Message message);
 
-    public void stop() {
+    protected void stop() {
         stopping.compareAndSet(false, true);
     }
 
@@ -89,14 +68,17 @@ public abstract class Actress implements Runnable {
     public void run() {
         stopped = false;
         stopping.set(false);
+        idle = true;
 
         while (!stopping.get())
             try {
                 Message message = inBox.poll();
                 if (message != null) {
+                    idle = false;
                     debug(this.address + " !! " + message.toString());
                     process(message);
                 } else {
+                    idle = true;
                     Thread.yield();
                 }
 
@@ -105,6 +87,12 @@ public abstract class Actress implements Runnable {
                 throw e;
             }
         stopped = true;
+    }
+
+    protected void maybeTrace(Message message) {
+        if (trace) {
+            tracer.receive(traced(message, this));
+        }
     }
 
     @Override
@@ -120,19 +108,13 @@ public abstract class Actress implements Runnable {
         return Objects.hash(address);
     }
 
-    protected static void debug(String s) {
+    protected void debug(String s) {
         if (debug) {
             System.out.println(s);
         }
     }
 
-    private static void await(Supplier<Boolean> condition) {
-        while (!condition.get()) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                //
-            }
-        }
+    public void checkSanityOnStop() {
     }
+
 }

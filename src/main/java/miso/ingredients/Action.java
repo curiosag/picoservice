@@ -6,15 +6,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static miso.ingredients.Actresses.start;
 import static miso.ingredients.Nop.nop;
 
 public class Action extends Function {
 
-    private final Consumer<Message> action;
+    private Consumer<Message> action;
     private final List<String> expectedParams = new ArrayList<>();
 
-    private Action(Consumer<Message> action) {
+    protected Action(Consumer<Message> action) {
         this.action = action;
+    }
+
+    public Action() {
+        super();
     }
 
     @Override
@@ -24,6 +29,10 @@ public class Action extends Function {
 
     @Override
     protected void processInner(Message m, State s) {
+        if (action == null)
+        {
+            throw new IllegalStateException();
+        }
         action.accept(m);
         removeState(s.origin);
     }
@@ -33,6 +42,14 @@ public class Action extends Function {
         result.returnTo(nop, Name.nop);
         start(result);
         return result;
+    }
+
+    public Consumer<Message> getAction() {
+        return action;
+    }
+
+    public void setAction(Consumer<Message> action) {
+        this.action = action;
     }
 
     @Override

@@ -5,7 +5,7 @@ public class Message {
     public final String key;
     public final Origin origin;
 
-    private Message(String key, Object value, Origin origin) {
+    protected Message(String key, Object value, Origin origin) {
         this.origin = origin;
         this.key = key;
         this.value = value;

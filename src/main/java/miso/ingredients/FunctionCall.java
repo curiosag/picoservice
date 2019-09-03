@@ -1,5 +1,6 @@
 package miso.ingredients;
 
+import static miso.ingredients.Actresses.start;
 import static miso.ingredients.Message.message;
 
 public class FunctionCall<T> extends Function<T> {
@@ -10,23 +11,15 @@ public class FunctionCall<T> extends Function<T> {
         this.function = f;
     }
 
-    public static <T> FunctionCall<T> functionCall(Function<T> body){
+    public static <T> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
+        start(result);
         return result;
     }
 
     @Override
-    public void receive(Message m) {
-        if (m.hasKey(Name.result)) {
-            returnTo.receive(message(returnKey, m.value, m.origin.sender(this)));
-        } else {
-            function.receive(m.sender(this));
-        }
-    }
-
-    @Override
     protected boolean isParameter(String key) {
-        throw new IllegalStateException();
+        return true;
     }
 
     @Override
@@ -41,7 +34,12 @@ public class FunctionCall<T> extends Function<T> {
 
     @Override
     protected void process(Message m) {
-        throw new IllegalStateException();
+        maybeTrace(m);
+        if (m.hasKey(Name.result)) {
+            returnTo.receive(message(returnKey, m.value, m.origin.sender(this)));
+        } else {
+            function.receive(m.sender(this));
+        }
     }
 
 }

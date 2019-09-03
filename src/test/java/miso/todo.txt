@@ -1,3 +1,66 @@
-2048032000
-2147483647
-24503500
+/* 
+  Huffman Tree DOT graph.
+
+  DOT Reference :  http://www.graphviz.org/doc/info/lang.html
+                   http://en.wikipedia.org/wiki/DOT_language
+  Timestamp     :  1567510181 
+  Phrase        :  'REBEL TORIES JOIN LABOUR MPS IN BID TO STOP NO DEAL, AFTER DOWNING STREET THREATENS SNAP ELECTION.'
+
+  Generated on http://huffman.ooz.ie/
+*/
+
+digraph G {
+    edge [label=0];
+    graph [ranksep=0];
+    node [shape=record];
+    L [label="{{L|4}|0000}"];
+    DOT [label="{{DOT|1}|000100}"];
+    C [label="{{C|1}|000101}"];
+    B [label="{{B|3}|00011}"];
+    T [label="{{T|9}|001}"];
+    A [label="{{A|5}|0100}"];
+    D [label="{{D|3}|01010}"];
+    P [label="{{P|3}|01011}"];
+    E [label="{{E|11}|011}"];
+    I [label="{{I|6}|1000}"];
+    S [label="{{S|6}|1001}"];
+    R [label="{{R|6}|1010}"];
+    H [label="{{H|1}|1011000}"];
+    J [label="{{J|1}|1011001}"];
+    HJ [label=2];
+    G [label="{{G|1}|1011010}"];
+    F [label="{{F|1}|1011011}"];
+    GF [label=2];
+    W [label="{{W|1}|1011100}"];
+    COMA [label="{{COMA|1}|1011101}"];
+    WCOMA [label=2];
+    M [label="{{M|1}|1011110}"];
+    U [label="{{U|1}|1011111}"];
+    MU [label=2];
+    WCOMAMU [label=4];
+    O [label="{{O|8}|1100}"];
+    N [label="{{N|8}|1101}"];
+    SPACE [label="{{SPACE|16}|111}"];
+    98 -> 40 -> 18 -> 9 -> L;
+    5 -> 2 -> DOT;
+    22 -> 11 -> A;
+    6 -> D;
+    58 -> 26 -> 12 -> I;
+    14 -> R;
+    8 -> 4 -> HJ -> H;
+    GF -> G;
+    WCOMAMU -> WCOMA -> W;
+    MU -> M;
+    32 -> 16 -> O;2 -> C [label=1];
+    9 -> 5 -> B [label=1];
+    18 -> T [label=1];
+    11 -> 6 -> P [label=1];
+    40 -> 22 -> E [label=1];
+    12 -> S [label=1];
+    HJ -> J [label=1];
+    4 -> GF -> F [label=1];
+    WCOMA -> COMA [label=1];
+    26 -> 14 -> 8 -> WCOMAMU -> MU -> U [label=1];
+    16 -> N [label=1];
+    98 -> 58 -> 32 -> SPACE [label=1];
+}

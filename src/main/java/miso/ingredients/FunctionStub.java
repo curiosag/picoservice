@@ -10,7 +10,7 @@ public class FunctionStub<T> extends Function<T> {
 
     public static <T> FunctionStub<T> of(String keyFuncStubbed) {
         FunctionStub<T> result = new FunctionStub<>(keyFuncStubbed);
-        Actress.start(result);
+        Actresses.start(result);
         return result;
     }
 
@@ -26,6 +26,7 @@ public class FunctionStub<T> extends Function<T> {
 
     @Override
     protected void process(Message message) {
+        maybeTrace(message);
         FunctionStubState state = (FunctionStubState) getState(message.origin);
 
         if (message.key.equals(Name.result)) {

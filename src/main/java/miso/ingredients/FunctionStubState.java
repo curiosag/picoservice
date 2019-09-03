@@ -18,7 +18,7 @@ class FunctionStubState extends State {
 
     private FunctionCall<?> createCall(FunctionSignature<?> f) {
         FunctionCall<?> functionCall = functionCall(f);
-        functionCall.label(f.address.sticker.toLowerCase());
+        functionCall.label(f.address.label.toLowerCase());
         functionCall.returnTo(stub, Name.result);
         return functionCall;
     }

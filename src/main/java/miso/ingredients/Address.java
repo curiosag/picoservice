@@ -6,14 +6,14 @@ public class Address {
 
     public String value;
 
-    String sticker = "";
+    public String label = "";
 
-    Address(String value) {
+    public Address(String value) {
         this.value = value;
     }
 
-    void setSticker(String sticker) {
-        this.sticker = " " + sticker;
+    void setLabel(String label) {
+        this.label = " " + label;
     }
 
     @Override
@@ -31,6 +31,6 @@ public class Address {
 
     @Override
     public String toString() {
-        return "{" + value + sticker + '}';
+        return "{" + value + label + '}';
     }
 }

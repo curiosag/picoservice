@@ -7,6 +7,7 @@ public class Nop extends Function<Object> {
     private static Nop createNop() {
         Nop result = new Nop();
         result.address.value = "nop";
+        result.address.label = "~~~~~~~~";
         return result;
     }
 

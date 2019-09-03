@@ -3,6 +3,8 @@ package miso.ingredients;
 
 import java.util.function.BiFunction;
 
+import static miso.ingredients.Actresses.start;
+
 public class BinOp<T, U, V> extends Function<V> {
 
     private final BiFunction<T, U, V> op;

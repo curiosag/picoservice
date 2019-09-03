@@ -32,4 +32,6 @@ public interface Name {
     String predicate = "predicate";
     String func = "func";
     String nop = "nop";
+    String receiver = "receiver";
+    String senderReceiverTuple = "senderReceiverTuple";
 }

@@ -11,7 +11,7 @@ public class ListBinOp {
 
     public static BinOp<List<Integer>, List<Integer>, Boolean> eq() {
         BinOp<List<Integer>, List<Integer>, Boolean> result = new BinOp<>(List::equals, listConverter, listConverter);
-        Actress.start(result);
+        Actresses.start(result);
         return result;
     }
 
@@ -23,7 +23,7 @@ public class ListBinOp {
             integers.addAll(n2);
             return integers;
         }, intConverter, listConverter);
-        Actress.start(result);
+        Actresses.start(result);
         return result;
     }
 }

@@ -67,30 +67,35 @@ public class UnOp<T, V> extends Function<V> {
 
     public static UnOp<Boolean, Boolean> not() {
         UnOp<Boolean, Boolean> result = new UnOp<>(v -> !v, boolConverter);
+        result.label("not");
         start(result);
         return result;
     }
 
     public static UnOp<Object, Boolean> isNull() {
         UnOp<Object, Boolean> result = new UnOp<>(Objects::isNull, v -> v);
+        result.label("isNull");
         start(result);
         return result;
     }
 
     public static UnOp<List<Integer>, Integer> head() {
         UnOp<List<Integer>, Integer> result = new UnOp<>(v -> v.isEmpty() ? null : v.get(0), listConverter);
+        result.label("head");
         start(result);
         return result;
     }
 
     public static UnOp<List<Integer>, List<Integer>> tail() {
-        UnOp<List<Integer>, List<Integer>> result = new UnOp<>(v -> v.isEmpty() ? null : v.subList(1, v.size()), listConverter);
+        UnOp<List<Integer>, List<Integer>> result = new UnOp<>(v -> v.isEmpty() ? v : v.subList(1, v.size()), listConverter);
+        result.label("tail");
         start(result);
         return result;
     }
 
     public static UnOp<List<Integer>, Integer> size() {
         UnOp<List<Integer>, Integer> result = new UnOp<>(v -> v.isEmpty() ? null : v.size(), listConverter);
+        result.label("listSize");
         start(result);
         return result;
     }

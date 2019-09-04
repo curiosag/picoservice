@@ -129,7 +129,7 @@ public class Iff<T> extends Function<T> {
             removeState(state.origin);
         }
         if (isFalse(state.decision) && computed(state.onFalse)) {
-            returnResult((T) state.onFalse, m.origin);
+            returnResult((T) state.onFalse, m.origin.sender(this));
             removeState(state.origin);
         }
 

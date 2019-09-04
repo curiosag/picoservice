@@ -49,13 +49,21 @@ public class Actresses {
         addressed.clear();
         debug = false;
         trace = false;
-        tracer = new Trace();
-        start(tracer);
-        addressed.put(Adresses.trace, tracer);
-        maxAddress.set(0);
+        setUpTracer(trace);
+        maxAddress = new AtomicInteger(0);
     }
 
-    public static void reset(){
+    private void setUpTracer(boolean trace) {
+        if (!trace && tracer != null) {
+            shutdownTracer();
+        }
+        tracer = new Trace(trace);
+        start(tracer);
+        cast.remove(tracer); // must be handled seperately
+        addressed.put(Adresses.trace, tracer);
+    }
+
+    public static void reset() {
         instance().resetInstance();
     }
 
@@ -88,17 +96,18 @@ public class Actresses {
         instance().cast.forEach(a -> a.debug = instance().debug);
     }
 
-    private static void setTrace(boolean what) {
-        instance().trace = what;
-        instance().cast.forEach(a -> a.trace = instance().trace);
+    private void setTrace(boolean what) {
+        trace = what;
+        setUpTracer(trace);
+        cast.forEach(a -> a.setTrace(trace));
     }
 
     public static void trace() {
-        instance().trace = true;
+        instance().setTrace(true);
     }
 
     public static void noTrace() {
-        instance().trace = false;
+        instance().setTrace(false);
     }
 
     public static void debug() {
@@ -114,17 +123,23 @@ public class Actresses {
     }
 
     private void shutdownInstance() {
-        cast.remove(tracer); //!!
-
         cast.forEach(Actress::stop);
         await(() -> cast.stream().allMatch(Actress::isStopped));
         cast.forEach(Actress::checkSanityOnStop);
-        await(() -> tracer.idle());
-        tracer.stop();
-        try {
-            tracer.close(); // trace needs to be available until everything else has stopped
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        shutdownTracer();
+    }
+
+    private void shutdownTracer() {
+        if (tracer != null) {
+            await(() -> tracer.idle());
+            tracer.stop();
+            try {
+                tracer.close(); // trace needs to be available until everything else has stopped
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            addressed.remove(tracer);
+            tracer = null;
         }
     }
 

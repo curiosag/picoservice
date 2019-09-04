@@ -10,6 +10,7 @@ public class FunctionStub<T> extends Function<T> {
 
     public static <T> FunctionStub<T> of(String keyFuncStubbed) {
         FunctionStub<T> result = new FunctionStub<>(keyFuncStubbed);
+        result.label("stub:" + keyFuncStubbed);
         Actresses.start(result);
         return result;
     }

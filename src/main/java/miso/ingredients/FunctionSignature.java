@@ -53,7 +53,7 @@ public class FunctionSignature<T> extends Function<T> {
     public void process(Message m) {
         if (m.origin.sender instanceof FunctionCall) {
             hdlFunctionCallTrace(m);
-            Origin o = origin(m.origin.sender, m.origin.sender, m.origin.executionId, m.origin.callLevel + 1);
+            Origin o = origin(m.origin.sender, m.origin.sender, m.origin.executionId, m.origin.callLevel + 1, m.origin.seqNr);
             FunctionSignatureState state = (FunctionSignatureState) getState(o);
             state.triggerOfCaller = m.origin.scope;
             super.process(m.origin(o));
@@ -65,7 +65,7 @@ public class FunctionSignature<T> extends Function<T> {
 
     private void hdlFunctionCallTrace(Message m){
         // original scope is needed to reconstruct the trace
-        Origin o = origin(m.origin.sender, m.origin.scope, m.origin.executionId, m.origin.callLevel + 1);
+        Origin o = origin(m.origin.sender, m.origin.scope, m.origin.executionId, m.origin.callLevel + 1, m.origin.seqNr);
         hackyMaybeTrace(m.origin(o));
     }
 
@@ -73,7 +73,7 @@ public class FunctionSignature<T> extends Function<T> {
     protected void processInner(Message m, State state) {
         if (m.hasKey(Name.result)) {
             Function<?> triggerOfCaller = ((FunctionSignatureState) state).triggerOfCaller;
-            Origin o = origin(this, triggerOfCaller, m.origin.executionId, m.origin.callLevel - 1);
+            Origin o = origin(this, triggerOfCaller, m.origin.executionId, m.origin.callLevel - 1, m.origin.seqNr + 1L);
             state.origin.scope.receive(m.origin(o));
             removeState(state.origin);
         }

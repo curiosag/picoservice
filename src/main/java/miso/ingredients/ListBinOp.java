@@ -11,18 +11,19 @@ public class ListBinOp {
 
     public static BinOp<List<Integer>, List<Integer>, Boolean> eq() {
         BinOp<List<Integer>, List<Integer>, Boolean> result = new BinOp<>(List::equals, listConverter, listConverter);
+        result.label("equal");
         Actresses.start(result);
         return result;
     }
 
     public static miso.ingredients.BinOp<Integer, List<Integer>, List<Integer>> cons() {
         BinOp<Integer, List<Integer>, List<Integer>> result = new BinOp<>((n1, n2) -> {
-            n2.add(0, n1);
-            ArrayList<Integer> integers = new ArrayList<>();
-            integers.add(n1);
-            integers.addAll(n2);
-            return integers;
+            List<Integer> cons = new ArrayList<>();
+            cons.add(n1);
+            cons.addAll(n2);
+            return cons;
         }, intConverter, listConverter);
+        result.label("cons");
         Actresses.start(result);
         return result;
     }

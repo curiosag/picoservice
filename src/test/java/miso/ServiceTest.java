@@ -255,14 +255,26 @@ public class ServiceTest {
             check(filter(input, a -> iff (a == null) {false} else {a mod 2 == 0}))
             */
 
+        Actresses.trace();
 
         Function<List<Integer>> filterCall = functionCall(getFilterSignature());
         filterCall.label("filter");
         FunctionSignature<Boolean> predicate = getModTwoEqZero();
-        //checkFilter(Collections.singletonList(2), Collections.singletonList(2), filterCall, predicate);
-        checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
-        //checkFilter(Collections.emptyList(), Collections.singletonList(3), filterCall, predicate);
+/*        checkFilter(list(2), list(2), filterCall, predicate);
+        checkFilter(list(2, 2), list(2, 2), filterCall, predicate);
+        //checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
+        checkFilter(emptyList(), list(3), filterCall, predicate);
+        checkFilter(emptyList(), list(3, 3), filterCall, predicate);
+        checkFilter(list(2), list(1, 2, 3), filterCall, predicate);*/
+        checkFilter(list(0, 2, 4, 6, 8), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), filterCall, predicate);
+    }
 
+    private List<Integer> list(Integer... i) {
+        return Arrays.asList(i);
+    }
+
+    private List<Integer> emptyList() {
+        return new ArrayList<>();
     }
 
     private void checkFilter(List<Integer> expected, List<Integer> input, Function<List<Integer>> filterCall, FunctionSignature<Boolean> predicate) {
@@ -276,7 +288,7 @@ public class ServiceTest {
         resultListener.propagate(Name.predicate, Name.predicate, filterCall);
         filterCall.returnTo(resultListener, Name.result);
 
-        Origin origin = createSource(resultListener);
+        Origin origin = createSource(nop);
         resultListener.receive(message(Name.list, input, origin));
         resultListener.receive(message(Name.predicate, predicate, origin));
 
@@ -302,33 +314,33 @@ public class ServiceTest {
         }
         */
 
-        List empty = Collections.EMPTY_LIST;
+        List<Integer> empty = new ArrayList<>();
 
-        Iff<List<Integer>> iffOuter = iffList();
-        iffOuter.constant(Name.onTrue, empty);
-        FunctionSignature<List<Integer>> filterSignature = functionSignature(iffOuter);
-        filterSignature.propagate(Name.predicate, Name.predicate, iffOuter);
-        filterSignature.propagate(Name.list, Name.list, iffOuter);
+        Iff<List<Integer>> outerIff = iffList();
+        outerIff.constant(Name.onTrue, empty);
+        FunctionSignature<List<Integer>> filterSignature = functionSignature(outerIff);
+        filterSignature.propagate(Name.predicate, Name.predicate, outerIff);
+        filterSignature.propagate(Name.list, Name.list, outerIff);
         filterSignature.label("FILTER");
 
-        Function<Boolean> listEq = ListBinOp.eq().returnTo(iffOuter, Name.condition).constant(Name.rightArg, empty);
-        iffOuter.propagate(Name.list, Name.leftArg, listEq);
+        Function<Boolean> listEq = ListBinOp.eq().returnTo(outerIff, Name.condition).constant(Name.rightArg, empty);
+        outerIff.propagate(Name.list, Name.leftArg, listEq);
 
-        Iff<List<Integer>> iffInner = iffList();
-        iffInner.label("filter/iffInner");
-        iffOuter.label("filter/iffOuter");
-        iffInner.returnTo(iffOuter, Name.result);
-        iffOuter.propagateOnFalse(Name.predicate, Name.predicate, iffInner);
+        Iff<List<Integer>> innerIff = iffList();
+        innerIff.label("innerIff");
+        outerIff.label("outerIff");
+        innerIff.returnTo(outerIff, Name.onFalse);
+        outerIff.propagateOnFalse(Name.predicate, Name.predicate, innerIff);
 
         //let head = head(list);
         //let tail = tail(list);
-        Function<Integer> head = head().returnTo(iffOuter, Name.head);
-        Function<List<Integer>> tail = tail().returnTo(iffOuter, Name.tail);
+        Function<Integer> head = head().returnTo(outerIff, Name.head);
+        Function<List<Integer>> tail = tail().returnTo(outerIff, Name.tail);
 
-        iffOuter.propagateOnFalse(Name.list, Name.arg, head);
-        iffOuter.propagateOnFalse(Name.list, Name.arg, tail);
-        iffOuter.propagateOnFalse(Name.head, Name.head, iffInner);
-        iffOuter.propagateOnFalse(Name.tail, Name.tail, iffInner);
+        outerIff.propagateOnFalse(Name.list, Name.arg, head);
+        outerIff.propagateOnFalse(Name.list, Name.arg, tail);
+        outerIff.propagateOnFalse(Name.head, Name.head, innerIff);
+        outerIff.propagateOnFalse(Name.tail, Name.tail, innerIff);
 
         /*
         else {
@@ -342,23 +354,23 @@ public class ServiceTest {
         */
 
         FunctionStub<Boolean> predicateStub = FunctionStub.of(Name.predicate);
-        predicateStub.returnTo(iffInner, Name.condition);
+        predicateStub.returnTo(innerIff, Name.condition);
 
-        Function<List<Integer>> cons = cons().returnTo(iffInner, Name.onTrue);
-        Function<List<Integer>> filterReCallOnTrue = functionCall(filterSignature).returnTo(cons, Name.leftArg);
-        Function<List<Integer>> filterReCallOnFalse = functionCall(filterSignature).returnTo(iffInner, Name.onFalse);
+        Function<List<Integer>> cons = cons().returnTo(innerIff, Name.onTrue);
+        Function<List<Integer>> filterReCallOnTrue = functionCall(filterSignature).returnTo(cons, Name.rightArg);
+        Function<List<Integer>> filterReCallOnFalse = functionCall(filterSignature).returnTo(innerIff, Name.onFalse);
         filterReCallOnTrue.label("filterReCallOnTrue");
-        filterReCallOnTrue.label("filterReCallOnFalse");
+        filterReCallOnFalse.label("filterReCallOnFalse");
 
-        iffInner.propagate(Name.head, Name.arg, predicateStub);
-        iffInner.propagate(Name.predicate, Name.predicate, predicateStub);
+        innerIff.propagate(Name.head, Name.arg, predicateStub);
+        innerIff.propagate(Name.predicate, Name.predicate, predicateStub);
 
-        iffInner.propagateOnTrue(Name.head, Name.leftArg, cons);
-        iffInner.propagateOnTrue(Name.tail, Name.list, filterReCallOnTrue);
-        iffInner.propagateOnTrue(Name.predicate, Name.predicate, filterReCallOnTrue);
+        innerIff.propagateOnTrue(Name.head, Name.leftArg, cons);
+        innerIff.propagateOnTrue(Name.tail, Name.list, filterReCallOnTrue);
+        innerIff.propagateOnTrue(Name.predicate, Name.predicate, filterReCallOnTrue);
 
-        iffInner.propagateOnFalse(Name.tail, Name.list, filterReCallOnFalse);
-        iffInner.propagateOnFalse(Name.predicate, Name.predicate, filterReCallOnFalse);
+        innerIff.propagateOnFalse(Name.tail, Name.list, filterReCallOnFalse);
+        innerIff.propagateOnFalse(Name.predicate, Name.predicate, filterReCallOnFalse);
 
         return filterSignature;
     }
@@ -575,8 +587,8 @@ public class ServiceTest {
 
     }
 
-    private Origin createSource(Action printMsg) {
-        return Origin.origin(printMsg, nop, 0L, 0);
+    private Origin createSource(Function a) {
+        return Origin.origin(a, nop, 0L, 0, 0L);
     }
 
     @Test
@@ -608,11 +620,11 @@ public class ServiceTest {
         resultMonitor.param(callerA.returnKey);
         resultMonitor.param(callerB.returnKey);
 
-        Origin originA = Origin.origin(callerA, nop, 0L, 0);
+        Origin originA = Origin.origin(callerA, nop, 0L, 0, 0L);
         callerA.receive(message(Name.a, 1, originA));
         callerA.receive(message(Name.b, 2, originA));
 
-        Origin originB = Origin.origin(callerB, nop, 1L, 0);
+        Origin originB = Origin.origin(callerB, nop, 1L, 0, 0L);
         callerB.receive(message(Name.a, 3, originB));
         callerB.receive(message(Name.b, 4, originB));
 
@@ -1011,7 +1023,7 @@ public class ServiceTest {
 
 
     private Origin standardOrigin(Action gateway, Long runId) {
-        return origin(gateway, nop, runId, 0);
+        return origin(gateway, nop, runId, 0, 0L);
     }
 
 }

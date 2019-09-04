@@ -16,12 +16,14 @@ import java.util.List;
 
 public class Trace extends Actress implements Closeable {
 
-    private final BufferedWriter writer = createWriter();
+    private final boolean active;
+    private final BufferedWriter writer;
     private List<TraceMessage> messages = new ArrayList<>();
 
-    public Trace() {
+    public Trace(boolean active) {
         super(new Address(Adresses.trace));
-
+        this.active = active;
+        writer = active ? createWriter() : null;
         writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
     }
 
@@ -29,7 +31,8 @@ public class Trace extends Actress implements Closeable {
         write(s);
         write("\n");
         try {
-            writer.flush();
+            if (active)
+                writer.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -37,7 +40,8 @@ public class Trace extends Actress implements Closeable {
 
     private void write(String s) {
         try {
-            writer.write(s);
+            if (active)
+                writer.write(s);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -47,14 +51,17 @@ public class Trace extends Actress implements Closeable {
         return f.address.label.length() > 0 ? f.address.label : f.address.toString();
     }
 
-    private String node(Origin f) {
-        return node(f.sender);
-    }
-
     private String payload(Message m) {
-        String value = m.value instanceof Actress ? ((Actress) m.value).address.value : (m.value == null ? "NULL" : m.value.toString());
+        String value;
+        if (m.value == null) {
+            value = "NULL";
+        } else if (m.value instanceof Actress) {
+            value = node((Actress) m.value);
+        } else {
+            value = (m.value).toString();
+        }
 
-        return '"' + m.key + ":" + value
+        return '"' + "<" + m.origin.seqNr + ">" + m.key + ":" + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -70,8 +77,6 @@ public class Trace extends Actress implements Closeable {
         String labelReceiver = node(m.receiver());
         String scopeReceiver = scopeSender;
 
-        System.out.println(String.format("%s(%s)%s --> %s(%s)%s", labelSender, scopeSender, levelSender, labelReceiver, scopeReceiver, levelReceiver));
-
         if ((m.origin.sender instanceof FunctionCall) && (m.receiver() instanceof FunctionSignature)) {
             // levelSender ok
             // scopeSender ok;
@@ -80,7 +85,7 @@ public class Trace extends Actress implements Closeable {
         }
 
         if ((m.origin.sender instanceof FunctionSignature) && (m.receiver() instanceof FunctionCall)) {
-            levelSender ++;
+            levelSender++;
             scopeSender = labelReceiver;
             // levelReceiver ok
             // scopeReceiver ok
@@ -93,7 +98,7 @@ public class Trace extends Actress implements Closeable {
     }
 
     private String renderNode(String label, Long executionId, Integer callLevel, String scope) {
-        return '"' + String.format("%s(%d/%d)\n(%s)", label, executionId, callLevel, scope) + '"';
+        return '"' + String.format("%s(%d/%d)(%s)", label, executionId, callLevel, scope) + '"';
     }
 
     @Override
@@ -118,9 +123,11 @@ public class Trace extends Actress implements Closeable {
 
     @Override
     public void close() throws IOException {
-        writeLn("}");
-        writer.flush();
-        writer.close();
+        if (active) {
+            writeLn("}");
+            writer.flush();
+            writer.close();
+        }
     }
 
 }

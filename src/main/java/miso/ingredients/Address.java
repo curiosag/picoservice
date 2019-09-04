@@ -13,7 +13,7 @@ public class Address {
     }
 
     void setLabel(String label) {
-        this.label = " " + label;
+        this.label = label;
     }
 
     @Override
@@ -31,6 +31,6 @@ public class Address {
 
     @Override
     public String toString() {
-        return "{" + value + label + '}';
+        return String.format("{%s(%s)}", value, label);
     }
 }

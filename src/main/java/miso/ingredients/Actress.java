@@ -16,7 +16,7 @@ public abstract class Actress implements Runnable {
     boolean debug = false;
     boolean trace = false;
     boolean idle = true;
-    protected final Actress tracer = resolveTracer();
+    protected Actress tracer = resolveTracer();
 
     private Actress resolveTracer() {
         if (this instanceof Trace) {
@@ -29,7 +29,7 @@ public abstract class Actress implements Runnable {
     public final Address address;
     Queue<Message> inBox = new ConcurrentLinkedQueue<>();
 
-    public boolean idle(){
+    public boolean idle() {
         return inBox.size() == 0 && idle;
     }
 
@@ -53,9 +53,12 @@ public abstract class Actress implements Runnable {
         address.setLabel(sticker);
     }
 
-    public void receive(Message message) {
-        //debug(this.address.toString() + " <- " + message.origin.sender.address.toString() + " " + message.toString());
-        inBox.add(message);
+    public void receive(Message m) {
+        if(m.origin.sender.address.toString().contains("filterReCallOnFalse")) {
+            debug(String.format("<%d>%s <- %s %s", m.origin.seqNr, this.address.toString(), m.origin.sender.address.toString(), m.toString()));
+        }
+        debug(String.format("<%d>%s <- %s %s", m.origin.seqNr, this.address.toString(), m.origin.sender.address.toString(), m.toString()));
+        inBox.add(m);
     }
 
     protected abstract void process(Message message);
@@ -72,11 +75,13 @@ public abstract class Actress implements Runnable {
 
         while (!stopping.get())
             try {
-                Message message = inBox.poll();
-                if (message != null) {
+                Message m = inBox.poll();
+                if (m != null) {
                     idle = false;
-                    debug(this.address + " !! " + message.toString());
-                    process(message);
+                 //   if(this.address.toString().contains("filterReCallOnFalse")) {
+                        debug(String.format("<%d>%s !! %s %s", m.origin.seqNr, this.address.toString(), m.origin.sender.address.toString(), m.toString()));
+                 //   }
+                    process(m);
                 } else {
                     idle = true;
                     Thread.yield();
@@ -117,4 +122,7 @@ public abstract class Actress implements Runnable {
     public void checkSanityOnStop() {
     }
 
+    public void setTrace(boolean trace) {
+        tracer = resolveTracer();
+    }
 }

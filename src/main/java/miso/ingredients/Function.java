@@ -127,6 +127,7 @@ public abstract class Function<T> extends Actress {
         if (!(this instanceof FunctionSignature) && (returnTo == null || returnKey == null)) {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
         }
+
         State state = getState(m.origin);
         if (m.key.equals(Name.kickOff)) {
             return;// initializeComputation happens in getState() on new state
@@ -178,12 +179,11 @@ public abstract class Function<T> extends Actress {
     static boolean isTrue(Boolean decision) {
         return decision != null && decision;
     }
-
     static boolean isFalse(Boolean decision) {
         return decision != null && !decision;
     }
+
     static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
     static java.util.function.Function<Object, Boolean> boolConverter = o -> (Boolean) o;
-
     static java.util.function.Function<Object, List<Integer>> listConverter = o -> (List<Integer>) o;
 }

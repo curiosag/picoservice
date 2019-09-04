@@ -29,7 +29,7 @@ public class CallSync<T> extends Function<T> {
     }
 
     public T call() {
-        Origin origin = Origin.origin(f, nop, executions++, 0);
+        Origin origin = Origin.origin(f, nop, executions++, 0, 0L);
         if (params.size() == 0) {
             f.receive(message(Name.kickOff, null, origin));
         } else {

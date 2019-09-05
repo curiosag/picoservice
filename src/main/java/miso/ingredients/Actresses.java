@@ -123,6 +123,7 @@ public class Actresses {
     }
 
     private void shutdownInstance() {
+        await(() -> cast.stream().allMatch(Actress::idle));
         cast.forEach(Actress::stop);
         await(() -> cast.stream().allMatch(Actress::isStopped));
         cast.forEach(Actress::checkSanityOnStop);

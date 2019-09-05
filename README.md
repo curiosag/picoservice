@@ -1,4 +1,6 @@
 # microservice
-An execution model for a few functional language constructs based on actors
+An execution model for some functional language constructs based on message passing with actors
 
 TODO: &&, ||
+
+lambdas in iffs -> komplizierte propagation von parametern?

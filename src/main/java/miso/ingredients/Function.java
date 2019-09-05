@@ -61,13 +61,13 @@ public abstract class Function<T> extends Actress {
         if (result == null) {
             result = newState(origin);
             executionStates.put(matcher, result);
-            fowardConsts(origin, consts);
+            fowardConsts(origin);
             forwardKickOff(origin);
         }
         return result;
     }
 
-    private void fowardConsts(Origin origin, Map<String, Object> consts) {
+    protected void fowardConsts(Origin origin) {
         consts.forEach((key, value) -> receive(message(key, value, origin.sender(this))));
     }
 
@@ -183,7 +183,7 @@ public abstract class Function<T> extends Actress {
         return decision != null && !decision;
     }
 
-    static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
-    static java.util.function.Function<Object, Boolean> boolConverter = o -> (Boolean) o;
-    static java.util.function.Function<Object, List<Integer>> listConverter = o -> (List<Integer>) o;
+    public static java.util.function.Function<Object, Integer> intConverter = o -> (Integer) o;
+    public static java.util.function.Function<Object, Boolean> boolConverter = o -> (Boolean) o;
+    public static java.util.function.Function<Object, List<Integer>> listConverter = o -> (List<Integer>) o;
 }

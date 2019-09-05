@@ -34,4 +34,7 @@ public interface Name {
     String nop = "nop";
     String receiver = "receiver";
     String senderReceiverTuple = "senderReceiverTuple";
+    String m = "m";
+    String l = "l";
+    String r = "r";
 }

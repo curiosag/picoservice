@@ -3,7 +3,10 @@ package miso;
 import miso.ingredients.*;
 import miso.ingredients.gateway.Execution;
 import miso.ingredients.gateway.Gateway;
+import miso.ingredients.nativeImpl.BinOps;
+import miso.ingredients.nativeImpl.ListBinOps;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
@@ -11,23 +14,26 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.Arrays.asList;
 import static miso.Int.Int;
+import static miso.implementations.Filter.getFilterSignature;
 import static miso.ingredients.Action.action;
 import static miso.ingredients.Actresses.await;
-import static miso.ingredients.BinOp.*;
 import static miso.ingredients.CallSync.sync;
 import static miso.ingredients.Const.constant;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iff;
 import static miso.ingredients.Iff.iffList;
-import static miso.ingredients.ListBinOp.cons;
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Nop.nop;
 import static miso.ingredients.Origin.origin;
-import static miso.ingredients.UnOp.head;
-import static miso.ingredients.UnOp.tail;
 import static miso.ingredients.gateway.Gateway.intGateway;
+import static miso.ingredients.nativeImpl.BinOps.add;
+import static miso.ingredients.nativeImpl.ListBinOps.concat;
+import static miso.ingredients.nativeImpl.ListBinOps.cons;
+import static miso.ingredients.nativeImpl.UnOps.head;
+import static miso.ingredients.nativeImpl.UnOps.tail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -40,24 +46,7 @@ public class ServiceTest {
     private static final Integer _1 = 1;
     private static final Integer _0 = 0;
 
-    private static final Boolean True = true;
-    private static final Boolean False = false;
 
-
-    /*
-
-    function lt(a, b) = a < b;
-    function gteq(a, b) = a >= b;
-    function filter(list, predicate) =...
-
-    function quicksort(list) =
-            if (list == [])
-                []
-            else
-                let head = head(list)
-                let tail = tail(list)
-                return quicksort(filter(list, i -> i < head)) :: [head] :: filter(filter(list, i -> i >= head))
-    */
 
     @After
     public void after() {
@@ -76,7 +65,7 @@ public class ServiceTest {
 
         // function mul(a) = a * 2
 
-        Function<Integer> mul = mul().constant(Name.rightArg, 2);
+        Function<Integer> mul = BinOps.mul().constant(Name.rightArg, 2);
         FunctionSignature<Integer> functionSignatureMul = functionSignature(mul);
         functionSignatureMul.propagate(Name.a, Name.leftArg, mul);
 
@@ -128,7 +117,7 @@ public class ServiceTest {
          */
 
         // function mul(a) = a * 2
-        Function<Integer> mul = mul().constant(Name.rightArg, 2);
+        Function<Integer> mul = BinOps.mul().constant(Name.rightArg, 2);
         mul.label("*");
         FunctionSignature<Integer> functionSignatureMul = functionSignature(mul);
         functionSignatureMul.propagate(Name.a, Name.leftArg, mul);
@@ -170,7 +159,7 @@ public class ServiceTest {
 
         //  function mul(a) = a * 2
 
-        Function<Integer> mul = mul().constant(Name.rightArg, 2);
+        Function<Integer> mul = BinOps.mul().constant(Name.rightArg, 2);
         mul.label("*");
         FunctionSignature<Integer> functionSignatureMul = functionSignature(mul);
         functionSignatureMul.propagate(Name.a, Name.leftArg, mul);
@@ -213,7 +202,7 @@ public class ServiceTest {
          */
 
         //  function mul(a) = a * 2
-        Function<Integer> mul = mul().constant(Name.rightArg, 2);
+        Function<Integer> mul = BinOps.mul().constant(Name.rightArg, 2);
         mul.label("*");
         FunctionSignature<Integer> functionSignatureMul = functionSignature(mul);
         functionSignatureMul.propagate(Name.a, Name.leftArg, mul);
@@ -248,6 +237,193 @@ public class ServiceTest {
 
     }
 
+    @Ignore
+    @Test
+    public void testLambdaWithPartialApplication() {
+        /*
+                function add(a, b) = a + b
+                function apply(func, a) = func(a)
+
+                function inc = x -> add(x, 1)
+
+                check(apply(inc, 0))
+                check(apply(inc, 1))
+         */
+
+        // function mul(a) = a * 2
+        FunctionSignature<Integer> add = BinOps.signature(add());
+
+        //function apply(func, a) = func(a)
+        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+        stubFunc.label("stubFunc");
+
+        FunctionSignature<Integer> signatureApply = functionSignature(stubFunc);
+        signatureApply.propagate(Name.a, Name.leftArg, stubFunc);
+        signatureApply.propagate(Name.func, Name.func, stubFunc);
+
+        //let a = 1
+        //let partial = x -> add(x, a)
+
+
+        // check(apply(mul, a))
+        FunctionCall<Integer> functionCallApply = functionCall(signatureApply);
+        functionCallApply.label("functionCallApply");
+        Int result = Int(0);
+        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        resultListener.param(Name.result);
+        functionCallApply.returnTo(resultListener, Name.result);
+
+        Origin origin = createSource(resultListener);
+      //  functionCallApply.receive(message(Name.func, functionSignatureMul, origin));
+        functionCallApply.receive(message(Name.a, _3, origin));
+        await(() -> result.value != 0);
+        assertEquals(Integer.valueOf(6), result.value);
+
+    }
+
+    @Ignore
+    @Test
+    public void testQuicksort() {
+        Actresses.trace();
+        Actresses.debug();
+
+        Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
+        qsortCall.label("qsortCall");
+
+//        checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
+//        checkQsort(list(2), list(2), qsortCall);
+        checkQsort(list(1, 2), list(2, 1), qsortCall);
+//        checkQsort(list(1, 2, 3), list(1, 3, 2), qsortCall);
+//        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), qsortCall);
+    }
+
+    private void checkQsort(List<Integer> expected, List<Integer> input, Function<List<Integer>> qsortCall) {
+        ArrayList<Integer> result = new ArrayList<>();
+        Int lastInt = Int(-1);
+        Action resultListener = action(i -> {
+            result.addAll((List<Integer>) i.value);
+            lastInt.value = 1;
+        }).param(Name.result);
+        resultListener.propagate(Name.list, Name.list, qsortCall);
+
+        qsortCall.returnTo(resultListener, Name.result);
+
+        Origin origin = createSource(nop);
+        resultListener.receive(message(Name.list, input, origin));
+
+        await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
+        result.sort(Integer::compareTo);
+        assertEquals(expected, result);
+    }
+
+    private FunctionSignature<List<Integer>> getQuicksortSignature() {
+
+    /*
+
+    function lt(a, b) = a < b;
+    function gteq(a, b) = a >= b;
+    function filter(list, predicate) =...
+
+    function quicksort(list) =
+            if (list == [])
+                []
+            else
+                let head = head(list)
+                let tail = tail(list)
+                quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(filter(tail, i -> gteq(i, head))))
+    */
+        //----------------------------------------------------------------------------------------------
+    /*    function quicksort(list) =
+            if (list == [])
+                []
+     */
+        Iff<List<Integer>> iff = iffList();
+        FunctionSignature<List<Integer>> qsortSignature = functionSignature(iff);
+        qsortSignature.propagate(Name.list, Name.list, iff);
+        iff.constant(Name.onTrue, emptyList());
+        Function<Boolean> listEq = ListBinOps.eq().returnTo(iff, Name.condition).constant(Name.rightArg, emptyList());
+        iff.propagate(Name.list, Name.leftArg, listEq);
+
+        // else
+        //      let head = head(list);
+        //      let tail = tail(list);
+        Function<Integer> head = head().returnTo(iff, Name.head);
+        Function<List<Integer>> tail = tail().returnTo(iff, Name.tail);
+        iff.propagateOnFalse(Name.list, Name.arg, head);
+        iff.propagateOnFalse(Name.list, Name.arg, tail);
+
+        // quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(filter(tail, i -> gteq(i, head))))
+        // +
+        Function<List<Integer>> concat = concat().returnTo(iff, Name.onFalse);
+        // ::
+        Function<List<Integer>> cons = cons().returnTo(concat, Name.rightArg);
+        iff.propagateOnFalse(Name.head, Name.leftArg, cons);
+        // 2 times quicksort(filter(...))
+        FunctionSignature<List<Integer>> filterSignature = getFilterSignature();
+        Function<List<Integer>> qsortReCallLeft = functionCall(filterSignature).returnTo(concat, Name.leftArg);
+        Function<List<Integer>> qsortReCallRight = functionCall(filterSignature).returnTo(cons, Name.rightArg);
+
+        // function lt(a, b) = a < b;
+        // filter(tail, i -> lt(i, head))
+
+        FunctionSignature<Boolean> ltPredicate = getLtSignature();
+        Function<List<Integer>> filterCallLeft =
+                functionCall(filterSignature)
+                        .constant(Name.predicate, ltPredicate)
+                        .returnTo(qsortReCallLeft, Name.list);
+        // TODO: passing on head as arg is needed here
+        iff.propagateOnFalse(Name.head, Name.arg, filterCallLeft);
+        iff.propagateOnFalse(Name.tail, Name.list, filterCallLeft);
+
+        // function gteq(a, b) = a >= b;
+        // filter(filter(tail, i -> gteq(i, head))
+        FunctionSignature<Boolean> gtEqPredicate = getGtEqSignature();
+        Function<List<Integer>> filterCallRight =
+                functionCall(filterSignature)
+                        .constant(Name.predicate, gtEqPredicate)
+                        .returnTo(qsortReCallRight, Name.list);
+        iff.propagateOnFalse(Name.head, Name.r, filterCallRight);
+        iff.propagateOnFalse(Name.tail, Name.list, filterCallRight);
+
+        iff.label("iff");
+        qsortSignature.label("QSORT");
+        filterSignature.label("FILTER");
+        qsortReCallLeft.label("qsortReCallLeft");
+        qsortReCallRight.label("qsortReCallRight");
+        ltPredicate.label("LT(l,r)");
+        gtEqPredicate.label("GTEQ(l,r)");
+        filterCallLeft.label("filterCallLeft");
+        filterCallRight.label("filterCallRight");
+
+        return qsortSignature;
+    }
+
+    private FunctionSignature<Boolean> getLtSignature() {
+        // (l,r) -> l < r
+
+        Function<Boolean> lt = BinOps.lt();
+        FunctionSignature<Boolean> signature = functionSignature(lt);
+        signature.label("LT");
+
+        signature.propagate(Name.l, Name.leftArg, lt);
+        signature.propagate(Name.r, Name.rightArg, lt);
+
+        return signature;
+    }
+
+    private FunctionSignature<Boolean> getGtEqSignature() {
+        // (l,r) -> l < r
+
+        Function<Boolean> lt = BinOps.gteq();
+        FunctionSignature<Boolean> signature = functionSignature(lt);
+        signature.label("GTEQ");
+
+        signature.propagate(Name.l, Name.leftArg, lt);
+        signature.propagate(Name.r, Name.rightArg, lt);
+
+        return signature;
+    }
+
     @Test
     public void testFilter() {
         /*
@@ -255,26 +431,25 @@ public class ServiceTest {
             check(filter(input, a -> iff (a == null) {false} else {a mod 2 == 0}))
             */
 
-        Actresses.trace();
-
         Function<List<Integer>> filterCall = functionCall(getFilterSignature());
         filterCall.label("filter");
-        FunctionSignature<Boolean> predicate = getModTwoEqZero();
-/*        checkFilter(list(2), list(2), filterCall, predicate);
+        FunctionSignature<Boolean> predicate = getModEqZero();
+        predicate.constant(Name.m, 2);
+        checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
+        checkFilter(list(2), list(2), filterCall, predicate);
         checkFilter(list(2, 2), list(2, 2), filterCall, predicate);
-        //checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
-        checkFilter(emptyList(), list(3), filterCall, predicate);
-        checkFilter(emptyList(), list(3, 3), filterCall, predicate);
-        checkFilter(list(2), list(1, 2, 3), filterCall, predicate);*/
-        checkFilter(list(0, 2, 4, 6, 8), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), filterCall, predicate);
+        checkFilter(emptyList(), list(1), filterCall, predicate);
+        checkFilter(emptyList(), list(1, 1), filterCall, predicate);
+        checkFilter(list(2), list(1, 2, 3), filterCall, predicate);
+        checkFilter(list(0, 2, 4, 6, 8), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), filterCall, predicate);
     }
 
     private List<Integer> list(Integer... i) {
-        return Arrays.asList(i);
+        return asList(i);
     }
 
     private List<Integer> emptyList() {
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     private void checkFilter(List<Integer> expected, List<Integer> input, Function<List<Integer>> filterCall, FunctionSignature<Boolean> predicate) {
@@ -297,107 +472,40 @@ public class ServiceTest {
         assertEquals(expected, result);
     }
 
-    private FunctionSignature<List<Integer>> getFilterSignature() {
 
-        /*
-        function filter(list, predicate) = {
-            iff (list == []){                    //outerIff
-                []
-            } else {
-                let head = head(list);
-                let tail = tail(list);
-                iff (predicate(head))           //innerIff
-                    head :: filter(tail, predicate)
-                else
-                    filter(tail, predicate)
-            }
-        }
-        */
-
-        List<Integer> empty = new ArrayList<>();
-
-        Iff<List<Integer>> outerIff = iffList();
-        outerIff.constant(Name.onTrue, empty);
-        FunctionSignature<List<Integer>> filterSignature = functionSignature(outerIff);
-        filterSignature.propagate(Name.predicate, Name.predicate, outerIff);
-        filterSignature.propagate(Name.list, Name.list, outerIff);
-        filterSignature.label("FILTER");
-
-        Function<Boolean> listEq = ListBinOp.eq().returnTo(outerIff, Name.condition).constant(Name.rightArg, empty);
-        outerIff.propagate(Name.list, Name.leftArg, listEq);
-
-        Iff<List<Integer>> innerIff = iffList();
-        innerIff.label("innerIff");
-        outerIff.label("outerIff");
-        innerIff.returnTo(outerIff, Name.onFalse);
-        outerIff.propagateOnFalse(Name.predicate, Name.predicate, innerIff);
-
-        //let head = head(list);
-        //let tail = tail(list);
-        Function<Integer> head = head().returnTo(outerIff, Name.head);
-        Function<List<Integer>> tail = tail().returnTo(outerIff, Name.tail);
-
-        outerIff.propagateOnFalse(Name.list, Name.arg, head);
-        outerIff.propagateOnFalse(Name.list, Name.arg, tail);
-        outerIff.propagateOnFalse(Name.head, Name.head, innerIff);
-        outerIff.propagateOnFalse(Name.tail, Name.tail, innerIff);
-
-        /*
-        else {
-                ...
-
-                iff (predicate(head))           //innerIff
-                    head :: filter(tail, predicate)
-                else
-                    filter(tail, predicate)
-            }
-        */
-
-        FunctionStub<Boolean> predicateStub = FunctionStub.of(Name.predicate);
-        predicateStub.returnTo(innerIff, Name.condition);
-
-        Function<List<Integer>> cons = cons().returnTo(innerIff, Name.onTrue);
-        Function<List<Integer>> filterReCallOnTrue = functionCall(filterSignature).returnTo(cons, Name.rightArg);
-        Function<List<Integer>> filterReCallOnFalse = functionCall(filterSignature).returnTo(innerIff, Name.onFalse);
-        filterReCallOnTrue.label("filterReCallOnTrue");
-        filterReCallOnFalse.label("filterReCallOnFalse");
-
-        innerIff.propagate(Name.head, Name.arg, predicateStub);
-        innerIff.propagate(Name.predicate, Name.predicate, predicateStub);
-
-        innerIff.propagateOnTrue(Name.head, Name.leftArg, cons);
-        innerIff.propagateOnTrue(Name.tail, Name.list, filterReCallOnTrue);
-        innerIff.propagateOnTrue(Name.predicate, Name.predicate, filterReCallOnTrue);
-
-        innerIff.propagateOnFalse(Name.tail, Name.list, filterReCallOnFalse);
-        innerIff.propagateOnFalse(Name.predicate, Name.predicate, filterReCallOnFalse);
-
-        return filterSignature;
+    private List<String> list(String... p) {
+        return asList(p);
     }
 
-    private FunctionSignature<Boolean> getModTwoEqZero() {
-        // a -> (a mod 2) == 0
+    private FunctionSignature<Boolean> getModEqZero() {
+        // (a,m) -> (a mod m) == 0
 
-        Function<Boolean> eqZero = eq().constant(Name.rightArg, _0);
-        Function<Integer> modTwo = mod().constant(Name.rightArg, _2).returnTo(eqZero, Name.leftArg);
+        Function<Boolean> eqZero = BinOps.eq().constant(Name.rightArg, _0);
+        Function<Integer> mod = BinOps.mod().returnTo(eqZero, Name.leftArg);
 
         FunctionSignature<Boolean> signature = functionSignature(eqZero);
-        signature.label("MOD2==0");
-        signature.propagate(Name.arg, Name.leftArg, modTwo);
+        signature.label("MODm==0");
+        signature.propagate(Name.m, Name.rightArg, mod);
+        signature.propagate(Name.arg, Name.leftArg, mod);
+
         return signature;
     }
 
     @Test
-    public void testgetModTwoEqZero() {
-        FunctionSignature<Boolean> f = getModTwoEqZero();
+    public void testgetModEqZero() {
+        FunctionSignature<Boolean> f = getModEqZero();
         FunctionCall<Boolean> c = functionCall(f);
-        Stream.of(0, 1, 2, 3, 4, 5, 6).forEach(i -> assertEquals((i % 2) == 0, sync(c).param(Name.arg, i).call()));
+        Stream.of(0, 1, 2, 3, 4, 5, 6).forEach(i ->
+                assertEquals((i % 2) == 0, sync(c)
+                        .param(Name.arg, i)
+                        .param(Name.m, 2)
+                        .call()));
     }
 
     @Test
     public void testGateway() {
         Gateway<Integer> gateway = intGateway();
-        BinOp<Integer, Integer, Integer> mul = mul();
+        BinOp<Integer, Integer, Integer> mul = BinOps.mul();
 
         Execution<Integer> ex = gateway
                 .execute(mul)
@@ -407,7 +515,7 @@ public class ServiceTest {
 
 
         Int result = Int(0);
-        ex = gateway.execute(mul(), result::setValue)
+        ex = gateway.execute(BinOps.mul(), result::setValue)
                 .param(Name.leftArg, 2)
                 .param(Name.rightArg, 2);
         await(() -> result.value.equals(_4));
@@ -423,7 +531,7 @@ public class ServiceTest {
 
                 ).sorted(Integer::compareTo)
                 .collect(Collectors.toList());
-        assertEquals(Arrays.asList(0, 1, 4, 9, 16, 25), results);
+        assertEquals(asList(0, 1, 4, 9, 16, 25), results);
 
         ConcurrentLinkedQueue<Integer> resultCollector = new ConcurrentLinkedQueue<>();
         Stream.of(0, 1, 2, 3, 4, 5)
@@ -434,7 +542,7 @@ public class ServiceTest {
                         .param(Name.rightArg, i)
                 );
         await(() -> resultCollector.size() == 6);
-        assertEquals(Arrays.asList(0, 1, 4, 9, 16, 25),
+        assertEquals(asList(0, 1, 4, 9, 16, 25),
                 resultCollector.stream()
                         .sorted(Integer::compareTo)
                         .collect(Collectors.toList()));
@@ -529,7 +637,7 @@ public class ServiceTest {
         Int result = Int(0);
         Action resultListener = action(i -> result.setValue((Integer) i.value));
 
-        Function<Integer> mul = mul();
+        Function<Integer> mul = BinOps.mul();
         Function<Integer> functionSignature = functionSignature(mul);
 
         Function<Integer> constOne = new Const(_1).returnTo(functionSignature, Name.a);
@@ -651,7 +759,7 @@ public class ServiceTest {
         Function<Integer> signatureInc = functionSignature(inc);
         signatureInc.propagate(Name.a, Name.leftArg, inc);
 
-        Function<Integer> mul = mul();
+        Function<Integer> mul = BinOps.mul();
         Function<Integer> callerL = functionCall(signatureInc).returnTo(mul, Name.leftArg);
         Function<Integer> callerR = functionCall(signatureInc).returnTo(mul, Name.rightArg);
 
@@ -685,7 +793,7 @@ public class ServiceTest {
          */
         Int result = Int(0);
 
-        Function<Integer> mul = mul();
+        Function<Integer> mul = BinOps.mul();
         Function<Integer> mulSignature = functionSignature(mul);
         mulSignature.propagate(Name.a, Name.leftArg, mul);
         mulSignature.propagate(Name.a, Name.rightArg, mul);
@@ -731,9 +839,9 @@ public class ServiceTest {
         Action resultMonitor = action(i -> result.setValue((int) i.value));
         resultMonitor.param(Name.result);
 
-        Function<Boolean> gt = gt().returnTo(_if, Name.condition);
-        Function subT = sub().returnTo(_if, Name.onTrue);
-        Function subF = sub().returnTo(_if, Name.onFalse);
+        Function<Boolean> gt = BinOps.gt().returnTo(_if, Name.condition);
+        Function subT = BinOps.sub().returnTo(_if, Name.onTrue);
+        Function subF = BinOps.sub().returnTo(_if, Name.onFalse);
 
         _if.returnTo(resultMonitor, Name.result);
 
@@ -797,11 +905,11 @@ public class ServiceTest {
         Action resultMonitor = action(i -> result.setValue((int) i.value));
         resultMonitor.param(Name.result);
 
-        Function<Boolean> gt = gt()
+        Function<Boolean> gt = BinOps.gt()
                 .returnTo(iff, Name.condition);
-        Function subT = sub()
+        Function subT = BinOps.sub()
                 .returnTo(iff, Name.onTrue);
-        Function subF = sub()
+        Function subF = BinOps.sub()
                 .returnTo(iff, Name.onFalse);
 
         iff.returnTo(resultMonitor, Name.result);
@@ -855,7 +963,7 @@ public class ServiceTest {
         Action resultMonitor = action(i -> result.setValue((int) i.value));
         resultMonitor.param(Name.result);
 
-        Function<Boolean> gt = gt();
+        Function<Boolean> gt = BinOps.gt();
 
         gt.returnTo(_if, Name.condition);
 
@@ -904,8 +1012,8 @@ public class ServiceTest {
         Iff<Integer> _if = iff();
         _if.constant(Name.onTrue, _0);
 
-        Function<Boolean> eq = eq().constant(Name.rightArg, _0);
-        Function<Integer> sub = sub().constant(Name.rightArg, _1);
+        Function<Boolean> eq = BinOps.eq().constant(Name.rightArg, _0);
+        Function<Integer> sub = BinOps.sub().constant(Name.rightArg, _1);
         Function<Integer> add = add();
         Function<Integer> sumSignature = functionSignature(_if);
         Function<Integer> sumCallRec = functionCall(sumSignature);
@@ -938,7 +1046,7 @@ public class ServiceTest {
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
         checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
-        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+        //checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
 
         Gateway<Integer> gateway = intGateway();
 
@@ -957,7 +1065,7 @@ public class ServiceTest {
         t2.start();
 
         await(() -> resultCollector.size() == 54);
-        assertEquals(Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6, 6, 10, 10, 10, 10, 10, 10, 15, 15, 15, 15, 15, 15, 21, 21, 21, 21, 21, 21),
+        assertEquals(asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6, 6, 10, 10, 10, 10, 10, 10, 15, 15, 15, 15, 15, 15, 21, 21, 21, 21, 21, 21),
                 resultCollector.stream()
                         .sorted(Integer::compareTo)
                         .collect(Collectors.toList()));
@@ -1018,7 +1126,7 @@ public class ServiceTest {
         Integer sum = sum(max);
         long elapsed = (System.nanoTime() - start) / 1000000;
 
-        System.out.println(String.format("java function: sum of %d (%d) in %d millis", max, sum, elapsed));
+        System.out.println(String.format("(java function: sum of %d (%d) in %d millis", max, sum, elapsed));
     }
 
 

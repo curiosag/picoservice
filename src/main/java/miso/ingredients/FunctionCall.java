@@ -38,6 +38,9 @@ public class FunctionCall<T> extends Function<T> {
         if (m.hasKey(Name.result)) {
             returnTo.receive(message(returnKey, m.value, m.origin.sender(this)));
         } else {
+            // TODO: hier brauchts auch state per call
+            if (!m.origin.sender.equals(this))
+                super.fowardConsts(m.origin.sender(this));
             function.receive(m.sender(this));
         }
     }

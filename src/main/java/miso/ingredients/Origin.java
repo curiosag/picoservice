@@ -8,6 +8,7 @@ public class Origin {
     public final Long executionId;
     public final Integer callLevel;
     public final Long seqNr;
+    public boolean partiallyApplied;
 
     private Origin(Function<?> sender, Function<?> scope, Long executionId, Integer callLevel, Long seqNr) {
         this.sender = sender;
@@ -25,8 +26,13 @@ public class Origin {
         return origin(sender, scope, executionId, callLevel, seqNr + 1L);
     }
 
+    Origin incSeqNr() {
+        return origin(sender, scope, executionId, callLevel, seqNr + 1L);
+    }
+
     @Override
     public String toString() {
+        //TODO
         return "";
        // return String.format("Origin:(%d/%d)%s->%s (%d states left)", executionId, callLevel, scope.address, sender.address, sender.executionStates.size());
     }

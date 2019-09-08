@@ -54,11 +54,13 @@ public abstract class Actress implements Runnable {
     }
 
     public void receive(Message m) {
-        if(m.origin.sender.address.toString().contains("filterReCallOnFalse")) {
-            debug(String.format("<%d>%s <- %s %s", m.origin.seqNr, this.address.toString(), m.origin.sender.address.toString(), m.toString()));
-        }
-        debug(String.format("<%d>%s <- %s %s", m.origin.seqNr, this.address.toString(), m.origin.sender.address.toString(), m.toString()));
+        Origin o = m.origin;
+        debug(m, o, "<--");
         inBox.add(m);
+    }
+
+    private void debug(Message m, Origin o, String rel) {
+        debug(String.format("<%d>(%d/%d)%s " + rel + " %s %s", o.seqNr, o.executionId, o.callLevel, this.address.toString(), o.sender.address.toString(), m.toString()));
     }
 
     protected abstract void process(Message message);
@@ -79,8 +81,8 @@ public abstract class Actress implements Runnable {
                 if (m != null) {
                     idle = false;
                  //   if(this.address.toString().contains("filterReCallOnFalse")) {
-                        debug(String.format("<%d>%s !! %s %s", m.origin.seqNr, this.address.toString(), m.origin.sender.address.toString(), m.toString()));
-                 //   }
+                    debug(m, m.origin, "!!");
+                    //   }
                     process(m);
                 } else {
                     idle = true;

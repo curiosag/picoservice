@@ -28,6 +28,7 @@ import static miso.ingredients.Iff.iffList;
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Nop.nop;
 import static miso.ingredients.Origin.origin;
+import static miso.ingredients.PartialFunctionApplication.partialApplication;
 import static miso.ingredients.gateway.Gateway.intGateway;
 import static miso.ingredients.nativeImpl.BinOps.add;
 import static miso.ingredients.nativeImpl.ListBinOps.concat;
@@ -45,7 +46,6 @@ public class ServiceTest {
     private static final Integer _2 = 2;
     private static final Integer _1 = 1;
     private static final Integer _0 = 0;
-
 
 
     @After
@@ -237,49 +237,116 @@ public class ServiceTest {
 
     }
 
+    @Test
+    public void testPartialApplicationOnPrimitiveFunction() {
+        /*
+
+                function inc = a -> a + 1
+
+                check(inc(0))
+                check(inc(1))
+         */
+
+        Int result = Int(0);
+        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        resultListener.param(Name.result);
+
+
+        Origin origin = createSource(resultListener);
+        BinOp<Integer, Integer, Integer> add = add();
+        PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
+        partialAdd.label("+X");
+        partialAdd.propagate(Name.a, Name.leftArg, add);
+        partialAdd.propagate(Name.b, Name.rightArg, add);
+
+        FunctionCall<Integer> inc = functionCall(partialAdd);
+        inc.returnTo(resultListener, Name.result);
+        inc.label("INC");
+
+        inc.receive(message(Name.b, _1, origin));
+        assertResult(_1, _0, inc, result, origin);
+        assertResult(_2, _1, inc, result, origin);
+        partialAdd.popPartialApp(origin);
+
+        inc.receive(message(Name.b, _2, origin));
+        assertResult(_2, _0, inc, result, origin);
+        assertResult(_3, _1, inc, result, origin);
+        partialAdd.popPartialApp(origin);
+
+    }
+
     @Ignore
     @Test
-    public void testLambdaWithPartialApplication() {
+    public void testPartialApplicationOnLambda() {
         /*
-                function add(a, b) = a + b
+                function inc = a -> a + 1
                 function apply(func, a) = func(a)
-
-                function inc = x -> add(x, 1)
 
                 check(apply(inc, 0))
                 check(apply(inc, 1))
          */
+        Actresses.debug();
+        Actresses.trace();
 
-        // function mul(a) = a * 2
-        FunctionSignature<Integer> add = BinOps.signature(add());
+        Int result = Int(0);
+        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        resultListener.param(Name.result);
+
+
+        Origin origin = createSource(resultListener);
+        BinOp<Integer, Integer, Integer> add = add();
+        PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
+        partialAdd.label("+X");
+        partialAdd.propagate(Name.a, Name.leftArg, add);
+        partialAdd.propagate(Name.b, Name.rightArg, add);
+
+        FunctionCall<Integer> inc = functionCall(partialAdd);
+        inc.returnTo(resultListener, Name.result);
+        inc.label("INC");
+
+        inc.receive(message(Name.b, _1, origin));
+        assertResult(_1, _0, inc, result, origin);
+        assertResult(_2, _1, inc, result, origin);
+        partialAdd.popPartialApp(origin);
+
+        inc.receive(message(Name.b, _2, origin));
+        assertResult(_2, _0, inc, result, origin);
+        assertResult(_3, _1, inc, result, origin);
+        partialAdd.popPartialApp(origin);
 
         //function apply(func, a) = func(a)
         FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
         stubFunc.label("stubFunc");
 
-        FunctionSignature<Integer> signatureApply = functionSignature(stubFunc);
-        signatureApply.propagate(Name.a, Name.leftArg, stubFunc);
-        signatureApply.propagate(Name.func, Name.func, stubFunc);
-
-        //let a = 1
-        //let partial = x -> add(x, a)
-
+        FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
+        functionSignatureApply.propagate(Name.a, Name.leftArg, stubFunc);
+        functionSignatureApply.propagate(Name.b, Name.rightArg, stubFunc);
+        functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
 
         // check(apply(mul, a))
-        FunctionCall<Integer> functionCallApply = functionCall(signatureApply);
+        FunctionCall<Integer> functionCallApply = functionCall(functionSignatureApply);
         functionCallApply.label("functionCallApply");
-        Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
-        resultListener.param(Name.result);
         functionCallApply.returnTo(resultListener, Name.result);
 
-        Origin origin = createSource(resultListener);
-      //  functionCallApply.receive(message(Name.func, functionSignatureMul, origin));
+
+
+        functionCallApply.receive(message(Name.func, partialAdd, origin));
         functionCallApply.receive(message(Name.a, _3, origin));
+        functionCallApply.returnTo(resultListener, Name.result);
+
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(6), result.value);
 
+
     }
+
+    private void assertResult(Integer expected, Integer a, FunctionCall<Integer> inc, Int result, Origin origin) {
+        result.setValue(0);
+        inc.receive(message(Name.a, a, origin));
+        await(() -> result.value != 0);
+        assertEquals(expected, result.value);
+    }
+
 
     @Ignore
     @Test

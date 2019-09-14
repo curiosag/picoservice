@@ -61,7 +61,7 @@ public class Trace extends Actress implements Closeable {
             value = (m.value).toString();
         }
 
-        return '"' + "<" + m.origin.seqNr + ">" + m.key + ":" + value
+        return '"' + String.format("<%d>(%d/%d)%s:", m.origin.seqNr, m.origin.executionId, m.origin.callLevel, m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';

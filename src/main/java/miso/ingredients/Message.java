@@ -24,6 +24,11 @@ public class Message {
         return new Message(key, value, origin.sender(sender));
     }
 
+    public Message usingKey(String key)
+    {
+        return new Message(key, value, origin);
+    }
+
 
     public boolean hasKey(String value)
     {

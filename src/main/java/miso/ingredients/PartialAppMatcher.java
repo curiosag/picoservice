@@ -3,11 +3,9 @@ package miso.ingredients;
 import java.util.Objects;
 
 public class PartialAppMatcher {
-    private final Function<?> scope;
     final Long executionId;
 
     private PartialAppMatcher(Origin origin) {
-        this.scope = origin.scope;
         this.executionId = origin.executionId;
     }
 
@@ -20,12 +18,11 @@ public class PartialAppMatcher {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PartialAppMatcher that = (PartialAppMatcher) o;
-        return Objects.equals(scope, that.scope) &&
-                Objects.equals(executionId, that.executionId);
+        return Objects.equals(executionId, that.executionId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(scope, executionId);
+        return Objects.hash(executionId);
     }
 }

@@ -37,4 +37,5 @@ public interface Name {
     String m = "m";
     String l = "l";
     String r = "r";
+    String popPartialAppValues = "popPartialAppValues";
 }

@@ -16,7 +16,7 @@ class FunctionStubState extends State {
         this.stub = stub;
     }
 
-    private FunctionCall<?> createCall(FunctionSignature<?> f) {
+    private FunctionCall<?> createCall(Function<?> f) {
         FunctionCall<?> functionCall = functionCall(f);
         functionCall.label(f.address.label.toLowerCase());
         functionCall.returnTo(stub, Name.result);
@@ -25,11 +25,11 @@ class FunctionStubState extends State {
 
     void forward(Message m) {
         if (m.key.equals(stub.keyFunctionParameter)) {
-            if (!(m.value instanceof FunctionSignature))
+            if (!(m.value instanceof Function))
             {
                 throw new IllegalStateException();
             }
-            functionCall = createCall((FunctionSignature) m.value);
+            functionCall = createCall((Function) m.value);
             pendingForPropagation.forEach(functionCall::receive);
             pendingForPropagation.clear();
             return;
@@ -41,4 +41,6 @@ class FunctionStubState extends State {
             pendingForPropagation.add(m);
         }
     }
+
+
 }

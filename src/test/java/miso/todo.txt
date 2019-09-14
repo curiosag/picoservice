@@ -1,5 +1,10 @@
 Temporary Application Id:-47X4A554ZJY33EB
 
+whatsapp +919444749335
+
+dezember burma, feb nilambe
+
+
 Closures und Namensraum für Werte? Lambdas funktionieren so, daß richtig benannte werte bis zu lambda L durchgereicht werden,
 L muß dann das als formalen parameter haben
 
@@ -7,23 +12,31 @@ mapping formale/aktuelle parameter
 
 Lambdas als Werte in partial function application??
 
-Partial application params MÜSSEN vor den anderen parametern eintreffen im Moment, ned so ideal. Könnte man ausräumen
+Mit der push/pop partial application params Logik müssen die messages in der Reihenfolge eintreffen,
+in der sie abgesendet wurden.
 
-<0>(0/0){FunctionCall-5(INC)} <-- {Action-1()}  b:1
+<0>(0/0){PartialFunctionApplication-4(+X)} <-- {Action-1()}  b:1
 <0>(0/0){FunctionCall-5(INC)} <-- {Action-1()}  a:0
-<0>(0/0){FunctionCall-5(INC)} !! {Action-1()}  b:1
+<0>(0/0){PartialFunctionApplication-4(+X)} !! {Action-1()}  b:1
 <0>(0/0){FunctionCall-5(INC)} !! {Action-1()}  a:0
-
-<1>(0/0){PartialFunctionApplication-4(+X)} <-- {FunctionCall-5(INC)}  b:1
 <1>(0/0){PartialFunctionApplication-4(+X)} <-- {FunctionCall-5(INC)}  a:0
-<1>(0/0){PartialFunctionApplication-4(+X)} !! {FunctionCall-5(INC)}  b:1
+<1>(0/0){BinOp-3(+)} <-- {PartialFunctionApplication-4(+X)}  rightArg:1
+<1>(0/0){BinOp-3(+)} !! {PartialFunctionApplication-4(+X)}  rightArg:1
 <1>(0/0){PartialFunctionApplication-4(+X)} !! {FunctionCall-5(INC)}  a:0
+<1>(0/1){PartialFunctionApplication-4(+X)} <-- {FunctionCall-5(INC)}  b:1
+<1>(0/1){PartialFunctionApplication-4(+X)} !! {FunctionCall-5(INC)}  b:1
 
-<2>(0/1){PartialFunctionApplication-4(+X)} <-- {PartialFunctionApplication-4(+X)}  b:1
 <2>(0/1){BinOp-3(+)} <-- {PartialFunctionApplication-4(+X)}  leftArg:0
-
-<2>(0/1){PartialFunctionApplication-4(+X)} !! {PartialFunctionApplication-4(+X)}  b:1
 <2>(0/1){BinOp-3(+)} !! {PartialFunctionApplication-4(+X)}  leftArg:0
+<2>(0/1){BinOp-3(+)} <-- {PartialFunctionApplication-4(+X)}  rightArg:1
+<2>(0/1){BinOp-3(+)} !! {PartialFunctionApplication-4(+X)}  rightArg:1
 
-<3>(0/1){BinOp-3(+)} <-- {PartialFunctionApplication-4(+X)}  rightArg:1
-<3>(0/1){BinOp-3(+)} !! {PartialFunctionApplication-4(+X)}  rightArg:1
+<3>(0/1){PartialFunctionApplication-4(+X)} <-- {BinOp-3(+)}  result:1
+<3>(0/1){PartialFunctionApplication-4(+X)} !! {BinOp-3(+)}  result:1
+
+<4>(0/0){FunctionCall-5(INC)} <-- {PartialFunctionApplication-4(+X)}  result:1
+<4>(0/0){FunctionCall-5(INC)} !! {PartialFunctionApplication-4(+X)}  result:1
+<5>(0/0){Action-1()} <-- {FunctionCall-5(INC)}  result:1
+<5>(0/0){Action-1()} !! {FunctionCall-5(INC)}  result:1
+<0>(0/0){PartialFunctionApplication-4(+X)} <-- {Action-1()}  popPartialAppValues:1
+<0>(0/0){PartialFunctionApplication-4(+X)} !! {Action-1()}  popPartialAppValues:1

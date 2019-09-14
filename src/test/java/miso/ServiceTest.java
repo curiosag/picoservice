@@ -4,7 +4,6 @@ import miso.ingredients.*;
 import miso.ingredients.gateway.Execution;
 import miso.ingredients.gateway.Gateway;
 import miso.ingredients.nativeImpl.BinOps;
-import miso.ingredients.nativeImpl.ListBinOps;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -17,6 +16,7 @@ import java.util.stream.Stream;
 import static java.util.Arrays.asList;
 import static miso.Int.Int;
 import static miso.implementations.Filter.getFilterSignature;
+import static miso.implementations.Quicksort.getQuicksortSignature;
 import static miso.ingredients.Action.action;
 import static miso.ingredients.Actresses.await;
 import static miso.ingredients.CallSync.sync;
@@ -24,17 +24,12 @@ import static miso.ingredients.Const.constant;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iff;
-import static miso.ingredients.Iff.iffList;
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Nop.nop;
 import static miso.ingredients.Origin.origin;
 import static miso.ingredients.PartialFunctionApplication.partialApplication;
 import static miso.ingredients.gateway.Gateway.intGateway;
 import static miso.ingredients.nativeImpl.BinOps.add;
-import static miso.ingredients.nativeImpl.ListBinOps.concat;
-import static miso.ingredients.nativeImpl.ListBinOps.cons;
-import static miso.ingredients.nativeImpl.UnOps.head;
-import static miso.ingredients.nativeImpl.UnOps.tail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -256,26 +251,25 @@ public class ServiceTest {
         BinOp<Integer, Integer, Integer> add = add();
         PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
         partialAdd.label("+X");
-        partialAdd.propagate(Name.a, Name.leftArg, add);
         partialAdd.propagate(Name.b, Name.rightArg, add);
+        partialAdd.propagate(Name.a, Name.leftArg, add);
 
         FunctionCall<Integer> inc = functionCall(partialAdd);
         inc.returnTo(resultListener, Name.result);
         inc.label("INC");
 
-        inc.receive(message(Name.b, _1, origin));
+        partialAdd.receive(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
         assertResult(_2, _1, inc, result, origin);
-        partialAdd.popPartialApp(origin);
+        partialAdd.receive(message(Name.popPartialAppValues, null, origin));
 
-        inc.receive(message(Name.b, _2, origin));
+        partialAdd.receive(message(Name.b, _2, origin));
         assertResult(_2, _0, inc, result, origin);
         assertResult(_3, _1, inc, result, origin);
-        partialAdd.popPartialApp(origin);
+        partialAdd.popPartialAppValues(origin);
 
     }
 
-    @Ignore
     @Test
     public void testPartialApplicationOnLambda() {
         /*
@@ -291,12 +285,11 @@ public class ServiceTest {
         Int result = Int(0);
         Action resultListener = action(i -> result.setValue((Integer) i.value));
         resultListener.param(Name.result);
-
-
         Origin origin = createSource(resultListener);
+
         BinOp<Integer, Integer, Integer> add = add();
         PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
-        partialAdd.label("+X");
+        partialAdd.label("ADD(_,X)");
         partialAdd.propagate(Name.a, Name.leftArg, add);
         partialAdd.propagate(Name.b, Name.rightArg, add);
 
@@ -304,23 +297,20 @@ public class ServiceTest {
         inc.returnTo(resultListener, Name.result);
         inc.label("INC");
 
+        // by way of direct call of the partially applied function
         inc.receive(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
         assertResult(_2, _1, inc, result, origin);
-        partialAdd.popPartialApp(origin);
+        partialAdd.popPartialAppValues(origin);
 
-        inc.receive(message(Name.b, _2, origin));
-        assertResult(_2, _0, inc, result, origin);
-        assertResult(_3, _1, inc, result, origin);
-        partialAdd.popPartialApp(origin);
-
+        // by way of using the apply function
         //function apply(func, a) = func(a)
         FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
         stubFunc.label("stubFunc");
 
         FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
-        functionSignatureApply.propagate(Name.a, Name.leftArg, stubFunc);
-        functionSignatureApply.propagate(Name.b, Name.rightArg, stubFunc);
+        functionSignatureApply.propagate(Name.a, Name.a, stubFunc);
+        functionSignatureApply.propagate(Name.b, Name.b, stubFunc);
         functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
 
         // check(apply(mul, a))
@@ -328,16 +318,16 @@ public class ServiceTest {
         functionCallApply.label("functionCallApply");
         functionCallApply.returnTo(resultListener, Name.result);
 
-
-
+        functionCallApply.receive(message(Name.b, _1, origin));
         functionCallApply.receive(message(Name.func, partialAdd, origin));
         functionCallApply.receive(message(Name.a, _3, origin));
         functionCallApply.returnTo(resultListener, Name.result);
 
+        result.setValue(0);
         await(() -> result.value != 0);
-        assertEquals(Integer.valueOf(6), result.value);
+        assertEquals(Integer.valueOf(4), result.value);
 
-
+        partialAdd.popPartialAppValues(origin);
     }
 
     private void assertResult(Integer expected, Integer a, FunctionCall<Integer> inc, Int result, Origin origin) {
@@ -345,6 +335,7 @@ public class ServiceTest {
         inc.receive(message(Name.a, a, origin));
         await(() -> result.value != 0);
         assertEquals(expected, result.value);
+
     }
 
 
@@ -357,10 +348,10 @@ public class ServiceTest {
         Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
         qsortCall.label("qsortCall");
 
-//        checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
+        //       checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
 //        checkQsort(list(2), list(2), qsortCall);
-        checkQsort(list(1, 2), list(2, 1), qsortCall);
-//        checkQsort(list(1, 2, 3), list(1, 3, 2), qsortCall);
+//               checkQsort(list(1, 2), list(2, 1), qsortCall);
+        checkQsort(list(1, 2, 3), list(1, 3, 2), qsortCall);
 //        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), qsortCall);
     }
 
@@ -383,113 +374,7 @@ public class ServiceTest {
         assertEquals(expected, result);
     }
 
-    private FunctionSignature<List<Integer>> getQuicksortSignature() {
 
-    /*
-
-    function lt(a, b) = a < b;
-    function gteq(a, b) = a >= b;
-    function filter(list, predicate) =...
-
-    function quicksort(list) =
-            if (list == [])
-                []
-            else
-                let head = head(list)
-                let tail = tail(list)
-                quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(filter(tail, i -> gteq(i, head))))
-    */
-        //----------------------------------------------------------------------------------------------
-    /*    function quicksort(list) =
-            if (list == [])
-                []
-     */
-        Iff<List<Integer>> iff = iffList();
-        FunctionSignature<List<Integer>> qsortSignature = functionSignature(iff);
-        qsortSignature.propagate(Name.list, Name.list, iff);
-        iff.constant(Name.onTrue, emptyList());
-        Function<Boolean> listEq = ListBinOps.eq().returnTo(iff, Name.condition).constant(Name.rightArg, emptyList());
-        iff.propagate(Name.list, Name.leftArg, listEq);
-
-        // else
-        //      let head = head(list);
-        //      let tail = tail(list);
-        Function<Integer> head = head().returnTo(iff, Name.head);
-        Function<List<Integer>> tail = tail().returnTo(iff, Name.tail);
-        iff.propagateOnFalse(Name.list, Name.arg, head);
-        iff.propagateOnFalse(Name.list, Name.arg, tail);
-
-        // quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(filter(tail, i -> gteq(i, head))))
-        // +
-        Function<List<Integer>> concat = concat().returnTo(iff, Name.onFalse);
-        // ::
-        Function<List<Integer>> cons = cons().returnTo(concat, Name.rightArg);
-        iff.propagateOnFalse(Name.head, Name.leftArg, cons);
-        // 2 times quicksort(filter(...))
-        FunctionSignature<List<Integer>> filterSignature = getFilterSignature();
-        Function<List<Integer>> qsortReCallLeft = functionCall(filterSignature).returnTo(concat, Name.leftArg);
-        Function<List<Integer>> qsortReCallRight = functionCall(filterSignature).returnTo(cons, Name.rightArg);
-
-        // function lt(a, b) = a < b;
-        // filter(tail, i -> lt(i, head))
-
-        FunctionSignature<Boolean> ltPredicate = getLtSignature();
-        Function<List<Integer>> filterCallLeft =
-                functionCall(filterSignature)
-                        .constant(Name.predicate, ltPredicate)
-                        .returnTo(qsortReCallLeft, Name.list);
-        // TODO: passing on head as arg is needed here
-        iff.propagateOnFalse(Name.head, Name.arg, filterCallLeft);
-        iff.propagateOnFalse(Name.tail, Name.list, filterCallLeft);
-
-        // function gteq(a, b) = a >= b;
-        // filter(filter(tail, i -> gteq(i, head))
-        FunctionSignature<Boolean> gtEqPredicate = getGtEqSignature();
-        Function<List<Integer>> filterCallRight =
-                functionCall(filterSignature)
-                        .constant(Name.predicate, gtEqPredicate)
-                        .returnTo(qsortReCallRight, Name.list);
-        iff.propagateOnFalse(Name.head, Name.r, filterCallRight);
-        iff.propagateOnFalse(Name.tail, Name.list, filterCallRight);
-
-        iff.label("iff");
-        qsortSignature.label("QSORT");
-        filterSignature.label("FILTER");
-        qsortReCallLeft.label("qsortReCallLeft");
-        qsortReCallRight.label("qsortReCallRight");
-        ltPredicate.label("LT(l,r)");
-        gtEqPredicate.label("GTEQ(l,r)");
-        filterCallLeft.label("filterCallLeft");
-        filterCallRight.label("filterCallRight");
-
-        return qsortSignature;
-    }
-
-    private FunctionSignature<Boolean> getLtSignature() {
-        // (l,r) -> l < r
-
-        Function<Boolean> lt = BinOps.lt();
-        FunctionSignature<Boolean> signature = functionSignature(lt);
-        signature.label("LT");
-
-        signature.propagate(Name.l, Name.leftArg, lt);
-        signature.propagate(Name.r, Name.rightArg, lt);
-
-        return signature;
-    }
-
-    private FunctionSignature<Boolean> getGtEqSignature() {
-        // (l,r) -> l < r
-
-        Function<Boolean> lt = BinOps.gteq();
-        FunctionSignature<Boolean> signature = functionSignature(lt);
-        signature.label("GTEQ");
-
-        signature.propagate(Name.l, Name.leftArg, lt);
-        signature.propagate(Name.r, Name.rightArg, lt);
-
-        return signature;
-    }
 
     @Test
     public void testFilter() {
@@ -538,6 +423,7 @@ public class ServiceTest {
         result.sort(Integer::compareTo);
         assertEquals(expected, result);
     }
+
 
 
     private List<String> list(String... p) {
@@ -1083,7 +969,7 @@ public class ServiceTest {
         Function<Integer> sub = BinOps.sub().constant(Name.rightArg, _1);
         Function<Integer> add = add();
         Function<Integer> sumSignature = functionSignature(_if);
-        Function<Integer> sumCallRec = functionCall(sumSignature);
+        Function<Integer> sumReCall = functionCall(sumSignature);
         Function<Integer> sumCall = functionCall(sumSignature);
 
         resultMonitor.propagate(Name.a, Name.a, sumCall);
@@ -1102,8 +988,8 @@ public class ServiceTest {
 
         //TODO: the returning structure is symmetrical to the dependency structure, maybe setting up both can be unified
         eq.returnTo(_if, Name.condition);
-        sub.returnTo(sumCallRec, Name.a);
-        sumCallRec.returnTo(add, Name.rightArg);
+        sub.returnTo(sumReCall, Name.a);
+        sumReCall.returnTo(add, Name.rightArg);
         add.returnTo(_if, Name.onFalse);
         sumCall.returnTo(resultMonitor, Name.result);
 

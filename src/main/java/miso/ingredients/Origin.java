@@ -8,7 +8,6 @@ public class Origin {
     public final Long executionId;
     public final Integer callLevel;
     public final Long seqNr;
-    public boolean partiallyApplied;
 
     private Origin(Function<?> sender, Function<?> scope, Long executionId, Integer callLevel, Long seqNr) {
         this.sender = sender;

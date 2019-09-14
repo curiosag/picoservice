@@ -39,50 +39,65 @@ public class FunctionSignature<T> extends Function<T> {
         return result;
     }
 
-    protected boolean isPartialAppParamValue(Message m) {
+    protected boolean isPartialAppParam(Message m) {
         return false;
     }
 
     protected void pushPartialAppParamValue(Message m) {
     }
 
-    protected void forwardPartialAppParamValues(FunctionSignatureState o) {
-        o.setPartialApplicationValuesForwarded(true);
+    protected void forwardPartialAppParamValues(FunctionSignatureState s) {
+        s.setPartialApplicationValuesForwarded(true);
+    }
+
+    public void popPartialAppValues(Origin o) {
     }
 
     @Override
     public void process(Message m) {
-        if (isDownstreamMessage(m)) {
-            hackyFunctionCallTrace(m);
-            Origin o = origin(m.origin.sender, m.origin.sender, m.origin.executionId, m.origin.callLevel + 1, m.origin.seqNr);
-            FunctionSignatureState state = (FunctionSignatureState) getState(o);
-            state.caller = m.origin;
-            //TODO clean this up
-            state.triggerOfCaller = m.origin.scope;
-            if (isPartialAppParamValue(m)) {
-                pushPartialAppParamValue(m);
-            } else {
-                forwardPartialAppParamValues(state);
-                super.process(m.origin(o));
-            }
-
+        if (m.key.equals(Name.popPartialAppValues)) {
+            popPartialAppValues(m.origin);
+            return;
         }
-        if (isUpstreamMessage(m) || isSelfMessage(m)) {
+
+        if (forwardingPartialAppParamValues(m)) {
             hackyTrace(m);
             super.process(m);
+            return;
         }
+
+        if (isPartialAppParam(m)) {
+            pushPartialAppParamValue(m);
+            return;
+        }
+
+        if (isDownstreamMessage(m)) {
+            hackyFunctionCallTrace(m);
+            Origin o = incCallLevel(m.origin);
+            FunctionSignatureState state = (FunctionSignatureState) getState(o);
+            state.caller = m.origin;
+            state.triggerOfCaller = m.origin.scope;
+            if (!state.partialApplicationValuesForwarded) {
+                forwardPartialAppParamValues(state);
+            }
+            super.process(m.origin(o));
+            return;
+        }
+
+        hackyTrace(m);
+        super.process(m);
     }
 
-    private boolean isUpstreamMessage(Message m) {
-        return !isDownstreamMessage(m) && !isSelfMessage(m);
+    protected Origin incCallLevel(Origin o) {
+        return origin(o.sender, o.sender, o.executionId, o.callLevel + 1, o.seqNr);
     }
 
     private boolean isDownstreamMessage(Message m) {
-        return !(isSelfMessage(m)) && m.origin.sender instanceof FunctionCall;
+        return !(forwardingPartialAppParamValues(m)) && m.origin.sender instanceof FunctionCall;
     }
 
-    private boolean isSelfMessage(Message m) {
-        return m.origin.partiallyApplied;
+    private boolean forwardingPartialAppParamValues(Message m) {
+        return m.origin.sender.equals(this) && isPartialAppParam(m);
     }
 
     private void hackyFunctionCallTrace(Message m) {

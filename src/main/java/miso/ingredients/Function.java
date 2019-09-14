@@ -13,6 +13,7 @@ import static miso.ingredients.OriginMatcher.matcher;
 public abstract class Function<T> extends Actress {
     Function<?> returnTo;
     public String returnKey;
+    private final List<Tuple<KeyValuePair, Function<?>>> onReturn = new ArrayList<>();
 
     public final Map<OriginMatcher, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
@@ -27,6 +28,10 @@ public abstract class Function<T> extends Actress {
                 .filter(k -> k.executionId.equals(runId))
                 .collect(Collectors.toList());
         toRemove.forEach(executionStates::remove);
+    }
+
+    public void onReturnSend(String key, Object value, Function<?> target){
+        onReturn.add(Tuple.of(KeyValuePair.of(key, value), target));
     }
 
     @Override
@@ -161,6 +166,7 @@ public abstract class Function<T> extends Actress {
     }
 
     void returnResult(T result, Origin origin) {
+        onReturn.forEach(v -> v.right.receive(message(v.left.key(), v.left.value(), origin)));
         returnTo.receive(message(returnKey, result, origin));
     }
 

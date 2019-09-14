@@ -8,10 +8,6 @@ public class FunctionSignatureState extends State {
 
     public boolean partialApplicationValuesForwarded;
 
-    public void setCaller(Origin caller) {
-        this.caller = caller;
-    }
-
     public FunctionSignatureState(Origin origin) {
         super(origin);
     }

@@ -31,4 +31,10 @@ public class Guards {
         }
         return value;
     }
+
+    public static void isFalse(boolean v) {
+        if (v) {
+            throw new IllegalStateException();
+        }
+    }
 }

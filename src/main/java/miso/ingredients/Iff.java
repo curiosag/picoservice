@@ -68,12 +68,6 @@ public class Iff<T> extends Function<T> {
         return result;
     }
 
-    public static Iff<Boolean> iffBool() {
-        Iff<Boolean> result = new Iff<>();
-        start(result);
-        return result;
-    }
-
     public static Iff<List<Integer>> iffList() {
         Iff<List<Integer>> result = new Iff<>();
         start(result);

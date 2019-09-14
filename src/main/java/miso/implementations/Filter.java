@@ -18,6 +18,8 @@ public class Filter {
     public static FunctionSignature<List<Integer>> getFilterSignature() {
 
         /*
+        predicate: arg -> boolean
+
         function filter(list, predicate) = {
             iff (list == []){                    //outerIff
                 []

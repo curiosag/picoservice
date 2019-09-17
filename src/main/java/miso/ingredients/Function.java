@@ -1,5 +1,8 @@
 package miso.ingredients;
 
+import miso.ingredients.tuples.KeyValuePair;
+import miso.ingredients.tuples.OnReturnForwardItem;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,14 +14,14 @@ import static miso.ingredients.Message.message;
 import static miso.ingredients.OriginMatcher.matcher;
 
 public abstract class Function<T> extends Actress {
-    Function<?> returnTo;
+    public Function<?> returnTo;
     public String returnKey;
-    private final List<Tuple<KeyValuePair, Function<?>>> onReturn = new ArrayList<>();
+    private final List<OnReturnForwardItem> onReturn = new ArrayList<>();
 
     public final Map<OriginMatcher, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
 
-    void removeState(Origin origin) {
+    protected void removeState(Origin origin) {
         executionStates.remove(matcher(origin));
         //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
@@ -31,7 +34,7 @@ public abstract class Function<T> extends Actress {
     }
 
     public void onReturnSend(String key, Object value, Function<?> target){
-        onReturn.add(Tuple.of(KeyValuePair.of(key, value), target));
+        onReturn.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
     }
 
     @Override
@@ -60,7 +63,7 @@ public abstract class Function<T> extends Actress {
 
     private List<Function> kicks = new ArrayList<>();
 
-    State getState(Origin origin) {
+    protected State getState(Origin origin) {
         OriginMatcher matcher = matcher(origin);
         State result = executionStates.get(matcher);
         if (result == null) {
@@ -165,8 +168,8 @@ public abstract class Function<T> extends Actress {
         return null;
     }
 
-    void returnResult(T result, Origin origin) {
-        onReturn.forEach(v -> v.right.receive(message(v.left.key(), v.left.value(), origin)));
+    protected void returnResult(T result, Origin origin) {
+        onReturn.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), origin)));
         returnTo.receive(message(returnKey, result, origin));
     }
 

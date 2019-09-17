@@ -1,4 +1,4 @@
-package miso.ingredients;
+package miso.ingredients.tuples;
 
 import java.util.Objects;
 

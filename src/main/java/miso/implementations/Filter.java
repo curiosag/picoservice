@@ -4,8 +4,10 @@ import miso.ingredients.*;
 import miso.ingredients.nativeImpl.ListBinOps;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import static miso.ingredients.Actresses.start;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iffList;
@@ -15,7 +17,14 @@ import static miso.ingredients.nativeImpl.UnOps.tail;
 
 public class Filter {
 
-    public static FunctionSignature<List<Integer>> getFilterSignature() {
+    public static Implementation<List<Integer>> filterSignatureJava() {
+        FilterJava filter = new FilterJava();
+        start(filter);
+        return new Implementation<>(filter, Arrays.asList());
+    }
+
+
+    public static Implementation<List<Integer>> filterSignature() {
 
         /*
         predicate: arg -> boolean
@@ -41,15 +50,11 @@ public class Filter {
         FunctionSignature<List<Integer>> filterSignature = functionSignature(outerIff);
         filterSignature.propagate(Name.predicate, Name.predicate, outerIff);
         filterSignature.propagate(Name.list, Name.list, outerIff);
-        filterSignature.label("FILTER");
 
         Function<Boolean> listEq = ListBinOps.eq().returnTo(outerIff, Name.condition).constant(Name.rightArg, empty);
         outerIff.propagate(Name.list, Name.leftArg, listEq);
 
         Iff<List<Integer>> innerIff = iffList();
-        innerIff.label("innerIff");
-        outerIff.label("outerIff");
-        innerIff.returnTo(outerIff, Name.onFalse);
         outerIff.propagateOnFalse(Name.predicate, Name.predicate, innerIff);
 
         //let head = head(list);
@@ -79,8 +84,18 @@ public class Filter {
         Function<List<Integer>> cons = cons().returnTo(innerIff, Name.onTrue);
         Function<List<Integer>> filterReCallOnTrue = functionCall(filterSignature).returnTo(cons, Name.rightArg);
         Function<List<Integer>> filterReCallOnFalse = functionCall(filterSignature).returnTo(innerIff, Name.onFalse);
-        filterReCallOnTrue.label("filterReCallOnTrue");
-        filterReCallOnFalse.label("filterReCallOnFalse");
+
+        filterReCallOnTrue.label("**filterReCallOnTrue");
+        filterReCallOnFalse.label("**filterReCallOnFalse");
+        filterSignature.label("**FILTER");
+        innerIff.label("**innerIff");
+        outerIff.label("**outerIff");
+        listEq.label("**eq[]");
+        head.label("**head");
+        tail.label("**tail");
+        cons.label("**cons");
+
+        innerIff.returnTo(outerIff, Name.onFalse);
 
         innerIff.propagate(Name.head, Name.arg, predicateStub);
         innerIff.propagate(Name.predicate, Name.predicate, predicateStub);
@@ -92,7 +107,8 @@ public class Filter {
         innerIff.propagateOnFalse(Name.tail, Name.list, filterReCallOnFalse);
         innerIff.propagateOnFalse(Name.predicate, Name.predicate, filterReCallOnFalse);
 
-        return filterSignature;
+        return new Implementation<>(filterSignature, Arrays.asList(filterSignature, listEq, outerIff, innerIff, head, tail, cons,
+                predicateStub, filterReCallOnTrue, filterReCallOnFalse));
     }
 
 }

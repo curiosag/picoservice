@@ -59,7 +59,7 @@ public abstract class Actress implements Runnable {
         inBox.add(m);
     }
 
-    private void debug(Message m, Origin o, String rel) {
+    protected void debug(Message m, Origin o, String rel) {
         debug(String.format("<%d>(%d/%d)%s " + rel + " %s %s", o.seqNr, o.executionId, o.callLevel, this.address.toString(), o.sender.address.toString(), m.toString()));
     }
 

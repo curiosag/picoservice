@@ -1,6 +1,7 @@
 package miso.ingredients.trace;
 
 import miso.ingredients.*;
+import miso.ingredients.tuples.Tuple;
 
 public class TraceMessage extends Message {
 

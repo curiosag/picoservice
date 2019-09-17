@@ -7,12 +7,13 @@ import java.util.Collections;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static miso.implementations.Filter.getFilterSignature;
+import static miso.implementations.Filter.filterSignatureJava;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iffList;
 import static miso.ingredients.PartialFunctionApplication.partialApplication;
-import static miso.ingredients.nativeImpl.BinOps.*;
+import static miso.ingredients.nativeImpl.BinOps.gteq;
+import static miso.ingredients.nativeImpl.BinOps.lt;
 import static miso.ingredients.nativeImpl.ListBinOps.concat;
 import static miso.ingredients.nativeImpl.ListBinOps.cons;
 import static miso.ingredients.nativeImpl.UnOps.head;
@@ -56,7 +57,7 @@ public class Quicksort {
         iff.propagateOnFalse(Name.list, Name.arg, head);
         iff.propagateOnFalse(Name.list, Name.arg, tail);
 
-        // quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(filter(tail, i -> gteq(i, head))))
+        // quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(tail, i -> gteq(i, head))))
         // +
         Function<List<Integer>> concat = concat().returnTo(iff, Name.onFalse);
         // ::
@@ -65,17 +66,19 @@ public class Quicksort {
         // 2 times quicksort(filter(...))
         Function<List<Integer>> qsortReCallLeft = functionCall(qsortSignature).returnTo(concat, Name.leftArg);
         Function<List<Integer>> qsortReCallRight = functionCall(qsortSignature).returnTo(cons, Name.rightArg);
-        FunctionSignature<List<Integer>> filterSignature = getFilterSignature();
+
+        FunctionSignature<List<Integer>> filterSignatureLeft = filterSignatureJava().get();
+        FunctionSignature<List<Integer>> filterSignatureRight = filterSignatureJava().get();
 
         // function lt(a, b) = a < b;
         // filter(tail, i -> lt(i, head))
         BinOp<Integer, Integer, Boolean> lt = lt();
-        Function<Boolean> ltPredicate = partialApplication(lt, list(Name.rightArg))
+        Function<Boolean> ltPredicate = partialApplication(lt, Name.rightArg)
                 .propagate(Name.arg, Name.leftArg, lt)
                 .propagate(Name.rightArg, Name.rightArg, lt);
 
         Function<List<Integer>> filterCallLeft =
-                functionCall(filterSignature)
+                functionCall(filterSignatureLeft)
                         .constant(Name.predicate, ltPredicate)
                         .returnTo(qsortReCallLeft, Name.list);
 
@@ -85,23 +88,24 @@ public class Quicksort {
         // function gteq(a, b) = a >= b;
         // filter(filter(tail, i -> gteq(i, head))
         Function<Boolean> gteq = gteq();
-        Function<Boolean> gtEqPredicate = partialApplication(gteq, list(Name.rightArg))
+        Function<Boolean> gtEqPredicate = partialApplication(gteq, Name.rightArg)
                 .propagate(Name.arg, Name.leftArg, gteq)
                 .propagate(Name.rightArg, Name.rightArg, gteq);
 
         Function<List<Integer>> filterCallRight =
-                functionCall(filterSignature)
+                functionCall(filterSignatureRight)
                         .constant(Name.predicate, gtEqPredicate)
                         .returnTo(qsortReCallRight, Name.list);
         iff.propagateOnFalse(Name.head, Name.rightArg, gtEqPredicate);
         iff.propagateOnFalse(Name.tail, Name.list, filterCallRight);
 
-        iff.onReturnSend(Name.popPartialAppValues, null, ltPredicate);
-        iff.onReturnSend(Name.popPartialAppValues, null, gtEqPredicate);
+        iff.onReturnOnFalseSend(Name.popPartialAppValues, null, ltPredicate);
+        iff.onReturnOnFalseSend(Name.popPartialAppValues, null, gtEqPredicate);
 
         iff.label("iff");
         qsortSignature.label("QSORT");
-        filterSignature.label("FILTER");
+        filterSignatureLeft.label("FILTER LEFT");
+        filterSignatureRight.label("FILTER RIGHT");
         qsortReCallLeft.label("qsortReCallLeft");
         qsortReCallRight.label("qsortReCallRight");
         ltPredicate.label("LT(l,r)");

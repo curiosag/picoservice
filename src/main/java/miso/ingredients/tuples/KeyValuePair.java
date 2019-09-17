@@ -1,4 +1,4 @@
-package miso.ingredients;
+package miso.ingredients.tuples;
 
 public class KeyValuePair extends Tuple<String, Object> {
 

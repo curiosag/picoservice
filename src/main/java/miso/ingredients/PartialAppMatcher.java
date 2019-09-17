@@ -9,7 +9,7 @@ public class PartialAppMatcher {
         this.executionId = origin.executionId;
     }
 
-    static PartialAppMatcher matcher(Origin o){
+    public static PartialAppMatcher matcher(Origin o){
         return new PartialAppMatcher(o);
     }
 

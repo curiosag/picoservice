@@ -1,5 +1,8 @@
 package miso.ingredients;
 
+import miso.ingredients.tuples.KeyValuePair;
+import miso.ingredients.tuples.OnReturnForwardItem;
+
 import java.util.*;
 
 import static miso.ingredients.Actresses.start;
@@ -8,6 +11,9 @@ import static miso.ingredients.Message.message;
 public class Iff<T> extends Function<T> {
 
     private static final List<String> params = Arrays.asList(Name.onTrue, Name.onFalse, Name.condition);
+    private final List<OnReturnForwardItem> onReturnOnTrueSend = new ArrayList<>();
+    private final List<OnReturnForwardItem> onReturnOnFalseSend = new ArrayList<>();
+
 
     class StateIff extends State {
         // messages must not be propagated to branches before decision has been calculated
@@ -25,6 +31,15 @@ public class Iff<T> extends Function<T> {
     private Map<Function<?>, Map<String, List<String>>> propagationsOnFalse = new HashMap<>();
     private List<Function> kickOffOnTrue = new ArrayList<>();
     private List<Function> kickOffOnFalse = new ArrayList<>();
+
+
+    public void onReturnOnTrueSend(String key, Object value, Function<?> target){
+        onReturnOnTrueSend.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+    }
+
+    public void onReturnOnFalseSend(String key, Object value, Function<?> target){
+        onReturnOnFalseSend.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+    }
 
     public void propagateOnFalse(String keyReceived, String keyToPropagate, Function target) {
         propagate(keyReceived, keyToPropagate, target, propagationsOnFalse);
@@ -119,10 +134,12 @@ public class Iff<T> extends Function<T> {
             kickOffBranch(state);
         }
         if (isTrue(state.decision) && computed(state.onTrue)) {
+            onReturnOnTrueSend.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), m.origin)));
             returnResult((T) state.onTrue, m.origin.sender(this));
             removeState(state.origin);
         }
         if (isFalse(state.decision) && computed(state.onFalse)) {
+            onReturnOnFalseSend.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), m.origin)));
             returnResult((T) state.onFalse, m.origin.sender(this));
             removeState(state.origin);
         }

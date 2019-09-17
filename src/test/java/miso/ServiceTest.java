@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static miso.Int.Int;
-import static miso.implementations.Filter.getFilterSignature;
+import static miso.implementations.Filter.filterSignature;
 import static miso.implementations.Quicksort.getQuicksortSignature;
 import static miso.ingredients.Action.action;
 import static miso.ingredients.Actresses.await;
@@ -342,8 +342,8 @@ public class ServiceTest {
     @Ignore
     @Test
     public void testQuicksort() {
-        Actresses.trace();
-        Actresses.debug();
+         Actresses.trace();
+         Actresses.debug();
 
         Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
         qsortCall.label("qsortCall");
@@ -351,8 +351,18 @@ public class ServiceTest {
         //       checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
 //        checkQsort(list(2), list(2), qsortCall);
 //               checkQsort(list(1, 2), list(2, 1), qsortCall);
-        checkQsort(list(1, 2, 3), list(1, 3, 2), qsortCall);
-//        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), qsortCall);
+        // checkQsort(list(1, 2, 3), list(3, 2, 1), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4), list( 3, 0, 2, 1, 4), qsortCall);
+
+        //  checkQsort(list(0, 1, 2, 3), list(3, 2, 1, 0), qsortCall);
+
+
+        //  checkQsort(list(0,1, 2, 3, 4, 5, 6), list(6, 5, 4, 3, 2, 1, 0), qsortCall);
+
+        // checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
+        // checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(9, 8, 7, 6, 5, 4, 3, 2, 1, 0), qsortCall);
+        // checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), qsortCall);
+        //   checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), qsortCall);
     }
 
     private void checkQsort(List<Integer> expected, List<Integer> input, Function<List<Integer>> qsortCall) {
@@ -375,7 +385,6 @@ public class ServiceTest {
     }
 
 
-
     @Test
     public void testFilter() {
         /*
@@ -383,7 +392,7 @@ public class ServiceTest {
             check(filter(input, a -> iff (a == null) {false} else {a mod 2 == 0}))
             */
 
-        Function<List<Integer>> filterCall = functionCall(getFilterSignature());
+        Function<List<Integer>> filterCall = functionCall(filterSignature().get());
         filterCall.label("filter");
         FunctionSignature<Boolean> predicate = getModEqZero();
         predicate.constant(Name.m, 2);
@@ -423,7 +432,6 @@ public class ServiceTest {
         result.sort(Integer::compareTo);
         assertEquals(expected, result);
     }
-
 
 
     private List<String> list(String... p) {

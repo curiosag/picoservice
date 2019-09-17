@@ -6,7 +6,7 @@ import static miso.ingredients.trace.TraceMessage.traced;
 
 public class FunctionSignature<T> extends Function<T> {
 
-    final Function<T> body;
+    public final Function<T> body;
 
 
     /*  FunctionSignature's responsibility are.
@@ -18,17 +18,12 @@ public class FunctionSignature<T> extends Function<T> {
      *     instead of the usual routine of using the "returnTo" target.
      *
      *   - handling for partially applied functions. works only if separate instances of FunctionSignature
-     *     are used in each lambda. If that's not done, then:
-     *      if e.g 2 lambdas l1, l2 both have the same FunctionSignature S.
-     *      and The partial application values get set for S
-     *      and l1 and l2 get passed to 2 different function calls c1, c2.
-     *      and downstream c1 pushes another set of partial application values
-     *      TODO: then there's no way ???????????????????????????
+     *     are used in each lambda. There's no way to tell apart stuff otherwise
      *
      * */
 
 
-    FunctionSignature(Function<T> body) {
+    protected FunctionSignature(Function<T> body) {
         this.body = body;
         body.returnTo(this, Name.result);
     }

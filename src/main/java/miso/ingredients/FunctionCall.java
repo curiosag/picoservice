@@ -24,7 +24,7 @@ public class FunctionCall<T> extends Function<T> {
 
     @Override
     protected State newState(Origin origin) {
-        throw new IllegalStateException();
+        return new State(origin);
     }
 
     @Override
@@ -33,16 +33,28 @@ public class FunctionCall<T> extends Function<T> {
     }
 
     @Override
-    protected void process(Message m) {
-        maybeTrace(m);
-        if (m.hasKey(Name.result)) {
-            returnTo.receive(message(returnKey, m.value, m.origin.sender(this)));
+    protected void process(Message message) {
+        maybeTrace(message);
+
+        Origin origin = message.origin.sender(this);
+
+        if (message.hasKey(Name.result)) {
+            removeState(origin);
+            if (!origin.popCall().equals(this.address.id)) {
+                throw new IllegalStateException();
+            }
+            returnTo.receive(message(returnKey, message.value, origin));
         } else {
-            // TODO: hier brauchts auch state per call
-            if (!m.origin.sender.equals(this))
-                super.fowardConsts(m.origin.sender(this));
-            function.receive(m.sender(this));
+            if (! isConst(message)) {
+                origin.pushCall(this.address.id);
+                getState(origin);
+            }
+            function.receive(message.origin(origin));
         }
+    }
+
+    private boolean isConst(Message message) {
+        return message.origin.sender.equals(this);
     }
 
 }

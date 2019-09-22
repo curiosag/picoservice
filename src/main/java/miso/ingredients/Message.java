@@ -20,10 +20,6 @@ public class Message {
         return message(key, value, o);
     }
 
-    public Message sender(Function sender) {
-        return new Message(key, value, origin.sender(sender));
-    }
-
     public Message usingKey(String key)
     {
         return new Message(key, value, origin);

@@ -36,7 +36,7 @@ public class FunctionStub<T> extends Function<T> {
             return;
         }
 
-        state.forward(message.sender(this));
+        state.forward(message.origin(message.origin.sender(this)));
     }
 
     @Override

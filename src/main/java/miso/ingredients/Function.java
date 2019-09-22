@@ -11,24 +11,23 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static miso.ingredients.Message.message;
-import static miso.ingredients.OriginMatcher.matcher;
 
 public abstract class Function<T> extends Actress {
     public Function<?> returnTo;
     public String returnKey;
     private final List<OnReturnForwardItem> onReturn = new ArrayList<>();
 
-    public final Map<OriginMatcher, State> executionStates = new HashMap<>();
+    public final Map<FunctionCallLevel, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
-        executionStates.remove(matcher(origin));
+        executionStates.remove(origin.functionCallLevel());
         //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
     void cleanup(Long runId) {
-        List<OriginMatcher> toRemove = executionStates.keySet().stream()
-                .filter(k -> k.executionId.equals(runId))
+        List<FunctionCallLevel> toRemove = executionStates.keySet().stream()
+                .filter(k -> k.getExecutionId().equals(runId))
                 .collect(Collectors.toList());
         toRemove.forEach(executionStates::remove);
     }
@@ -64,11 +63,10 @@ public abstract class Function<T> extends Actress {
     private List<Function> kicks = new ArrayList<>();
 
     protected State getState(Origin origin) {
-        OriginMatcher matcher = matcher(origin);
-        State result = executionStates.get(matcher);
+        State result = executionStates.get(origin.functionCallLevel());
         if (result == null) {
             result = newState(origin);
-            executionStates.put(matcher, result);
+            executionStates.put(origin.functionCallLevel(), result);
             fowardConsts(origin);
             forwardKickOff(origin);
         }

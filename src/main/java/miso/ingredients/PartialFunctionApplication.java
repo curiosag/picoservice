@@ -34,8 +34,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     @Override
     public void checkSanityOnStop() {
         super.checkSanityOnStop();
-        if (! partialAppValues.isEmpty())
-        {
+        if (!partialAppValues.isEmpty()) {
             throw new IllegalStateException();
         }
     }
@@ -45,7 +44,6 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
         return partialAppParams.contains(m.key);
     }
 
-    @Override
     protected void pushPartialAppParamValue(Message m) {
         if (isPartialAppParam(m)) {
             Stack<Map<String, Object>> stack = partialAppValues.computeIfAbsent(matcher(m.origin), k ->
@@ -54,7 +52,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
                 s.push(new HashMap<>());
                 return s;
             });
-            debug(m, m.origin,String.format(" << pushPartialAppParamValue (%d) << ", stack.size()));
+            debug(m, m.origin, String.format(" << pushPartialAppParamValue (%d) << ", stack.size()));
             stack.peek().put(m.key, m.value);
         }
     }
@@ -62,15 +60,15 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     @Override
     protected void forwardPartialAppParamValues(FunctionSignatureState s) {
         Guards.isFalse(s.partialApplicationValuesForwarded);
-        if (!s.partialApplicationValuesForwarded) {
-            Map<String, Object> values = getPartialAppValues(s.caller);
-            Origin o = s.origin.sender(this);
 
-            values.forEach((key, value) -> super.process(Message.message(key, value, o)));
-            // TODO: it is possible to make the forwarding of partially applied values not dependent on the order of messages
-            // i.e. that the partially applied values have to be supplied completely before any other parameters
-            s.setPartialApplicationValuesForwarded(true);
-        }
+        Map<String, Object> values = getPartialAppValues(s.origin);
+        Origin o = s.origin.sender(this);
+
+        values.forEach((key, value) -> super.process(Message.message(key, value, o)));
+        // TODO: it is possible to make the forwarding of partially applied values not dependent on the order of messages
+        // i.e. that the partially applied values have to be supplied completely before any other parameters
+        s.setPartialApplicationValuesForwarded(true);
+
     }
 
     public Map<String, Object> getPartialAppValues(Origin o) {
@@ -84,8 +82,8 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
         Stack<Map<String, Object>> partial = partialAppValues.get(matcher);
         if (partial != null) {
             partial.pop();
-            debug(String.format("%s popPartialAppParamValue (%d) << ", this.address.label, partial.size()));
-            if (partial.isEmpty()){
+            debug(String.format(o.callStack.toString() + " %s popPartialAppParamValue (%d) << ", this.address.label, partial.size()));
+            if (partial.isEmpty()) {
                 partialAppValues.remove(matcher);
             }
         }

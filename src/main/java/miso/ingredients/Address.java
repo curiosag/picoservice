@@ -4,12 +4,15 @@ import java.util.Objects;
 
 public class Address {
 
+    public Integer id;
+
     public String value;
 
     public String label = "";
 
-    public Address(String value) {
-        this.value = value;
+    public Address(String value, Integer id) {
+        this.value = value + "-" + id;
+        this.id = id;
     }
 
     void setLabel(String label) {

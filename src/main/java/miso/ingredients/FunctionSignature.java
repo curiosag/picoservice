@@ -68,14 +68,12 @@ public class FunctionSignature<T> extends Function<T> {
 
         if (isDownstreamMessage(m)) {
             hackyFunctionCallTrace(m);
-            Origin o = incCallLevel(m.origin);
+            Origin o = m.origin;
             FunctionSignatureState state = (FunctionSignatureState) getState(o);
-            state.caller = m.origin;
-            state.triggerOfCaller = m.origin.scope;
             if (!state.partialApplicationValuesForwarded) {
                 forwardPartialAppParamValues(state);
             }
-            super.process(m.origin(o));
+            super.process(m);
             return;
         }
 
@@ -83,12 +81,8 @@ public class FunctionSignature<T> extends Function<T> {
         super.process(m);
     }
 
-    protected Origin incCallLevel(Origin o) {
-        return origin(o.sender, o.sender, o.executionId, o.callLevel + 1, o.seqNr);
-    }
-
     private boolean isDownstreamMessage(Message m) {
-        return !(forwardingPartialAppParamValues(m)) && m.origin.sender instanceof FunctionCall;
+        return (m.origin.sender instanceof FunctionCall) && !(m.key.equals(Name.result));
     }
 
     private boolean forwardingPartialAppParamValues(Message m) {
@@ -97,7 +91,7 @@ public class FunctionSignature<T> extends Function<T> {
 
     private void hackyFunctionCallTrace(Message m) {
         // original scope is needed to reconstruct the trace
-        Origin o = origin(m.origin.sender, m.origin.scope, m.origin.executionId, m.origin.callLevel + 1, m.origin.seqNr);
+        Origin o = origin(m.origin.sender, m.origin.triggeredBy, m.origin.executionId, m.origin.seqNr, m.origin.callStack);
         hackyTrace(m.origin(o));
     }
 
@@ -105,9 +99,8 @@ public class FunctionSignature<T> extends Function<T> {
     protected void processInner(Message m, State s) {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
-            Function<?> triggerOfCaller = state.triggerOfCaller;
-            Origin o = origin(this, triggerOfCaller, m.origin.executionId, m.origin.callLevel - 1, m.origin.seqNr + 1L);
-            state.origin.scope.receive(m.origin(o));
+            Origin o = origin(this, state.getTriggerOfCaller(), m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
+            state.origin.sender.receive(m.origin(o));
             removeState(state.origin);
         }
     }

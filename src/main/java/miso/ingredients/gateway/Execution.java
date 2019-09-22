@@ -1,9 +1,11 @@
 package miso.ingredients.gateway;
 
+import miso.ingredients.Action;
 import miso.ingredients.Function;
 import miso.ingredients.Name;
 import miso.ingredients.Origin;
 
+import java.util.Stack;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -30,7 +32,8 @@ public class Execution<T> implements Future<T> {
     public Execution(Function<T> f, Consumer<T> onFinished) {
         this.f = f;
         this.onFinished = onFinished;
-        origin = Origin.origin(f, nop, maxExecutionId.addAndGet(1), 0, 0L);
+        Function<T> caller = new Action();
+        origin = Origin.origin(caller, nop, maxExecutionId.addAndGet(1), 0L, new Stack<>());
     }
 
     public Execution<T> param(String key, Integer value) {

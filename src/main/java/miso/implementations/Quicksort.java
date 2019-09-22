@@ -35,7 +35,7 @@ public class Quicksort {
             else
                 let head = head(list)
                 let tail = tail(list)
-                quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(filter(tail, i -> gteq(i, head))))
+                quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(tail, i -> gteq(i, head)))
     */
         //----------------------------------------------------------------------------------------------
     /*    function quicksort(list) =

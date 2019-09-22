@@ -51,6 +51,15 @@ public class BinOp<T, U, V> extends Function<V> {
                 T left = t(state.leftArg);
                 U right = u(state.rightArg);
                 removeState(state.origin);
+
+                if (this.address.label.contains("cons")) {
+                    //TODO: remove
+                    debug(String.format("%s<%d> cons: %s <--> %s", m.origin.callStack.toString(), m.origin.seqNr, left.toString(), right.toString()));
+                }
+                if (this.address.label.contains("conc")) {
+                    //TODO: remove
+                    debug(String.format("%s<%d> conc: %s <--> %s", m.origin.callStack.toString(), m.origin.seqNr, left.toString(), right.toString()));
+                }
                 returnResult(op.apply(left, right), m.origin.sender(this));
             } catch (Exception e) {
                 throw e;

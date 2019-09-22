@@ -3,7 +3,7 @@ package miso.ingredients;
 import java.util.Objects;
 
 public class PartialAppMatcher {
-    final Long executionId;
+    public final Long executionId;
 
     private PartialAppMatcher(Origin origin) {
         this.executionId = origin.executionId;

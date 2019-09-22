@@ -20,7 +20,7 @@ public class Actresses {
 
     private List<Actress> cast = new ArrayList<>();
     private Trace tracer;
-    private AtomicInteger maxAddress = new AtomicInteger(0);
+    private AtomicInteger maxId = new AtomicInteger(0);
 
     private static Actresses instance;
 
@@ -50,7 +50,7 @@ public class Actresses {
         debug = false;
         trace = false;
         setUpTracer(trace);
-        maxAddress = new AtomicInteger(0);
+        maxId = new AtomicInteger(0);
     }
 
     private void setUpTracer(boolean trace) {
@@ -67,8 +67,8 @@ public class Actresses {
         instance().resetInstance();
     }
 
-    static int nextAddress() {
-        return instance().maxAddress.addAndGet(1);
+    public static int nextId() {
+        return instance().maxId.addAndGet(1);
     }
 
     public static void start(Actress a) {
@@ -102,6 +102,10 @@ public class Actresses {
         cast.forEach(a -> a.setTrace(trace));
     }
 
+    public void showCast(){
+        cast.forEach(c -> System.out.println(c.address.id + " " +  c.address.toString()));
+    }
+
     public static void trace() {
         instance().setTrace(true);
     }
@@ -122,8 +126,16 @@ public class Actresses {
         instance().shutdownInstance();
     }
 
+    public void forceShutdown(){
+        doShutdown();
+    }
+
     private void shutdownInstance() {
         await(() -> cast.stream().allMatch(Actress::idle));
+        doShutdown();
+    }
+
+    private void doShutdown() {
         cast.forEach(Actress::stop);
         await(() -> cast.stream().allMatch(Actress::isStopped));
         cast.forEach(Actress::checkSanityOnStop);

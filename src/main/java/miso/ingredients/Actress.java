@@ -46,7 +46,7 @@ public abstract class Actress implements Runnable {
     }
 
     protected Actress() {
-        address = new Address(this.getClass().getSimpleName() + "-" + Actresses.nextAddress());
+        address = new Address(this.getClass().getSimpleName() , Actresses.nextId());
     }
 
     public void label(String sticker) {
@@ -60,7 +60,7 @@ public abstract class Actress implements Runnable {
     }
 
     protected void debug(Message m, Origin o, String rel) {
-        debug(String.format("<%d>(%d/%d)%s " + rel + " %s %s", o.seqNr, o.executionId, o.callLevel, this.address.toString(), o.sender.address.toString(), m.toString()));
+        debug(String.format("%s<%d>(%d/%d)%s " + rel + " %s %s", m.origin.callStack.toString(), o.seqNr, o.executionId, o.callStack.size(), this.address.toString(), o.sender.address.toString(), m.toString()));
     }
 
     protected abstract void process(Message message);

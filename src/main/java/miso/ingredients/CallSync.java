@@ -2,6 +2,7 @@ package miso.ingredients;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 
 import static miso.ingredients.Message.message;
 import static miso.ingredients.Nop.nop;
@@ -29,7 +30,7 @@ public class CallSync<T> extends Function<T> {
     }
 
     public T call() {
-        Origin origin = Origin.origin(f, nop, executions++, 0, 0L);
+        Origin origin = Origin.origin(this, nop, executions++, 0L, new Stack<>());
         if (params.size() == 0) {
             f.receive(message(Name.kickOff, null, origin));
         } else {

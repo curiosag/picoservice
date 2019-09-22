@@ -2,10 +2,6 @@ package miso.ingredients;
 
 public class FunctionSignatureState extends State {
 
-    public Function<?> triggerOfCaller;
-
-    public Origin caller;
-
     public boolean partialApplicationValuesForwarded;
 
     public FunctionSignatureState(Origin origin) {
@@ -15,4 +11,13 @@ public class FunctionSignatureState extends State {
     public void setPartialApplicationValuesForwarded(boolean partialApplicationValuesForwarded) {
         this.partialApplicationValuesForwarded = partialApplicationValuesForwarded;
     }
+
+    public Function<?> getTriggerOfCaller() {
+        return origin.triggeredBy;
+    }
+
+    public Origin getCaller() {
+        return origin;
+    }
+
 }

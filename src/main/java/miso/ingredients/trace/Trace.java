@@ -21,7 +21,7 @@ public class Trace extends Actress implements Closeable {
     private List<TraceMessage> messages = new ArrayList<>();
 
     public Trace(boolean active) {
-        super(new Address(Adresses.trace));
+        super(new Address(Adresses.trace, Actresses.nextId()));
         this.active = active;
         writer = active ? createWriter() : null;
         writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
@@ -61,7 +61,7 @@ public class Trace extends Actress implements Closeable {
             value = (m.value).toString();
         }
 
-        return '"' + String.format("<%d>(%d/%d)%s:", m.origin.seqNr, m.origin.executionId, m.origin.callLevel, m.key) + value
+        return '"' + String.format("<%d>(%d/%d)%s:", m.origin.seqNr, m.origin.executionId, m.origin.callStack.size(), m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -70,9 +70,10 @@ public class Trace extends Actress implements Closeable {
     private void write(TraceMessage m) {
         Long exId = m.origin.executionId;
 
-        Integer levelSender = m.sender().callLevel;
+        Integer levelSender = m.sender().callStack.size();
         String labelSender = node(m.sender().sender);
-        String scopeSender = node(m.sender().scope);
+        String scopeSender = node(m.sender().triggeredBy);
+        String stack = m.origin.callStack.toString();
         Integer levelReceiver = levelSender;
         String labelReceiver = node(m.receiver());
         String scopeReceiver = scopeSender;

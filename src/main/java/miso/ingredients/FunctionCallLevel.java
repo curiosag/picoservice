@@ -1,12 +1,18 @@
 package miso.ingredients;
 
-import java.util.Objects;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 public class FunctionCallLevel {
-    Origin origin;
+    public final Origin origin;
+    public final String matchString;
+
     public FunctionCallLevel(Origin origin) {
         this.origin = origin;
+        matchString = origin.executionId.toString() + '/' +
+                origin.callStack.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining("/"));
     }
 
     public Long getExecutionId(){
@@ -22,12 +28,11 @@ public class FunctionCallLevel {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FunctionCallLevel that = (FunctionCallLevel) o;
-        return Objects.equals(getExecutionId(), that.getExecutionId()) &&
-                Objects.equals(getCallStack(), that.getCallStack());
+        return matchString.equals(that.matchString);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getExecutionId(), getCallStack());
+        return matchString.hashCode();
     }
 }

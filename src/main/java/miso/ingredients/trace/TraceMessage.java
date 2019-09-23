@@ -5,8 +5,6 @@ import miso.ingredients.tuples.Tuple;
 
 public class TraceMessage extends Message {
 
-
-
     private TraceMessage(Message m, Actress receiver) {
         super(Name.senderReceiverTuple, Tuple.of(m, receiver), m.origin);
     }

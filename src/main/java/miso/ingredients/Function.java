@@ -10,12 +10,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import static miso.ingredients.Actresses.await;
 import static miso.ingredients.Message.message;
 
 public abstract class Function<T> extends Actress {
     public Function<?> returnTo;
     public String returnKey;
-    private final List<OnReturnForwardItem> onReturn = new ArrayList<>();
+    final List<OnReturnForwardItem> onReturn = new ArrayList<>();
+    private final List<OnReturnForwardItem> onReturnReceived = new ArrayList<>();
 
     public final Map<FunctionCallLevel, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
@@ -32,8 +34,12 @@ public abstract class Function<T> extends Actress {
         toRemove.forEach(executionStates::remove);
     }
 
-    public void onReturnSend(String key, Object value, Function<?> target){
+    public void onReturnSend(String key, Object value, Function<?> target) {
         onReturn.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+    }
+
+    public void onReturnReceivedSend(String key, Object value, Function target) {
+        onReturnReceived.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
     }
 
     @Override
@@ -58,7 +64,7 @@ public abstract class Function<T> extends Actress {
      *   all targetFunc know the keyValue used for returning results
      *
      * */
-    private Map<Function<?>, Map<String, List<String>>> propagations = new HashMap<>();
+    protected final Map<Function<?>, Map<String, List<String>>> propagations = new HashMap<>();
 
     private List<Function> kicks = new ArrayList<>();
 
@@ -114,17 +120,33 @@ public abstract class Function<T> extends Actress {
     }
 
     void propagate(Message m) {
-        propagate(m, propagations);
+        propagate(m, Acknowledge.N, propagations);
     }
 
-    void propagate(Message m, Map<Function<?>, Map<String, List<String>>> propagations) {
+    void propagate(Message m, Acknowledge ack) {
+        propagate(m, ack, propagations);
+    }
+
+    void propagate(Message message, Map<Function<?>, Map<String, List<String>>> propagations) {
+        propagate(message, Acknowledge.N, propagations);
+    }
+
+    void propagate(Message message, Acknowledge ack, Map<Function<?>, Map<String, List<String>>> propagations) {
         for (Entry<Function<?>, Map<String, List<String>>> prop : propagations.entrySet()) {
             for (Entry<String, List<String>> keyMapping : prop.getValue().entrySet()) {
-                if (keyMapping.getKey().equals(m.key)) {
-                    keyMapping.getValue().forEach(targetName -> prop.getKey().receive(message(targetName, m.value, m.origin.sender(this))));
+                if (keyMapping.getKey().equals(message.key)) {
+                    keyMapping.getValue().forEach(targetName -> {
+                        Message m = message(targetName, message.value, message.origin.sender(this)).ack(ack);
+                        prop.getKey().receive(m);
+                        if (m.ack == Acknowledge.Y) {
+                            await(() -> acknowledged.contains(m.id));
+                            acknowledged.remove(m.id);
+                        }
+                    });
                 }
             }
         }
+
     }
 
     @Override
@@ -147,6 +169,9 @@ public abstract class Function<T> extends Actress {
             propagate(m);
             return;
         }
+        if (m.key.equals(Name.result)) {
+            hdlOnReturns(m.origin, onReturnReceived);
+        }
         processInner(m, state);
     }
 
@@ -167,8 +192,12 @@ public abstract class Function<T> extends Actress {
     }
 
     protected void returnResult(T result, Origin origin) {
-        onReturn.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), origin)));
+        hdlOnReturns(origin, onReturn);
         returnTo.receive(message(returnKey, result, origin));
+    }
+
+    void hdlOnReturns(Origin origin, List<OnReturnForwardItem> items) {
+        items.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), origin)));
     }
 
     static boolean computed(Object value) {
@@ -186,6 +215,7 @@ public abstract class Function<T> extends Actress {
     static boolean isTrue(Boolean decision) {
         return decision != null && decision;
     }
+
     static boolean isFalse(Boolean decision) {
         return decision != null && !decision;
     }

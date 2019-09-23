@@ -112,6 +112,8 @@ public class ServiceTest {
          */
 
         // function mul(a) = a * 2
+
+
         Function<Integer> mul = BinOps.mul().constant(Name.rightArg, 2);
         mul.label("*");
         FunctionSignature<Integer> functionSignatureMul = functionSignature(mul);
@@ -261,23 +263,22 @@ public class ServiceTest {
         partialAdd.receive(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
         assertResult(_2, _1, inc, result, origin);
-        partialAdd.receive(message(Name.popPartialAppValues, null, origin));
+        partialAdd.receive(message(Name.removePartialAppValues, null, origin));
 
         partialAdd.receive(message(Name.b, _2, origin));
         assertResult(_2, _0, inc, result, origin);
         assertResult(_3, _1, inc, result, origin);
-        partialAdd.popPartialAppValues(origin);
+        partialAdd.removePartialAppValues(origin);
 
     }
 
     @Test
-    public void testPartialApplicationOnLambda() {
+    public void testPartialApplicationDirectCall() {
         /*
                 function inc = a -> a + 1
-                function apply(func, a) = func(a)
 
-                check(apply(inc, 0))
-                check(apply(inc, 1))
+                check(inc(0))
+                check(inc(0))
          */
 
         Int result = Int(0);
@@ -292,23 +293,52 @@ public class ServiceTest {
         partialAdd.propagate(Name.b, Name.rightArg, add);
 
         FunctionCall<Integer> inc = functionCall(partialAdd);
+        inc.onReturnSend(Name.removePartialAppValues, null, partialAdd);
         inc.returnTo(resultListener, Name.result);
         inc.label("INC");
 
         // by way of direct call of the partially applied function
         inc.receive(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
+        // TODO maybe, since removePartialAppValues happens after inc returns, we must reset the partial value again :-(
+        // one could wrap it in another function call or trigger removePartialAppValues when the resulListener receives the result
+        inc.receive(message(Name.b, _1, origin));
         assertResult(_2, _1, inc, result, origin);
-        partialAdd.popPartialAppValues(origin);
+
+    }
+
+    @Test
+    public void testPartialApplicationOnLambda() {
+        /*
+                function inc = a -> a + 1
+                function apply(func, a) = func(a)
+
+                check(apply(inc, 0))
+                check(apply(inc, 1))
+         */
+        Actresses.debug();
+        Actresses.trace();
+
+        Int result = Int(0);
+        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        resultListener.param(Name.result);
+        Origin origin = Origin.origin(resultListener);
+
+        BinOp<Integer, Integer, Integer> add = add();
+        PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
+        partialAdd.label("ADD(_,X)");
+        partialAdd.propagate(Name.a, Name.leftArg, add);
+        partialAdd.propagate(Name.b, Name.rightArg, add);
 
         // by way of using the apply function
         //function apply(func, a) = func(a)
         FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
         stubFunc.label("stubFunc");
 
+        // it is intended that the partialy applied function is created before passing it to apply
+        // applying values and removing them again has to happen at the same function call level
         FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
         functionSignatureApply.propagate(Name.a, Name.a, stubFunc);
-        functionSignatureApply.propagate(Name.b, Name.b, stubFunc);
         functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
 
         // check(apply(mul, a))
@@ -316,7 +346,10 @@ public class ServiceTest {
         functionCallApply.label("functionCallApply");
         functionCallApply.returnTo(resultListener, Name.result);
 
-        functionCallApply.receive(message(Name.b, _1, origin));
+        resultListener.propagate(Name.b, Name.b, partialAdd);
+        resultListener.onReturnReceivedSend(Name.removePartialAppValues, null, partialAdd);
+        resultListener.receive(message(Name.b, _1, origin));
+
         functionCallApply.receive(message(Name.func, partialAdd, origin));
         functionCallApply.receive(message(Name.a, _3, origin));
         functionCallApply.returnTo(resultListener, Name.result);
@@ -325,7 +358,7 @@ public class ServiceTest {
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(4), result.value);
 
-        partialAdd.popPartialAppValues(origin);
+        Actresses.instance().showCast();
     }
 
     private void assertResult(Integer expected, Integer a, FunctionCall<Integer> inc, Int result, Origin origin) {
@@ -340,30 +373,33 @@ public class ServiceTest {
     @Ignore
     @Test
     public void testQuicksort() {
-        Actresses.trace();
-        Actresses.debug();
 
         Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
         qsortCall.label("qsortCall");
-        Actresses.instance().showCast();
 
-//               checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
-//        checkQsort(list(2), list(2), qsortCall);
+        checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
+        checkQsort(list(2), list(2), qsortCall);
+        checkQsort(list(1, 2), list(2, 1), qsortCall);
+        checkQsort(list(1, 2, 3), list(3, 2, 1), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4), list(3, 0, 2, 1, 4), qsortCall);
+        checkQsort(list(0, 1, 2, 3), list(3, 2, 1, 0), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4, 5, 6), list(6, 5, 4, 3, 2, 1, 0), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(9, 8, 7, 6, 5, 4, 3, 2, 1, 0), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), qsortCall);
+        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), list(11, 6, 10, 7, 14, 8, 2, 13, 3, 12, 4, 19, 5, 18, 9, 15, 1, 17, 0, 16), qsortCall);
 
+        List<Integer> randList = randomList(1000);
+        List<Integer> randListSorted = new ArrayList<>(randList);
+        randListSorted.sort(Integer::compareTo);
+        System.out.println("sorting " + randList.size());
+        checkQsort(randListSorted, randList, qsortCall);
+        System.out.println("done sorting " + randList.size());
 
- //              checkQsort(list(1, 2), list(2, 1), qsortCall);
-        //  checkQsort(list(1, 2, 3), list(3, 2, 1), qsortCall);
-              checkQsort(list(0, 1, 2, 3, 4), list( 3, 0, 2, 1, 4), qsortCall);
-
-        //  checkQsort(list(0, 1, 2, 3), list(3, 2, 1, 0), qsortCall);
-
-
-        //  checkQsort(list(0,1, 2, 3, 4, 5, 6), list(6, 5, 4, 3, 2, 1, 0), qsortCall);
-
-        // checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
-        // checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(9, 8, 7, 6, 5, 4, 3, 2, 1, 0), qsortCall);
-        // checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), qsortCall);
-        //   checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), qsortCall);
+        for (int i = 0; i < 100; i++) {
+            System.out.println(i);
+            checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), list(11, 6, 10, 7, 14, 8, 2, 13, 3, 12, 4, 19, 5, 18, 9, 15, 1, 17, 0, 16), qsortCall);
+        }
     }
 
     private void checkQsort(List<Integer> expected, List<Integer> input, Function<List<Integer>> qsortCall) {
@@ -385,6 +421,16 @@ public class ServiceTest {
         assertEquals(expected, result);
     }
 
+    private List<Integer> randomList(int size) {
+        List<Integer> list = new ArrayList<>();
+        Random rand = new Random();
+
+        for (int i = 0; i < size; i++) {
+            list.add(rand.nextInt(100000));
+        }
+
+        return list;
+    }
 
     @Test
     public void testFilter() {
@@ -755,8 +801,7 @@ public class ServiceTest {
 
          */
 
-        if(1 == 1)
-        {
+        if (1 == 1) {
             System.out.println("NestedFunctionCall geht so ned");
             return;
         }

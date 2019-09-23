@@ -37,5 +37,8 @@ public interface Name {
     String m = "m";
     String l = "l";
     String r = "r";
-    String popPartialAppValues = "popPartialAppValues";
+    String removePartialAppValues = "removePartialAppValues";
+    String removeState = "removeState";
+    String ack = "ack";
+    String removeStatesForExecution = "removeStatesForExecution";
 }

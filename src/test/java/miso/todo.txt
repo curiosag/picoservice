@@ -16,7 +16,9 @@ Mit der push/pop partial application params Logik müssen die messages in der Re
 in der sie abgesendet wurden.
 
 TODOs
-- partially applied values rein kriegen vor den anderen?
+- partially applied values rein kriegen vor den anderen? -> geht nicht, auf die Art, müßte synchronisiert sein.
+
+
 - consts und states -> const propagation erzeugt anderen state als andere messages
 - function calls/signature mit mehreren params und consts
 

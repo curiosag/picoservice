@@ -5,7 +5,6 @@ import miso.ingredients.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 public class FilterJava extends FunctionSignature<List<Integer>> {
 
@@ -65,6 +64,10 @@ public class FilterJava extends FunctionSignature<List<Integer>> {
                 throw new IllegalStateException();
             }
 
+            if(rightArg == null)
+            {
+                throw new IllegalStateException();
+            }
             if ((LT.equals(op) && i < rightArg) || (GTEQ.equals(op) && i >= rightArg)) {
                 result.add(i);
             }
@@ -76,9 +79,9 @@ public class FilterJava extends FunctionSignature<List<Integer>> {
         returnResult(result, m.origin);
     }
 
-    private String getP(Map<PartialAppMatcher, Stack<Map<String, Object>>> pApp) {
+    private String getP(Map<FunctionCallLevel, Map<String, Object>> pApp) {
         StringBuilder result = new StringBuilder();
-        pApp.forEach((k, v) -> v.forEach(i -> i.forEach((kk, vv) -> result.append(vv.toString()).append(","))));
+        pApp.forEach((k, v) -> v.forEach((i,j) -> result.append(j.toString()).append(",")));
         return result.toString();
     }
 

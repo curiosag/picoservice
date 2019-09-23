@@ -3,18 +3,17 @@ package miso.ingredients;
 import miso.ingredients.guards.Guards;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
-import static miso.ingredients.Actresses.await;
 import static miso.ingredients.Actresses.start;
-import static miso.ingredients.PartialAppMatcher.matcher;
 import static miso.ingredients.guards.Guards.notEmpty;
-import static miso.ingredients.guards.Guards.notNull;
 
 public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     final List<String> partialAppParams = new ArrayList<>();
     // Map<ExecutionId, stack of preset values of partial function applications>
-    public final Map<PartialAppMatcher, Stack<Map<String, Object>>> partialAppValues = new HashMap<>();
+    public final Map<FunctionCallLevel, Map<String, Object>> partialAppValues = new ConcurrentHashMap<>();
 
     protected PartialFunctionApplication(Function<T> body, List<String> partialAppParams) {
         super(body);
@@ -44,16 +43,11 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
         return partialAppParams.contains(m.key);
     }
 
-    protected void pushPartialAppParamValue(Message m) {
+    protected void setPartialAppParamValue(Message m) {
         if (isPartialAppParam(m)) {
-            Stack<Map<String, Object>> stack = partialAppValues.computeIfAbsent(matcher(m.origin), k ->
-            {
-                Stack<Map<String, Object>> s = new Stack<>();
-                s.push(new HashMap<>());
-                return s;
-            });
-            debug(m, m.origin, String.format(" << pushPartialAppParamValue (%d) << ", stack.size()));
-            stack.peek().put(m.key, m.value);
+            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallLevel(), k -> new HashMap<>());
+            debug(m, m.origin, String.format(" << addPartialAppParamValue (%d) << ", partials.size()));
+            partials.put(m.key, m.value);
         }
     }
 
@@ -72,21 +66,20 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     }
 
     public Map<String, Object> getPartialAppValues(Origin o) {
-        await(() -> partialAppValues.get(matcher(o)) != null); //TODO!!!!!!!!!
-        return notEmpty(notNull(partialAppValues.get(matcher(o)))).peek();
+
+        List<Map.Entry<FunctionCallLevel, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
+                .filter(e -> o.functionCallLevel().matchString.startsWith(e.getKey().matchString))
+                .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
+                .collect(Collectors.toList());
+
+        Guards.notEmpty(matches);
+
+        return notEmpty(matches.get(matches.size() - 1).getValue());
     }
 
     @Override
-    public void popPartialAppValues(Origin o) {
-        PartialAppMatcher matcher = matcher(o);
-        Stack<Map<String, Object>> partial = partialAppValues.get(matcher);
-        if (partial != null) {
-            partial.pop();
-            debug(String.format(o.callStack.toString() + " %s popPartialAppParamValue (%d) << ", this.address.label, partial.size()));
-            if (partial.isEmpty()) {
-                partialAppValues.remove(matcher);
-            }
-        }
+    public void removePartialAppValues(Origin o) {
+         partialAppValues.remove(o.functionCallLevel());
     }
 
 

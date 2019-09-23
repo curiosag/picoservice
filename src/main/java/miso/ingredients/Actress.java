@@ -7,8 +7,10 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static miso.ingredients.Actresses.resolve;
+import static miso.ingredients.Message.message;
 import static miso.ingredients.trace.TraceMessage.traced;
 
 public abstract class Actress implements Runnable {
@@ -28,12 +30,15 @@ public abstract class Actress implements Runnable {
 
     public final Address address;
     Queue<Message> inBox = new ConcurrentLinkedQueue<>();
+    Queue<String> acknowledged = new ConcurrentLinkedQueue<>(); // of Message.id
 
     public boolean idle() {
         return inBox.size() == 0 && idle;
     }
 
     private AtomicBoolean stopping = new AtomicBoolean(false);
+
+    AtomicLong maxMessageId = new AtomicLong(0L);
 
     private boolean stopped = true;
 
@@ -46,17 +51,25 @@ public abstract class Actress implements Runnable {
     }
 
     protected Actress() {
-        address = new Address(this.getClass().getSimpleName() , Actresses.nextId());
+        address = new Address(this.getClass().getSimpleName(), Actresses.nextId());
     }
 
     public void label(String sticker) {
         address.setLabel(sticker);
     }
 
+    public String getNextMessageId() {
+        return address.id + "/" + maxMessageId.getAndIncrement();
+    }
+
     public void receive(Message m) {
         Origin o = m.origin;
         debug(m, o, "<--");
-        inBox.add(m);
+        if (m.key.equals(Name.ack)) {
+            acknowledged.add((String) m.value);
+        } else {
+            inBox.add(m);
+        }
     }
 
     protected void debug(Message m, Origin o, String rel) {
@@ -80,10 +93,15 @@ public abstract class Actress implements Runnable {
                 Message m = inBox.poll();
                 if (m != null) {
                     idle = false;
-                 //   if(this.address.toString().contains("filterReCallOnFalse")) {
                     debug(m, m.origin, "!!");
-                    //   }
                     process(m);
+                    if (m.ack == Acknowledge.Y) {
+                        if (!(this instanceof Function)) {
+                            //TODO: that's messy
+                            throw new IllegalStateException();
+                        }
+                        m.origin.sender.receive(message(Name.ack, m.id, m.origin.sender((Function) this)));
+                    }
                 } else {
                     idle = true;
                     Thread.yield();

@@ -1,6 +1,7 @@
 package miso.ingredients;
 
 import miso.ingredients.guards.Guards;
+import miso.ingredients.tuples.Tuple;
 
 import java.util.Objects;
 import java.util.Stack;
@@ -14,13 +15,16 @@ public class Origin {
     public final Long seqNr;
     public final Stack<Integer> callStack = new Stack<>();
 
-    public void pushCall(Integer id) {
-        callStack.push(id);
+    public Origin pushCall(Integer id) {
+        Origin result = new Origin(sender, triggeredBy, executionId, seqNr, callStack);
+        result.callStack.push(id);
+        return result;
     }
 
-    public Integer popCall() {
+    public Tuple<Origin, Integer> popCall() {
         Guards.notEmpty(callStack);
-        return callStack.pop();
+        Origin result = new Origin(sender, triggeredBy, executionId, seqNr, callStack);
+        return Tuple.of(result, result.callStack.pop());
     }
 
     private Origin(Function<?> sender, Function<?> triggeredBy, Long executionId, Long seqNr, Stack<Integer> callStack) {

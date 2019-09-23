@@ -38,20 +38,26 @@ public class FunctionSignature<T> extends Function<T> {
         return false;
     }
 
-    protected void pushPartialAppParamValue(Message m) {
+    protected void setPartialAppParamValue(Message m) {
     }
 
     protected void forwardPartialAppParamValues(FunctionSignatureState s) {
         s.setPartialApplicationValuesForwarded(true);
     }
 
-    public void popPartialAppValues(Origin o) {
+    public void removePartialAppValues(Origin o) {
     }
 
     @Override
     public void process(Message m) {
-        if (m.key.equals(Name.popPartialAppValues)) {
-            popPartialAppValues(m.origin);
+        if(m.key.equals(Name.removeStatesForExecution))
+        {
+            executionStates.entrySet().removeIf(e -> e.getKey().getExecutionId().equals(m.origin.executionId));
+            return;
+        }
+
+        if (m.key.equals(Name.removePartialAppValues)) {
+            removePartialAppValues(m.origin);
             return;
         }
 
@@ -62,7 +68,7 @@ public class FunctionSignature<T> extends Function<T> {
         }
 
         if (isPartialAppParam(m)) {
-            pushPartialAppParamValue(m);
+            setPartialAppParamValue(m);
             return;
         }
 
@@ -99,6 +105,7 @@ public class FunctionSignature<T> extends Function<T> {
     protected void processInner(Message m, State s) {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
+            hdlOnReturns(state.origin, onReturn);
             Origin o = origin(this, state.getTriggerOfCaller(), m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
             state.origin.sender.receive(m.origin(o));
             removeState(state.origin);

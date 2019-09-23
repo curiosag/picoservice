@@ -99,7 +99,7 @@ public class Trace extends Actress implements Closeable {
     }
 
     private String renderNode(String label, Long executionId, Integer callLevel, String scope) {
-        return '"' + String.format("%s(%d/%d)(%s)", label, executionId, callLevel, scope) + '"';
+        return '"' + String.format("%s(%d/%d)", label, executionId, callLevel) + '"';
     }
 
     @Override

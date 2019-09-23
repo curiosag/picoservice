@@ -1,5 +1,7 @@
 package miso.ingredients;
 
+import miso.ingredients.tuples.Tuple;
+
 import static miso.ingredients.Actresses.start;
 import static miso.ingredients.Message.message;
 
@@ -40,13 +42,19 @@ public class FunctionCall<T> extends Function<T> {
 
         if (message.hasKey(Name.result)) {
             removeState(origin);
-            if (!origin.popCall().equals(this.address.id)) {
+            // returnResult((T) message.value, origin); doesn't work here, the popping messes it up
+            // it must be hdlOnReturn, popCall, returnTo.receive
+            hdlOnReturns(origin, onReturn);
+
+            Tuple<Origin, Integer> popped = origin.popCall();
+            if (!popped.right.equals(this.address.id)) {
                 throw new IllegalStateException();
             }
-            returnTo.receive(message(returnKey, message.value, origin));
+
+            returnTo.receive(message(returnKey, (T) message.value, popped.left));
         } else {
             if (! isConst(message)) {
-                origin.pushCall(this.address.id);
+                origin = origin.pushCall(this.address.id);
                 getState(origin);
             }
             function.receive(message.origin(origin));

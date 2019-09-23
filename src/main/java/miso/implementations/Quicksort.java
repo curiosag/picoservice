@@ -8,6 +8,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static miso.implementations.Filter.filterSignatureJava;
+import static miso.ingredients.ConditionalPropagation.conditionalPropagation;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iffList;
@@ -82,8 +83,13 @@ public class Quicksort {
                         .constant(Name.predicate, ltPredicate)
                         .returnTo(qsortReCallLeft, Name.list);
 
-        iff.propagateOnFalse(Name.head, Name.rightArg, ltPredicate);
-        iff.propagateOnFalse(Name.tail, Name.list, filterCallLeft);
+        Function propagateLeftOnCondition = conditionalPropagation()
+                .addPriorityParam(Name.rightArg)
+                .propagate(Name.rightArg, Name.rightArg, ltPredicate)
+                .propagate(Name.list, Name.list, filterCallLeft);
+
+        iff.propagateOnFalse(Name.head, Name.rightArg, propagateLeftOnCondition);
+        iff.propagateOnFalse(Name.tail, Name.list, propagateLeftOnCondition);
 
         // function gteq(a, b) = a >= b;
         // filter(filter(tail, i -> gteq(i, head))
@@ -96,11 +102,22 @@ public class Quicksort {
                 functionCall(filterSignatureRight)
                         .constant(Name.predicate, gtEqPredicate)
                         .returnTo(qsortReCallRight, Name.list);
-        iff.propagateOnFalse(Name.head, Name.rightArg, gtEqPredicate);
-        iff.propagateOnFalse(Name.tail, Name.list, filterCallRight);
 
-        iff.onReturnOnFalseSend(Name.popPartialAppValues, null, ltPredicate);
-        iff.onReturnOnFalseSend(Name.popPartialAppValues, null, gtEqPredicate);
+        Function propagateRightOnCondition = conditionalPropagation()
+                .addPriorityParam(Name.rightArg)
+                .propagate(Name.rightArg, Name.rightArg, gtEqPredicate)
+                .propagate(Name.list, Name.list, filterCallRight);
+
+        iff.propagateOnFalse(Name.head, Name.rightArg, propagateRightOnCondition);
+        iff.propagateOnFalse(Name.tail, Name.list, propagateRightOnCondition);
+
+        iff.onReturnOnFalseSend(Name.removePartialAppValues, null, ltPredicate);
+        iff.onReturnOnFalseSend(Name.removePartialAppValues, null, gtEqPredicate);
+        iff.onReturnOnFalseSend(Name.removeState, null, propagateLeftOnCondition);
+        iff.onReturnOnFalseSend(Name.removeState, null, propagateRightOnCondition);
+
+        qsortSignature.onReturnSend(Name.removeStatesForExecution, null, filterSignatureRight);
+        qsortSignature.onReturnSend(Name.removeStatesForExecution, null, filterSignatureLeft);
 
         iff.label("iff");
         qsortSignature.label("QSORT");

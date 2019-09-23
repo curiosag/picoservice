@@ -28,11 +28,11 @@ public class FunctionStub<T> extends Function<T> {
     @Override
     protected void process(Message message) {
         maybeTrace(message);
-        FunctionStubState state = (FunctionStubState) getState(message.origin);
 
+        FunctionStubState state = (FunctionStubState) getState(message.origin);
         if (message.key.equals(Name.result)) {
-            returnResult((T) message.value, state.origin.sender(this));
             removeState(state.origin);
+            returnResult((T) message.value, state.origin.sender(this));
             return;
         }
 

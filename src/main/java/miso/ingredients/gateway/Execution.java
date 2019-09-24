@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static miso.ingredients.Message.message;
-import static miso.ingredients.Nop.nop;
 
 public class Execution<T> implements Future<T> {
     private static AtomicLong maxExecutionId = new AtomicLong(0);
@@ -33,7 +32,7 @@ public class Execution<T> implements Future<T> {
         this.f = f;
         this.onFinished = onFinished;
         Function<T> caller = new Action();
-        origin = Origin.origin(caller, nop, maxExecutionId.addAndGet(1), 0L, new Stack<>());
+        origin = Origin.origin(caller, maxExecutionId.addAndGet(1), 0L, new Stack<>());
     }
 
     public Execution<T> param(String key, Integer value) {

@@ -1,6 +1,7 @@
 package miso.ingredients;
 
 import miso.ingredients.trace.Trace;
+import miso.ingredients.trace.TraceMessage;
 import miso.misc.Adresses;
 
 import java.util.Objects;
@@ -73,7 +74,8 @@ public abstract class Actress implements Runnable {
     }
 
     protected void debug(Message m, Origin o, String rel) {
-        debug(String.format("%s<%d>(%d/%d)%s " + rel + " %s %s", m.origin.callStack.toString(), o.seqNr, o.executionId, o.callStack.size(), this.address.toString(), o.sender.address.toString(), m.toString()));
+        if (!(m instanceof TraceMessage))
+            debug(String.format("%s<%d>(%d/%d)%s " + rel + " %s %s", m.origin.callStack.toString(), o.seqNr, o.executionId, o.callStack.size(), this.address.toString(), o.sender.address.toString(), m.toString()));
     }
 
     protected abstract void process(Message message);
@@ -114,7 +116,7 @@ public abstract class Actress implements Runnable {
         stopped = true;
     }
 
-    protected void maybeTrace(Message message) {
+    protected void trace(Message message) {
         if (trace) {
             tracer.receive(traced(message, this));
         }

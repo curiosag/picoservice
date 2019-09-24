@@ -2,11 +2,16 @@ package miso.ingredients;
 
 import static miso.ingredients.Actresses.start;
 import static miso.ingredients.Origin.origin;
-import static miso.ingredients.trace.TraceMessage.traced;
 
 public class FunctionSignature<T> extends Function<T> {
 
     public final Function<T> body;
+    private boolean peep;
+
+
+    public void peep() {
+        this.peep = true;
+    }
 
 
     /*  FunctionSignature's responsibility are.
@@ -50,19 +55,19 @@ public class FunctionSignature<T> extends Function<T> {
 
     @Override
     public void process(Message m) {
-        if(m.key.equals(Name.removeStatesForExecution))
+        if(peep)
         {
-            executionStates.entrySet().removeIf(e -> e.getKey().getExecutionId().equals(m.origin.executionId));
-            return;
+            debug(m, m.origin.sender(this), " signature received ");
         }
 
-        if (m.key.equals(Name.removePartialAppValues)) {
+         if (m.key.equals(Name.removePartialAppValues)) {
             removePartialAppValues(m.origin);
             return;
         }
 
+        trace(m);
+
         if (forwardingPartialAppParamValues(m)) {
-            hackyTrace(m);
             super.process(m);
             return;
         }
@@ -73,9 +78,7 @@ public class FunctionSignature<T> extends Function<T> {
         }
 
         if (isDownstreamMessage(m)) {
-            hackyFunctionCallTrace(m);
-            Origin o = m.origin;
-            FunctionSignatureState state = (FunctionSignatureState) getState(o);
+            FunctionSignatureState state = (FunctionSignatureState) getState(m.origin);
             if (!state.partialApplicationValuesForwarded) {
                 forwardPartialAppParamValues(state);
             }
@@ -83,7 +86,6 @@ public class FunctionSignature<T> extends Function<T> {
             return;
         }
 
-        hackyTrace(m);
         super.process(m);
     }
 
@@ -95,18 +97,16 @@ public class FunctionSignature<T> extends Function<T> {
         return m.origin.sender.equals(this) && isPartialAppParam(m);
     }
 
-    private void hackyFunctionCallTrace(Message m) {
-        // original scope is needed to reconstruct the trace
-        Origin o = origin(m.origin.sender, m.origin.triggeredBy, m.origin.executionId, m.origin.seqNr, m.origin.callStack);
-        hackyTrace(m.origin(o));
-    }
-
     @Override
     protected void processInner(Message m, State s) {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
             hdlOnReturns(state.origin, onReturn);
-            Origin o = origin(this, state.getTriggerOfCaller(), m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
+            Origin o = origin(this, m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
+            if(peep)
+            {
+                debug(m.origin(o), o, " signature returns ");
+            }
             state.origin.sender.receive(m.origin(o));
             removeState(state.origin);
         }
@@ -122,16 +122,5 @@ public class FunctionSignature<T> extends Function<T> {
         return Name.result.equals(key);
     }
 
-
-    @Override
-    protected void maybeTrace(Message message) {
-        // bäh...
-    }
-
-    protected void hackyTrace(Message message) { // bäh..
-        if (trace) {
-            tracer.receive(traced(message, this));
-        }
-    }
 
 }

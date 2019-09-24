@@ -7,7 +7,7 @@ import java.util.List;
 
 import static miso.ingredients.Actresses.start;
 
-public class ConditionalPropagation extends Function {
+public class PrioiritizedPropagation extends Function {
 
     private final List<String> priorityParams = new ArrayList<>();
 
@@ -24,7 +24,7 @@ public class ConditionalPropagation extends Function {
         }
     }
 
-    public ConditionalPropagation addPriorityParam(String key) {
+    public PrioiritizedPropagation addPriorityParam(String key) {
         priorityParams.add(key);
         return this;
     }
@@ -39,8 +39,8 @@ public class ConditionalPropagation extends Function {
         return true;
     }
 
-    public static ConditionalPropagation conditionalPropagation() {
-        ConditionalPropagation result = new ConditionalPropagation();
+    public static PrioiritizedPropagation conditionalPropagation() {
+        PrioiritizedPropagation result = new PrioiritizedPropagation();
         start(result);
         return result;
     }
@@ -61,6 +61,8 @@ public class ConditionalPropagation extends Function {
             removeState(state.origin);
             return;
         }
+
+        trace(m);
 
         if (state.allMandatoryParamsEncountered()) {
             Guards.isFalse(priorityParams.contains(m.key));

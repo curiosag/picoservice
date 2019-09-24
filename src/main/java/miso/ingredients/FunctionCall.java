@@ -1,7 +1,5 @@
 package miso.ingredients;
 
-import miso.ingredients.tuples.Tuple;
-
 import static miso.ingredients.Actresses.start;
 import static miso.ingredients.Message.message;
 
@@ -13,10 +11,17 @@ public class FunctionCall<T> extends Function<T> {
         this.function = f;
     }
 
+    private boolean peep;
+
     public static <T> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
         start(result);
         return result;
+    }
+
+    public FunctionCall<T> peep() {
+        this.peep = true;
+        return this;
     }
 
     @Override
@@ -36,29 +41,42 @@ public class FunctionCall<T> extends Function<T> {
 
     @Override
     protected void process(Message message) {
-        maybeTrace(message);
+        trace(message);
 
         Origin origin = message.origin.sender(this);
-
         if (message.hasKey(Name.result)) {
             removeState(origin);
             // returnResult((T) message.value, origin); doesn't work here, the popping messes it up
             // it must be hdlOnReturn, popCall, returnTo.receive
             hdlOnReturns(origin, onReturn);
 
-            Tuple<Origin, Integer> popped = origin.popCall();
-            if (!popped.right.equals(this.address.id)) {
+            origin = origin.popCall();
+            if (!this.address.id.equals(origin.lastPopped)) {
                 throw new IllegalStateException();
             }
 
-            returnTo.receive(message(returnKey, (T) message.value, popped.left));
+            if(peep)
+            {
+                debug(message, message.origin, " hööööööast ");
+            }
+
+
+            returnTo.receive(message(returnKey, (T) message.value, origin));
         } else {
-            if (! isConst(message)) {
+            if (!isConst(message)) // const already comes with proper stack
+            {
                 origin = origin.pushCall(this.address.id);
                 getState(origin);
             }
+
+            if(peep)
+            {
+                debug(message, origin, " hööööööast ");
+            }
             function.receive(message.origin(origin));
         }
+
+
     }
 
     private boolean isConst(Message message) {

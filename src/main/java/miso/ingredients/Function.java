@@ -151,7 +151,7 @@ public abstract class Function<T> extends Actress {
 
     @Override
     protected void process(Message m) {
-        maybeTrace(m);
+        trace(m);
         if (!(this instanceof FunctionSignature) && (returnTo == null || returnKey == null)) {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
         }

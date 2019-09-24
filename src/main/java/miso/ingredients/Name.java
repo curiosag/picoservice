@@ -40,5 +40,4 @@ public interface Name {
     String removePartialAppValues = "removePartialAppValues";
     String removeState = "removeState";
     String ack = "ack";
-    String removeStatesForExecution = "removeStatesForExecution";
 }

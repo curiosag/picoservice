@@ -27,7 +27,7 @@ public class FunctionStub<T> extends Function<T> {
 
     @Override
     protected void process(Message message) {
-        maybeTrace(message);
+        trace(message);
 
         FunctionStubState state = (FunctionStubState) getState(message.origin);
         if (message.key.equals(Name.result)) {

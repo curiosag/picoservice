@@ -68,38 +68,41 @@ public class Trace extends Actress implements Closeable {
     }
 
     private void write(TraceMessage m) {
-        Long exId = m.origin.executionId;
+        if(m.traced().key.equals(Name.removeState) || m.traced().key.equals(Name.removePartialAppValues))
+        {
+            return;
+        }
 
-        Integer levelSender = m.sender().callStack.size();
-        String labelSender = node(m.sender().sender);
-        String scopeSender = node(m.sender().triggeredBy);
-        String stack = m.origin.callStack.toString();
-        Integer levelReceiver = levelSender;
+        String labelSender = node(m.traced().origin.sender);
         String labelReceiver = node(m.receiver());
-        String scopeReceiver = scopeSender;
 
-        if ((m.origin.sender instanceof FunctionCall) && (m.receiver() instanceof FunctionSignature)) {
-            // levelSender ok
-            // scopeSender ok;
-            levelSender--;
-            scopeReceiver = labelSender;
+        String callString = m.origin.functionCallLevel().matchString;
+        String stackSender = callString.endsWith("/") ? callString.substring(0, callString.length() - 1) : callString;
+        String stackReceiver = stackSender;
+
+
+        if (functionCallReturning(m)) {
+            stackSender = stackSender + "/" + m.traced().origin.lastPopped;
         }
-
-        if ((m.origin.sender instanceof FunctionSignature) && (m.receiver() instanceof FunctionCall)) {
-            levelSender++;
-            scopeSender = labelReceiver;
-            // levelReceiver ok
-            // scopeReceiver ok
+        if (functionCallReceiving(m)) {
+            stackReceiver = stackReceiver + "/" + m.receiver().address.id;
         }
-
         writeLn(String.format("%s -> %s [label=%s];",
-                renderNode(labelSender, exId, levelSender, scopeSender),
-                renderNode(labelReceiver, exId, levelReceiver, scopeReceiver),
+                renderNode(labelSender, stackSender),
+                renderNode(labelReceiver, stackReceiver),
                 payload(m.traced())));
     }
 
-    private String renderNode(String label, Long executionId, Integer callLevel, String scope) {
-        return '"' + String.format("%s(%d/%d)", label, executionId, callLevel) + '"';
+    private boolean functionCallReceiving(TraceMessage m) {
+        return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.sender.equals(m.receiver())) && !(m.traced().origin.sender instanceof FunctionSignature);
+    }
+
+    private boolean functionCallReturning(TraceMessage m) {
+        return (m.traced().origin.sender instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.sender)) && !(m.receiver() instanceof FunctionSignature);
+    }
+
+    private String renderNode(String label, String stack) {
+        return '"' + String.format("%s(%s)", label, stack) + '"';
     }
 
     @Override

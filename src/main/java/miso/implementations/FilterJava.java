@@ -74,15 +74,8 @@ public class FilterJava extends FunctionSignature<List<Integer>> {
 
         }
 
-        debug(String.format("filtering %s for %s r=%d (from %s) -> %s", list.toString(), app.address.label, rightArg, getP(app.partialAppValues), result.toString()));
         removeState(m.origin);
         returnResult(result, m.origin);
-    }
-
-    private String getP(Map<FunctionCallLevel, Map<String, Object>> pApp) {
-        StringBuilder result = new StringBuilder();
-        pApp.forEach((k, v) -> v.forEach((i,j) -> result.append(j.toString()).append(",")));
-        return result.toString();
     }
 
     private Integer getRightArg(Origin o) {

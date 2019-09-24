@@ -12,12 +12,4 @@ public class FunctionSignatureState extends State {
         this.partialApplicationValuesForwarded = partialApplicationValuesForwarded;
     }
 
-    public Function<?> getTriggerOfCaller() {
-        return origin.triggeredBy;
-    }
-
-    public Origin getCaller() {
-        return origin;
-    }
-
 }

@@ -1,50 +1,46 @@
 package miso.ingredients;
 
 import miso.ingredients.guards.Guards;
-import miso.ingredients.tuples.Tuple;
 
 import java.util.Objects;
 import java.util.Stack;
 
-import static miso.ingredients.Nop.nop;
-
 public class Origin {
     public final Function<?> sender;
-    public final Function<?> triggeredBy;
     public final Long executionId;
     public final Long seqNr;
     public final Stack<Integer> callStack = new Stack<>();
+    public final Integer lastPopped;
 
     public Origin pushCall(Integer id) {
-        Origin result = new Origin(sender, triggeredBy, executionId, seqNr, callStack);
+        Origin result = new Origin(sender, executionId, seqNr, callStack, lastPopped);
         result.callStack.push(id);
         return result;
     }
 
-    public Tuple<Origin, Integer> popCall() {
+    public Origin popCall() {
         Guards.notEmpty(callStack);
-        Origin result = new Origin(sender, triggeredBy, executionId, seqNr, callStack);
-        return Tuple.of(result, result.callStack.pop());
+        return new Origin(sender, executionId, seqNr, callStack, callStack.pop());
     }
 
-    private Origin(Function<?> sender, Function<?> triggeredBy, Long executionId, Long seqNr, Stack<Integer> callStack) {
+    private Origin(Function<?> sender, Long executionId, Long seqNr, Stack<Integer> callStack, Integer lastPopped) {
         this.sender = sender;
-        this.triggeredBy = triggeredBy;
         this.executionId = executionId;
         this.seqNr = seqNr;
         this.callStack.addAll(callStack);
+        this.lastPopped = lastPopped;
     }
 
     public static Origin origin(Function<?> sender) {
-        return new Origin(sender, nop,  0L, 0L, new Stack<>());
+        return new Origin(sender,  0L, 0L, new Stack<>(), null);
     }
 
-    public static Origin origin(Function<?> sender, Function<?> scope, Long executionId, Long seqNr, Stack<Integer> callStack) {
-        return new Origin(sender, scope, executionId, seqNr, callStack);
+    public static Origin origin(Function<?> sender, Long executionId, Long seqNr, Stack<Integer> callStack) {
+        return new Origin(sender, executionId, seqNr, callStack, null);
     }
 
     Origin sender(Function<?> sender) {
-        return origin(sender, triggeredBy, executionId, seqNr + 1L, callStack);
+        return origin(sender, executionId, seqNr + 1L, callStack);
     }
 
     @Override
@@ -60,14 +56,13 @@ public class Origin {
         if (o == null || getClass() != o.getClass()) return false;
         Origin origin = (Origin) o;
         return Objects.equals(sender, origin.sender) &&
-                Objects.equals(triggeredBy, origin.triggeredBy) &&
                 Objects.equals(executionId, origin.executionId) &&
                 Objects.equals(callStack, origin.callStack);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(sender, triggeredBy, executionId, callStack);
+        return Objects.hash(sender, executionId, callStack);
     }
 
     private FunctionCallLevel functionCallLevel;

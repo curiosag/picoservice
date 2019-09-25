@@ -56,7 +56,7 @@ public class Origin {
     }
 
     private FunctionCallTreeLocation functionCallTreeLocation;
-    public FunctionCallTreeLocation functionCallTreeLocation(){
+    public FunctionCallTreeLocation functionCallTreeNode(){
         if (functionCallTreeLocation == null)
         {
             functionCallTreeLocation = new FunctionCallTreeLocation(this);

@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 import static miso.ingredients.guards.Guards.notEmpty;
 
 public class PartialFunctionApplication<T> extends FunctionSignature<T> {
@@ -26,7 +26,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     public static <T> PartialFunctionApplication<T> partialApplication(Function<T> body, List<String> keys) {
         PartialFunctionApplication<T> result = new PartialFunctionApplication<>(body, keys);
-        start(result);
+        wire(result);
         return result;
     }
 
@@ -46,7 +46,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     protected void setPartialAppParamValue(Message m) {
         if (isPartialAppParam(m)) {
-            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallTreeLocation(), k -> new HashMap<>());
+            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallTreeNode(), k -> new HashMap<>());
             debug(m, m.origin, String.format(" << addPartialAppParamValue (%d) << ", partials.size()));
             partials.put(m.key, m.value);
         }
@@ -69,8 +69,8 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     public Map<String, Object> getPartialAppValues(Origin o) {
 
         List<Map.Entry<FunctionCallTreeLocation, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
-                .filter(e -> o.functionCallTreeLocation().getExecutionId().equals(e.getKey().getExecutionId()))
-                .filter(e -> o.functionCallTreeLocation().getCallStack().startsWith(e.getKey().getCallStack()))
+                .filter(e -> o.functionCallTreeNode().getExecutionId().equals(e.getKey().getExecutionId()))
+                .filter(e -> o.functionCallTreeNode().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());
 
@@ -81,7 +81,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     @Override
     public void removePartialAppValues(Origin o) {
-        partialAppValues.remove(o.functionCallTreeLocation());
+        partialAppValues.remove(o.functionCallTreeNode());
     }
 
 

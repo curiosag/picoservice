@@ -6,7 +6,7 @@ import miso.ingredients.tuples.Tuple;
 
 import java.util.*;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 import static miso.ingredients.Message.message;
 
 public class Iff<T> extends Function<T> {
@@ -80,13 +80,13 @@ public class Iff<T> extends Function<T> {
 
     public static Iff<Integer> iff() {
         Iff<Integer> result = new Iff<>();
-        start(result);
+        wire(result);
         return result;
     }
 
     public static Iff<List<Integer>> iffList() {
         Iff<List<Integer>> result = new Iff<>();
-        start(result);
+        wire(result);
         return result;
     }
 
@@ -135,12 +135,12 @@ public class Iff<T> extends Function<T> {
             kickOffBranch(state);
         }
         if (isTrue(state.decision) && computed(state.onTrue)) {
-            onReturnOnTrueSend.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), m.origin)));
+            onReturnOnTrueSend.forEach(v -> v.target().tell(message(v.keyValuePair().key(), v.keyValuePair().value(), m.origin)));
             returnResult((T) state.onTrue, m.origin.sender(this));
             removeState(state.origin);
         }
         if (isFalse(state.decision) && computed(state.onFalse)) {
-            onReturnOnFalseSend.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), m.origin)));
+            onReturnOnFalseSend.forEach(v -> v.target().tell(message(v.keyValuePair().key(), v.keyValuePair().value(), m.origin)));
             returnResult((T) state.onFalse, m.origin.sender(this));
             removeState(state.origin);
         }
@@ -150,7 +150,7 @@ public class Iff<T> extends Function<T> {
 
     private void kickOffBranch(StateIff state) {
         Message kickOff = message(Name.kickOff, null, state.origin.sender(this));
-        getBranchKickOffs(state.decision).forEach(d -> d.receive(kickOff));
+        getBranchKickOffs(state.decision).forEach(d -> d.tell(kickOff));
 
         state.pendingForBranchPropagation.forEach(p -> propagate(p, getBranchPropagations(state.decision)));
         state.pendingForBranchPropagation.clear();

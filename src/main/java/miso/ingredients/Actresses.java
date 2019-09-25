@@ -1,43 +1,57 @@
 package miso.ingredients;
 
+import akka.actor.ActorSystem;
+import miso.ingredients.akka.Akktor;
 import miso.ingredients.trace.Trace;
 import miso.misc.Adresses;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-public class Actresses {
+import static akka.pattern.Patterns.gracefulStop;
 
+public class Actresses {
     private boolean debug = false;
     private boolean trace = false;
 
-    private Map<String, Actress> addressed = new HashMap<>();
+    private final Map<String, Actress> addressed = new HashMap<>();
+    private final List<Actress> cast = new ArrayList<>();
+    private final ActorSystem akka = ActorSystem.create("microservice");
 
-    private List<Actress> cast = new ArrayList<>();
     private Trace tracer;
-    private AtomicInteger maxId = new AtomicInteger(0);
+    private static AtomicInteger maxId = new AtomicInteger(1); // 0 is the tracer
 
     private static Actresses instance;
+
+    public Actresses() {
+
+    }
 
     public static Actresses instance() {
         if (instance == null) {
             instance = new Actresses();
+
+            Trace t = new Trace(false);
+            instance.tracer = t;
+            instance.addressed.put(Adresses.trace, t);
+            instance.wire(t);
             instance.resetInstance();
+
         }
         return instance;
     }
-
 
     public static Actress resolve(Address address) {
         return resolve(address.value);
     }
 
     public static Actress resolve(String address) {
+        if (address.equals(Adresses.trace))
+        {
+            return instance().tracer;
+        }
         Actress result = instance().addressed.get(address);
         if (result == null)
             throw new IllegalStateException("not found: " + address);
@@ -45,22 +59,13 @@ public class Actresses {
     }
 
     public void resetInstance() {
-        cast.clear();
-        addressed.clear();
-        debug = false;
-        trace = false;
-        resetTracer();
-        maxId = new AtomicInteger(0);
-    }
+        cast.removeIf(c -> ! c.address.value.equals(Adresses.trace));
+        List<String> toRemove = new ArrayList<>(addressed.keySet());
+        toRemove.remove(Adresses.trace);
+        toRemove.forEach(addressed::remove);
 
-    private void resetTracer() {
-        if (tracer != null) {
-            shutdownTracer();
-        }
-        tracer = new Trace(trace);
-        start(tracer);
-        cast.remove(tracer); // must be handled seperately
-        addressed.put(Adresses.trace, tracer);
+        debug = false;
+        tracer.setTrace(false);
     }
 
     public static void reset() {
@@ -71,15 +76,18 @@ public class Actresses {
         return instance().maxId.addAndGet(1);
     }
 
-    public static void start(Actress a) {
-        instance().startActress(a);
+    public static void wire(Actress a) {
+        instance().wireActress(a);
     }
 
-    private void startActress(Actress a) {
+    private void wireActress(Actress a) {
         addressed.put(a.address.value, a);
         a.trace = trace;
         a.debug = debug;
-        new Thread(a).start();
+
+        String id = a.address.id.toString();
+        a.setAref(akka.actorOf(Akktor.props(a), id));
+
         cast.add(a);
     }
 
@@ -102,8 +110,8 @@ public class Actresses {
         cast.forEach(a -> a.setTrace(trace));
     }
 
-    public void showCast(){
-        cast.forEach(c -> System.out.println(c.address.id + " " +  c.address.toString()));
+    public void showCast() {
+        cast.forEach(c -> System.out.println(c.address.id + " " + c.address.toString()));
     }
 
     public static void trace() {
@@ -126,7 +134,7 @@ public class Actresses {
         instance().shutdownInstance();
     }
 
-    public void forceShutdown(){
+    public void forceShutdown() {
         doShutdown();
     }
 
@@ -138,7 +146,10 @@ public class Actresses {
     private void doShutdown() {
         cast.forEach(Actress::stop);
         await(() -> cast.stream().allMatch(Actress::isStopped));
-        cast.forEach(Actress::checkSanityOnStop);
+        cast.forEach(c -> {
+            c.checkSanityOnStop();
+            gracefulStop(c.getAref(), Duration.ofSeconds(10L));
+        });
         shutdownTracer();
     }
 
@@ -146,13 +157,7 @@ public class Actresses {
         if (tracer != null) {
             await(() -> tracer.idle());
             tracer.stop();
-            try {
-                tracer.close(); // trace needs to be available until everything else has stopped
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            addressed.remove(tracer);
-            tracer = null;
+            tracer.flush(); // trace needs to be available until everything else has stopped
         }
     }
 

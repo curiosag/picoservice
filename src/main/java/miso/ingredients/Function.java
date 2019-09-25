@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import static miso.ingredients.Message.message;
 
 public abstract class Function<T> extends Actress {
+
     public Function<?> returnTo;
     public String returnKey;
     final List<OnReturnForwardItem> onReturn = new ArrayList<>();
@@ -22,7 +23,7 @@ public abstract class Function<T> extends Actress {
     private final Map<String, Object> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
-        executionStates.remove(origin.functionCallTreeLocation());
+        executionStates.remove(origin.functionCallTreeNode());
         //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
@@ -48,10 +49,6 @@ public abstract class Function<T> extends Actress {
             System.out.println(String.format("-->  %s %s: %d execution states left after stop", address.toString(), address.toString(), executionStates.size()));
             executionStates.clear();
         }
-        if (!inBox.isEmpty()) {
-            System.out.println(String.format("%s: %d left in inbox", address.toString(), inBox.size()));
-            inBox.clear();
-        }
     }
 
     protected abstract State newState(Origin origin);
@@ -70,10 +67,10 @@ public abstract class Function<T> extends Actress {
     private List<Function> kicks = new ArrayList<>();
 
     protected State getState(Origin origin) {
-        State result = executionStates.get(origin.functionCallTreeLocation());
+        State result = executionStates.get(origin.functionCallTreeNode());
         if (result == null) {
             result = newState(origin);
-            executionStates.put(origin.functionCallTreeLocation(), result);
+            executionStates.put(origin.functionCallTreeNode(), result);
             fowardConsts(origin);
             forwardKickOff(origin);
         }
@@ -81,7 +78,7 @@ public abstract class Function<T> extends Actress {
     }
 
     protected void fowardConsts(Origin origin) {
-        consts.forEach((key, value) -> receive(message(key, value, origin.sender(this))));
+        consts.forEach((key, value) -> tell(message(key, value, origin.sender(this))));
     }
 
     public Function<T> kickOff(Function target) {
@@ -90,7 +87,7 @@ public abstract class Function<T> extends Actress {
     }
 
     private void forwardKickOff(Origin origin) {
-        kicks.forEach(p -> p.receive(message(Name.kickOff, null, origin.sender(this))));
+        kicks.forEach(p -> p.tell(message(Name.kickOff, null, origin.sender(this))));
     }
 
     public Function<T> returnTo(Function<?> f, String returnKey) {
@@ -130,13 +127,13 @@ public abstract class Function<T> extends Actress {
         {
             targets.forEach(t -> {
                 Message m = message(t.left, message.value, message.origin.sender(this)).ack(ack);
-                t.right.receive(m);
+                t.right.tell(m);
             });
         }
     }
 
     @Override
-    protected void process(Message m) {
+    public void process(Message m) {
         trace(m);
         if (!(this instanceof FunctionSignature) && (returnTo == null || returnKey == null)) {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
@@ -181,11 +178,11 @@ public abstract class Function<T> extends Actress {
 
     protected void returnResult(T result, Origin origin) {
         hdlOnReturns(origin, onReturn);
-        returnTo.receive(message(returnKey, result, origin));
+        returnTo.tell(message(returnKey, result, origin));
     }
 
     void hdlOnReturns(Origin origin, List<OnReturnForwardItem> items) {
-        items.forEach(v -> v.target().receive(message(v.keyValuePair().key(), v.keyValuePair().value(), origin)));
+        items.forEach(v -> v.target().tell(message(v.keyValuePair().key(), v.keyValuePair().value(), origin)));
     }
 
     static boolean computed(Object value) {

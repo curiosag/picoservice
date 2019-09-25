@@ -1,6 +1,6 @@
 package miso.ingredients;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 import static miso.ingredients.Message.message;
 
 public class FunctionCall<T> extends Function<T> {
@@ -13,7 +13,7 @@ public class FunctionCall<T> extends Function<T> {
 
     public static <T> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
-        start(result);
+        wire(result);
         return result;
     }
 
@@ -33,21 +33,21 @@ public class FunctionCall<T> extends Function<T> {
     }
 
     @Override
-    protected void process(Message message) {
+    public void process(Message message) {
         trace(message);
 
         Origin origin = message.origin.sender(this);
         if (message.hasKey(Name.result)) {
             removeState(origin);
             // returnResult((T) message.value, origin); doesn't work here, the popping messes it up
-            // it must be hdlOnReturn, popCall, returnTo.receive
+            // it must be hdlOnReturn, popCall, returnTo.tell
             hdlOnReturns(origin, onReturn);
 
             origin = origin.popCall();
             if (!this.address.id.equals(origin.lastPopped)) {
                 throw new IllegalStateException();
             }
-           returnTo.receive(message(returnKey, (T) message.value, origin));
+           returnTo.tell(message(returnKey, (T) message.value, origin));
         } else {
             if (!isConst(message)) // const already comes with proper stack
             {
@@ -55,7 +55,7 @@ public class FunctionCall<T> extends Function<T> {
                 getState(origin);
             }
 
-            function.receive(message.origin(origin));
+            function.tell(message.origin(origin));
         }
 
 

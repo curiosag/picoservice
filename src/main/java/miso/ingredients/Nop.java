@@ -17,7 +17,7 @@ public class Nop extends Function<Object> {
     }
 
     @Override
-    public void receive(Message message) {
+    public void tell(Message message) {
     }
 
     @Override

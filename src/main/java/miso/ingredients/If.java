@@ -3,7 +3,7 @@ package miso.ingredients;
 import java.util.Arrays;
 import java.util.List;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 
 public class If<T> extends Function<T> {
 
@@ -36,7 +36,7 @@ public class If<T> extends Function<T> {
 
     public static If<Integer> createIf() {
         If<Integer> result = new If<>();
-        start(result);
+        wire(result);
         return result;
     }
 

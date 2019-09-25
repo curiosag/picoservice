@@ -5,7 +5,7 @@ import miso.ingredients.guards.Guards;
 import java.util.ArrayList;
 import java.util.List;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 
 public class PrioritizedPropagation extends Function {
 
@@ -41,7 +41,7 @@ public class PrioritizedPropagation extends Function {
 
     public static PrioritizedPropagation conditionalPropagation() {
         PrioritizedPropagation result = new PrioritizedPropagation();
-        start(result);
+        wire(result);
         return result;
     }
 

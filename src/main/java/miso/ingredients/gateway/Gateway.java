@@ -32,7 +32,7 @@ public class Gateway<T> extends Function<T> {
     }
 
     @Override
-    public void receive(Message message) {
+    public void tell(Message message) {
         Optional<Execution<T>> ex = executions.stream()
                 .filter(e -> e.origin.executionId.equals(message.origin.executionId))
                 .findAny();
@@ -43,11 +43,6 @@ public class Gateway<T> extends Function<T> {
 
         ex.get().setResult((T) message.value);
         executions.remove(ex.get());
-    }
-
-    @Override
-    public void run() {
-        throw new IllegalStateException();
     }
 
     @Override

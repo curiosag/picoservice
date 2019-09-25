@@ -14,7 +14,7 @@ public class ListBinOps {
     public static BinOp<List<Integer>, List<Integer>, Boolean> eq() {
         BinOp<List<Integer>, List<Integer>, Boolean> result = new BinOp<>(List::equals, listConverter, listConverter);
         result.label("equal");
-        Actresses.start(result);
+        Actresses.wire(result);
         return result;
     }
 
@@ -25,7 +25,7 @@ public class ListBinOps {
             return conc;
         }, listConverter, listConverter);
         result.label("conc");
-        Actresses.start(result);
+        Actresses.wire(result);
         return result;
     }
 
@@ -37,7 +37,7 @@ public class ListBinOps {
             return cons;
         }, intConverter, listConverter);
         result.label("cons");
-        Actresses.start(result);
+        Actresses.wire(result);
         return result;
     }
 }

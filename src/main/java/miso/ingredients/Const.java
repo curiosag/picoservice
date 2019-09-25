@@ -15,13 +15,8 @@ public class Const extends Function<Integer> {
     }
 
     @Override
-    public void receive(Message message) {
-        returnTo.receive(message(returnKey, value, message.origin.sender(this)));
-    }
-
-    @Override
-    public void run() {
-        throw new IllegalStateException();
+    public void tell(Message message) {
+        returnTo.tell(message(returnKey, value, message.origin.sender(this)));
     }
 
     @Override

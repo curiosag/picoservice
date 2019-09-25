@@ -1,6 +1,6 @@
 package miso.ingredients;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 import static miso.ingredients.Origin.origin;
 
 public class FunctionSignature<T> extends Function<T> {
@@ -28,7 +28,7 @@ public class FunctionSignature<T> extends Function<T> {
 
     public static <T> FunctionSignature<T> functionSignature(Function<T> body) {
         FunctionSignature<T> result = new FunctionSignature<>(body);
-        start(result);
+        wire(result);
         return result;
     }
 
@@ -93,7 +93,7 @@ public class FunctionSignature<T> extends Function<T> {
             hdlOnReturns(state.origin, onReturn);
             Origin o = origin(this, m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
 
-            state.origin.sender.receive(m.origin(o));
+            state.origin.sender.tell(m.origin(o));
             removeState(state.origin);
         }
     }

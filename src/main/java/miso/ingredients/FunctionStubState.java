@@ -30,13 +30,13 @@ class FunctionStubState extends State {
                 throw new IllegalStateException();
             }
             functionCall = createCall((Function) m.value);
-            pendingForPropagation.forEach(functionCall::receive);
+            pendingForPropagation.forEach(functionCall::tell);
             pendingForPropagation.clear();
             return;
         }
 
         if (functionCall != null) {
-            functionCall.receive(m);
+            functionCall.tell(m);
         } else {
             pendingForPropagation.add(m);
         }

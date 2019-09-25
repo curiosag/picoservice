@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iffList;
@@ -19,7 +19,7 @@ public class Filter {
 
     public static Implementation<List<Integer>> filterSignatureJava() {
         FilterJava filter = new FilterJava();
-        start(filter);
+        wire(filter);
         return new Implementation<>(filter, Arrays.asList());
     }
 

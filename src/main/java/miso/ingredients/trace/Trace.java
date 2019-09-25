@@ -21,16 +21,25 @@ public class Trace extends Actress implements Closeable {
     private List<TraceMessage> messages = new ArrayList<>();
 
     @Override
-    public void setTrace(boolean trace) {
-        this.active = trace;
+    protected Actress resolveTracer() {
+        return this;
+    }
+
+    @Override
+    public void setTrace(boolean active) {
+        if (writer != null) {
+            close();
+        }
+
+        this.active = active;
         if (active) {
-            writer = writer == null && active ? createWriter() : null;
+            writer = createWriter();
             writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
         }
     }
 
     public Trace(boolean active) {
-        super(new Address(Adresses.trace, Actresses.nextId()));
+        super(new Address(Adresses.trace, 0));
         setTrace(active);
     }
 
@@ -82,8 +91,9 @@ public class Trace extends Actress implements Closeable {
         String labelSender = node(m.traced().origin.sender);
         String labelReceiver = node(m.receiver());
 
-        CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeLocation().getCallStack());
-        CallStack stackReceiver =  new CallStack(m.traced().origin.functionCallTreeLocation().getCallStack());;
+        CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
+        CallStack stackReceiver = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
+        ;
 
         if (functionCallReturning(m)) {
             stackSender.push(m.traced().origin.lastPopped);
@@ -92,7 +102,7 @@ public class Trace extends Actress implements Closeable {
             stackReceiver.push(m.receiver().address.id);
         }
 
-        long exId = m.origin.functionCallTreeLocation().getExecutionId();
+        long exId = m.origin.functionCallTreeNode().getExecutionId();
 
         writeLn(String.format("%s -> %s [label=%s];",
                 renderNode(labelSender, exId + "//" + stackSender),
@@ -113,7 +123,7 @@ public class Trace extends Actress implements Closeable {
     }
 
     @Override
-    protected void process(Message message) {
+    public void process(Message message) {
         if (!(message instanceof TraceMessage)) {
             throw new IllegalStateException();
         }
@@ -133,12 +143,24 @@ public class Trace extends Actress implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {
-        if (active) {
-            writeLn("}");
-            writer.flush();
-            writer.close();
+    public void close() {
+        try {
+            if (active) {
+                writeLn("}");
+                writer.flush();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
+    public void flush() {
+        try {
+            if (writer != null) {
+                writer.flush();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

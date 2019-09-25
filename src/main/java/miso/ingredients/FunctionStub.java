@@ -11,7 +11,7 @@ public class FunctionStub<T> extends Function<T> {
     public static <T> FunctionStub<T> of(String keyFuncStubbed) {
         FunctionStub<T> result = new FunctionStub<>(keyFuncStubbed);
         result.label("stub:" + keyFuncStubbed);
-        Actresses.start(result);
+        Actresses.wire(result);
         return result;
     }
 
@@ -26,7 +26,7 @@ public class FunctionStub<T> extends Function<T> {
     }
 
     @Override
-    protected void process(Message message) {
+    public void process(Message message) {
         trace(message);
 
         FunctionStubState state = (FunctionStubState) getState(message.origin);

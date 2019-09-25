@@ -32,12 +32,12 @@ public class Execution<T> implements Future<T> {
     }
 
     public Execution<T> param(String key, T value) {
-        f.receive(message(key, value, origin));
+        f.tell(message(key, value, origin));
         return this;
     }
 
     private Execution<T> kickOff() {
-        f.receive(message(Name.kickOff, null, origin));
+        f.tell(message(Name.kickOff, null, origin));
         return this;
     }
 

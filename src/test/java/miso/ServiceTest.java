@@ -94,8 +94,8 @@ public class ServiceTest {
         stubFuncRight.label("stubRight");
 
         Origin origin = Origin.origin(resultListener);
-        functionCallDouble.receive(message(Name.func, functionSignatureMul, origin));
-        functionCallDouble.receive(message(Name.a, _3, origin));
+        functionCallDouble.tell(message(Name.func, functionSignatureMul, origin));
+        functionCallDouble.tell(message(Name.a, _3, origin));
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(12), result.value);
 
@@ -136,8 +136,8 @@ public class ServiceTest {
         functionCallApply.returnTo(resultListener, Name.result);
 
         Origin origin = Origin.origin(resultListener);
-        functionCallApply.receive(message(Name.func, functionSignatureMul, origin));
-        functionCallApply.receive(message(Name.a, _3, origin));
+        functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
+        functionCallApply.tell(message(Name.a, _3, origin));
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(6), result.value);
 
@@ -179,7 +179,7 @@ public class ServiceTest {
         functionCallApply.returnTo(resultListener, Name.result);
 
         Origin origin = Origin.origin(resultListener);
-        functionCallApply.receive(message(Name.func, functionSignatureMul, origin));
+        functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
 
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
@@ -227,7 +227,7 @@ public class ServiceTest {
         functionCallApply.returnTo(resultListener, Name.result);
 
         Origin origin = Origin.origin(resultListener);
-        functionCallApply.receive(message(Name.func, functionSignatureMul, origin));
+        functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
 
         await(() -> result.value == 8);
 
@@ -259,12 +259,12 @@ public class ServiceTest {
         inc.returnTo(resultListener, Name.result);
         inc.label("INC");
 
-        partialAdd.receive(message(Name.b, _1, origin));
+        partialAdd.tell(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
         assertResult(_2, _1, inc, result, origin);
-        partialAdd.receive(message(Name.removePartialAppValues, null, origin));
+        partialAdd.tell(message(Name.removePartialAppValues, null, origin));
 
-        partialAdd.receive(message(Name.b, _2, origin));
+        partialAdd.tell(message(Name.b, _2, origin));
         assertResult(_2, _0, inc, result, origin);
         assertResult(_3, _1, inc, result, origin);
         partialAdd.removePartialAppValues(origin);
@@ -297,10 +297,10 @@ public class ServiceTest {
         inc.label("INC");
 
         // by way of direct call of the partially applied function
-        inc.receive(message(Name.b, _1, origin));
+        inc.tell(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
 
-        inc.receive(message(Name.b, _1, origin));
+        inc.tell(message(Name.b, _1, origin));
         assertResult(_2, _1, inc, result, origin);
 
     }
@@ -344,10 +344,10 @@ public class ServiceTest {
 
         resultListener.propagate(Name.b, Name.b, partialAdd);
         resultListener.onReturnReceivedSend(Name.removePartialAppValues, null, partialAdd);
-        resultListener.receive(message(Name.b, _1, origin));
+        resultListener.tell(message(Name.b, _1, origin));
 
-        functionCallApply.receive(message(Name.func, partialAdd, origin));
-        functionCallApply.receive(message(Name.a, _3, origin));
+        functionCallApply.tell(message(Name.func, partialAdd, origin));
+        functionCallApply.tell(message(Name.a, _3, origin));
 
         result.setValue(0);
         await(() -> result.value != 0);
@@ -357,7 +357,7 @@ public class ServiceTest {
 
     private void assertResult(Integer expected, Integer a, FunctionCall<Integer> inc, Int result, Origin origin) {
         result.setValue(0);
-        inc.receive(message(Name.a, a, origin));
+        inc.tell(message(Name.a, a, origin));
         await(() -> result.value != 0);
         assertEquals(expected, result.value);
 
@@ -378,7 +378,7 @@ public class ServiceTest {
         checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
 
         //TODO unpredictable java.lang.IllegalStateException: -->  {Iff-20(**outerIff)} {Iff-20(**outerIff)}: execution states left after stop
-        List<Integer> randList = randomList(30);
+        List<Integer> randList = randomList(100);
         List<Integer> randListSorted = new ArrayList<>(randList);
         randListSorted.sort(Integer::compareTo);
         checkQsort(randListSorted, randList, qsortCall);
@@ -392,8 +392,8 @@ public class ServiceTest {
         Gateway<List<Integer>> gateway = new Gateway<>();
         ConcurrentLinkedQueue<List<Integer>> resultCollector = new ConcurrentLinkedQueue<>();
 
-        int parallelRuns = 6;
-        int listSize = 6;
+        int parallelRuns = 10;
+        int listSize = 100;
         for (int i = 0; i < parallelRuns; i++) {
             runQuicksortThread(i, qsortCall, gateway, randomList(listSize), resultCollector);
         }
@@ -432,7 +432,7 @@ public class ServiceTest {
         qsortCall.returnTo(resultListener, Name.result);
 
         Origin origin = origin(nop, executions++, 0L, new CallStack());
-        resultListener.receive(message(Name.list, input, origin));
+        resultListener.tell(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
         result.sort(Integer::compareTo);
@@ -444,7 +444,7 @@ public class ServiceTest {
         Random rand = new Random();
 
         for (int i = 0; i < size; i++) {
-            list.add(rand.nextInt(100));
+            list.add(rand.nextInt(size * 10));
         }
 
         return list;
@@ -490,8 +490,8 @@ public class ServiceTest {
         filterCall.returnTo(resultListener, Name.result);
 
         Origin origin = Origin.origin(nop);
-        resultListener.receive(message(Name.list, input, origin));
-        resultListener.receive(message(Name.predicate, predicate, origin));
+        resultListener.tell(message(Name.list, input, origin));
+        resultListener.tell(message(Name.predicate, predicate, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
         result.sort(Integer::compareTo);
@@ -635,7 +635,7 @@ public class ServiceTest {
         assertTrue(add.executionStates.isEmpty());
 
         Origin origin = Origin.origin(resultListener);
-        resultListener.receive(message(Name.kickOff, null, origin));
+        resultListener.tell(message(Name.kickOff, null, origin));
 
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
@@ -685,7 +685,7 @@ public class ServiceTest {
         resultListener.kickOff(functionCall);
         resultListener.param(Name.result);
 
-        resultListener.receive(message(Name.kickOff, null, Origin.origin(resultListener)));
+        resultListener.tell(message(Name.kickOff, null, Origin.origin(resultListener)));
 
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(9), result.value);
@@ -716,7 +716,7 @@ public class ServiceTest {
 
         resultMonitor.param(Name.result);
 
-        resultMonitor.receive(message(Name.kickOff, null, Origin.origin(resultMonitor)));
+        resultMonitor.tell(message(Name.kickOff, null, Origin.origin(resultMonitor)));
         await(() -> result.value != 0);
 
         assertEquals(_1, result.value);
@@ -753,12 +753,12 @@ public class ServiceTest {
         resultMonitor.param(callerB.returnKey);
 
         Origin originA = Origin.origin(nop);
-        callerA.receive(message(Name.a, 1, originA));
-        callerA.receive(message(Name.b, 2, originA));
+        callerA.tell(message(Name.a, 1, originA));
+        callerA.tell(message(Name.b, 2, originA));
 
         Origin originB = Origin.origin(nop);
-        callerB.receive(message(Name.a, 3, originB));
-        callerB.receive(message(Name.b, 4, originB));
+        callerB.tell(message(Name.a, 3, originB));
+        callerB.tell(message(Name.b, 4, originB));
 
         await(() -> results.size() == 2);
         assertEquals(results.get(callerA.returnKey), _3);
@@ -797,7 +797,7 @@ public class ServiceTest {
         mul.propagate(Name.a, Name.a, callerR);
 
         Origin origin = originForRunId(resultMonitor, 0L);
-        resultMonitor.receive(message(Name.a, _1, origin));
+        resultMonitor.tell(message(Name.a, _1, origin));
 
         await(() -> result.value == 4);
 
@@ -841,7 +841,7 @@ public class ServiceTest {
         innerCaller.label("innerCaller");
 
         Origin origin = originForRunId(resultMonitor, 0L);
-        innerCaller.receive(message(Name.a, _2, origin));
+        innerCaller.tell(message(Name.a, _2, origin));
 
         await(() -> result.value == 16);
     }
@@ -861,8 +861,6 @@ public class ServiceTest {
          *             b - a
          */
 
-        Actresses.debug();
-        Actresses.trace();
         Function<Integer> _if = If.createIf();
 
         Int result = Int(0);
@@ -896,16 +894,16 @@ public class ServiceTest {
 
         // True-path
         Origin originA = originForRunId(resultMonitor, 0L);
-        resultMonitor.receive(message(Name.a, _4, originA));
-        resultMonitor.receive(message(Name.b, _1, originA));
+        resultMonitor.tell(message(Name.a, _4, originA));
+        resultMonitor.tell(message(Name.b, _1, originA));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
 
         // False-path
         result.setValue(0);
         Origin originB = originForRunId(resultMonitor, 1L);
-        resultMonitor.receive(message(Name.a, _1, originB));
-        resultMonitor.receive(message(Name.b, _4, originB));
+        resultMonitor.tell(message(Name.a, _1, originB));
+        resultMonitor.tell(message(Name.b, _4, originB));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
@@ -914,7 +912,7 @@ public class ServiceTest {
     @Test
     public void testSequentialIf() {
 
-        /* The darn sequential if requires specific control of branch initializations and propagations
+        /* sequential if requires specific control of branch initializations and propagations
            depending on the calculated value of the condition
 
              for cases      a   b
@@ -958,16 +956,16 @@ public class ServiceTest {
 
         // True-path
         Origin computationA = originForRunId(resultMonitor, 0L);
-        resultMonitor.receive(message(Name.a, _4, computationA));
-        resultMonitor.receive(message(Name.b, _1, computationA));
+        resultMonitor.tell(message(Name.a, _4, computationA));
+        resultMonitor.tell(message(Name.b, _1, computationA));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
 
         // False-path
         result.setValue(0);
         Origin computationB = originForRunId(resultMonitor, 1L);
-        resultMonitor.receive(message(Name.a, _1, computationB));
-        resultMonitor.receive(message(Name.b, _4, computationB));
+        resultMonitor.tell(message(Name.a, _1, computationB));
+        resultMonitor.tell(message(Name.b, _4, computationB));
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
@@ -1007,16 +1005,16 @@ public class ServiceTest {
 
         // True-path
         Origin originA = originForRunId(resultMonitor, 0L);
-        resultMonitor.receive(message(Name.a, _4, originA));
-        resultMonitor.receive(message(Name.b, _1, originA));
+        resultMonitor.tell(message(Name.a, _4, originA));
+        resultMonitor.tell(message(Name.b, _1, originA));
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
 
         // False-path
         result.setValue(0);
         Origin originB = originForRunId(resultMonitor, 1L);
-        resultMonitor.receive(message(Name.a, _1, originB));
-        resultMonitor.receive(message(Name.b, _4, originB));
+        resultMonitor.tell(message(Name.a, _1, originB));
+        resultMonitor.tell(message(Name.b, _4, originB));
         await(() -> result.value != 0);
         assertEquals(_4, result.value);
         result.setValue(0);
@@ -1055,7 +1053,7 @@ public class ServiceTest {
         _if.propagateOnFalse(Name.a, Name.a, add);
         // can't propagate "a" to sumCallRec directly, so that it passes "a" on to sub ("a - 1") alone. it doesen't.
         // instead it causes another recursion with "a" alone rather than "a - 1" from sub (and maybe more mess, because
-        // sum(a) will also receive a second "a" from the "a - 1", but that doesen't matter any more then)
+        // sum(a) will also tell a second "a" from the "a - 1", but that doesen't matter any more then)
         // one would have to distinguish somehow by key the "a" as the parameter in sum(a) from the a in "a - 1"
         // -> so this doesen't work:
         // mul.propagate(Name.a, Name.a, sumCallRec);
@@ -1074,8 +1072,8 @@ public class ServiceTest {
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 10, 11 * 5);
         checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
-//        checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
-//        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+        checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
+        //checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
 
         testParallelRecursion(sumCall);
     }
@@ -1132,7 +1130,7 @@ public class ServiceTest {
         result.value = -1;
 
         Origin run = originForRunId(resultMonitor, (long) runId);
-        resultMonitor.receive(message(Name.a, sumOf, run));
+        resultMonitor.tell(message(Name.a, sumOf, run));
 
         await(() -> result.value >= 0);
         assertEquals(expected, result.value);

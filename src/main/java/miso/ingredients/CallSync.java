@@ -30,9 +30,9 @@ public class CallSync<T> extends Function<T> {
     public T call() {
         Origin origin = Origin.origin(this, executions++, 0L, new CallStack());
         if (params.size() == 0) {
-            f.receive(message(Name.kickOff, null, origin));
+            f.tell(message(Name.kickOff, null, origin));
         } else {
-            params.forEach((k, v) -> f.receive(message(k, v, origin)));
+            params.forEach((k, v) -> f.tell(message(k, v, origin)));
         }
 
         while (true) {
@@ -52,16 +52,11 @@ public class CallSync<T> extends Function<T> {
     }
 
     @Override
-    synchronized public void receive(Message message) {
+    synchronized public void tell(Message message) {
         if (message.value == null || !message.hasKey(Name.result)) {
             throw new IllegalStateException();
         }
         result = (T) message.value;
-    }
-
-    @Override
-    public void run() {
-        throw new IllegalArgumentException();
     }
 
     @Override

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static miso.ingredients.Actresses.start;
+import static miso.ingredients.Actresses.wire;
 import static miso.ingredients.Nop.nop;
 
 public class Action extends Function {
@@ -40,7 +40,7 @@ public class Action extends Function {
     public static Action action(Consumer<Message> action) {
         Action result = new Action(action);
         result.returnTo(nop, Name.nop);
-        start(result);
+        wire(result);
         return result;
     }
 

@@ -11,17 +11,10 @@ public class FunctionCall<T> extends Function<T> {
         this.function = f;
     }
 
-    private boolean peep;
-
     public static <T> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
         start(result);
         return result;
-    }
-
-    public FunctionCall<T> peep() {
-        this.peep = true;
-        return this;
     }
 
     @Override
@@ -54,14 +47,7 @@ public class FunctionCall<T> extends Function<T> {
             if (!this.address.id.equals(origin.lastPopped)) {
                 throw new IllegalStateException();
             }
-
-            if(peep)
-            {
-                debug(message, message.origin, " hööööööast ");
-            }
-
-
-            returnTo.receive(message(returnKey, (T) message.value, origin));
+           returnTo.receive(message(returnKey, (T) message.value, origin));
         } else {
             if (!isConst(message)) // const already comes with proper stack
             {
@@ -69,10 +55,6 @@ public class FunctionCall<T> extends Function<T> {
                 getState(origin);
             }
 
-            if(peep)
-            {
-                debug(message, origin, " hööööööast ");
-            }
             function.receive(message.origin(origin));
         }
 

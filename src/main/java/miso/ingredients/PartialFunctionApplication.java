@@ -13,7 +13,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     final List<String> partialAppParams = new ArrayList<>();
     // Map<ExecutionId, stack of preset values of partial function applications>
-    public final Map<FunctionCallLevel, Map<String, Object>> partialAppValues = new ConcurrentHashMap<>();
+    public final Map<FunctionCallTreeLocation, Map<String, Object>> partialAppValues = new ConcurrentHashMap<>();
 
     protected PartialFunctionApplication(Function<T> body, List<String> partialAppParams) {
         super(body);
@@ -45,7 +45,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     protected void setPartialAppParamValue(Message m) {
         if (isPartialAppParam(m)) {
-            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallLevel(), k -> new HashMap<>());
+            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallTreeLocation(), k -> new HashMap<>());
             debug(m, m.origin, String.format(" << addPartialAppParamValue (%d) << ", partials.size()));
             partials.put(m.key, m.value);
         }
@@ -67,8 +67,8 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     public Map<String, Object> getPartialAppValues(Origin o) {
 
-        List<Map.Entry<FunctionCallLevel, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
-                .filter(e -> o.functionCallLevel().matchString.startsWith(e.getKey().matchString))
+        List<Map.Entry<FunctionCallTreeLocation, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
+                .filter(e -> o.functionCallTreeLocation().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());
 
@@ -79,7 +79,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     @Override
     public void removePartialAppValues(Origin o) {
-         partialAppValues.remove(o.functionCallLevel());
+        partialAppValues.remove(o.functionCallTreeLocation());
     }
 
 

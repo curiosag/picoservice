@@ -49,12 +49,12 @@ public class Actresses {
         addressed.clear();
         debug = false;
         trace = false;
-        setUpTracer(trace);
+        resetTracer();
         maxId = new AtomicInteger(0);
     }
 
-    private void setUpTracer(boolean trace) {
-        if (!trace && tracer != null) {
+    private void resetTracer() {
+        if (tracer != null) {
             shutdownTracer();
         }
         tracer = new Trace(trace);
@@ -98,7 +98,7 @@ public class Actresses {
 
     private void setTrace(boolean what) {
         trace = what;
-        setUpTracer(trace);
+        tracer.setTrace(trace);
         cast.forEach(a -> a.setTrace(trace));
     }
 

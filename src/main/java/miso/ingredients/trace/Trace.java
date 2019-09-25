@@ -16,15 +16,22 @@ import java.util.List;
 
 public class Trace extends Actress implements Closeable {
 
-    private final boolean active;
-    private final BufferedWriter writer;
+    private boolean active;
+    private BufferedWriter writer;
     private List<TraceMessage> messages = new ArrayList<>();
+
+    @Override
+    public void setTrace(boolean trace) {
+        this.active = trace;
+        if (active) {
+            writer = writer == null && active ? createWriter() : null;
+            writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
+        }
+    }
 
     public Trace(boolean active) {
         super(new Address(Adresses.trace, Actresses.nextId()));
-        this.active = active;
-        writer = active ? createWriter() : null;
-        writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
+        setTrace(active);
     }
 
     private void writeLn(String s) {
@@ -68,15 +75,14 @@ public class Trace extends Actress implements Closeable {
     }
 
     private void write(TraceMessage m) {
-        if(m.traced().key.equals(Name.removeState) || m.traced().key.equals(Name.removePartialAppValues))
-        {
-            return;
+        if (m.traced().key.equals(Name.removeState) || m.traced().key.equals(Name.removePartialAppValues)) {
+            //return;
         }
 
         String labelSender = node(m.traced().origin.sender);
         String labelReceiver = node(m.receiver());
 
-        String callString = m.origin.functionCallLevel().matchString;
+        String callString = m.origin.functionCallTreeLocation().toString();
         String stackSender = callString.endsWith("/") ? callString.substring(0, callString.length() - 1) : callString;
         String stackReceiver = stackSender;
 

@@ -19,16 +19,16 @@ public abstract class Function<T> extends Actress {
     final List<OnReturnForwardItem> onReturn = new ArrayList<>();
     private final List<OnReturnForwardItem> onReturnReceived = new ArrayList<>();
 
-    public final Map<FunctionCallLevel, State> executionStates = new HashMap<>();
+    public final Map<FunctionCallTreeLocation, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
-        executionStates.remove(origin.functionCallLevel());
+        executionStates.remove(origin.functionCallTreeLocation());
         //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
     void cleanup(Long runId) {
-        List<FunctionCallLevel> toRemove = executionStates.keySet().stream()
+        List<FunctionCallTreeLocation> toRemove = executionStates.keySet().stream()
                 .filter(k -> k.getExecutionId().equals(runId))
                 .collect(Collectors.toList());
         toRemove.forEach(executionStates::remove);
@@ -69,10 +69,10 @@ public abstract class Function<T> extends Actress {
     private List<Function> kicks = new ArrayList<>();
 
     protected State getState(Origin origin) {
-        State result = executionStates.get(origin.functionCallLevel());
+        State result = executionStates.get(origin.functionCallTreeLocation());
         if (result == null) {
             result = newState(origin);
-            executionStates.put(origin.functionCallLevel(), result);
+            executionStates.put(origin.functionCallTreeLocation(), result);
             fowardConsts(origin);
             forwardKickOff(origin);
         }

@@ -70,8 +70,7 @@ public class Quicksort {
 
         FunctionSignature<List<Integer>> filterSignatureLeft = filterSignature().get();
         FunctionSignature<List<Integer>> filterSignatureRight = filterSignature().get();
-        filterSignatureLeft.peep();
-        filterSignatureRight.peep();
+
         // function lt(a, b) = a < b;
         // filter(tail, i -> lt(i, head))
         BinOp<Integer, Integer, Boolean> lt = lt();

@@ -8,7 +8,6 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static miso.ingredients.Actresses.resolve;
 import static miso.ingredients.Message.message;
@@ -39,7 +38,7 @@ public abstract class Actress implements Runnable {
 
     private AtomicBoolean stopping = new AtomicBoolean(false);
 
-    AtomicLong maxMessageId = new AtomicLong(0L);
+    long maxMessageId = 0L;
 
     private boolean stopped = true;
 
@@ -60,7 +59,7 @@ public abstract class Actress implements Runnable {
     }
 
     public String getNextMessageId() {
-        return address.id + "/" + maxMessageId.getAndIncrement();
+        return address.id + "/" + maxMessageId++;
     }
 
     public void receive(Message m) {
@@ -145,6 +144,7 @@ public abstract class Actress implements Runnable {
     }
 
     public void setTrace(boolean trace) {
+        this.trace = trace;
         tracer = resolveTracer();
     }
 }

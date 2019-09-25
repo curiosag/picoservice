@@ -41,7 +41,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return " " + key + ":" + (value == null ? "NULL" : value.toString()) + " " + origin.toString();
+        return " " + key + ":" + (value == null ? "NULL" : value.toString());
     }
 
 }

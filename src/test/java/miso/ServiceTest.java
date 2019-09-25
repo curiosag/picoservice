@@ -5,7 +5,6 @@ import miso.ingredients.gateway.Execution;
 import miso.ingredients.gateway.Gateway;
 import miso.ingredients.nativeImpl.BinOps;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
@@ -300,8 +299,7 @@ public class ServiceTest {
         // by way of direct call of the partially applied function
         inc.receive(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
-        // TODO maybe, since removePartialAppValues happens after inc returns, we must reset the partial value again :-(
-        // one could wrap it in another function call or trigger removePartialAppValues when the resulListener receives the result
+
         inc.receive(message(Name.b, _1, origin));
         assertResult(_2, _1, inc, result, origin);
 
@@ -350,7 +348,6 @@ public class ServiceTest {
 
         functionCallApply.receive(message(Name.func, partialAdd, origin));
         functionCallApply.receive(message(Name.a, _3, origin));
-        functionCallApply.returnTo(resultListener, Name.result);
 
         result.setValue(0);
         await(() -> result.value != 0);
@@ -411,7 +408,7 @@ public class ServiceTest {
 
         qsortCall.returnTo(resultListener, Name.result);
 
-        Origin origin = origin(nop, executions++, 0L, new Stack<>());
+        Origin origin = origin(nop, executions++, 0L, new CallStack());
         resultListener.receive(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
@@ -501,8 +498,6 @@ public class ServiceTest {
     public void testgetModEqZero() {
 
         FunctionSignature<Boolean> f = getModEqZero();
-        Actresses.instance().showCast();
-
 
         FunctionCall<Boolean> c = functionCall(f);
         Stream.of(0, 1, 2, 3, 4, 5, 6).forEach(i ->
@@ -747,7 +742,6 @@ public class ServiceTest {
         assertEquals(results.get(callerB.returnKey), Integer.valueOf(7));
     }
 
-
     @Test
     public void testSerialFunctionCall() {
 
@@ -890,9 +884,7 @@ public class ServiceTest {
         await(() -> result.value != 0);
         assertEquals(_3, result.value);
         result.setValue(0);
-
     }
-
 
     @Test
     public void testSequentialIf() {
@@ -1006,7 +998,6 @@ public class ServiceTest {
 
     }
 
-    @Ignore
     @Test
     public void testRecursion() {
 
@@ -1056,12 +1047,12 @@ public class ServiceTest {
         checksum(result, resultMonitor, runId++, 0, 0);
         checksum(result, resultMonitor, runId++, 1, 1);
         checksum(result, resultMonitor, runId++, 2, 3);
+        checksum(result, resultMonitor, runId++, 10, 11 * 5);
         checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
-        //checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
-        //checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+//        checksum(result, resultMonitor, runId++, 7000, 7001 * 3500);
+//        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
 
         Gateway<Integer> gateway = intGateway();
-
 
         ConcurrentLinkedQueue<Integer> input = new ConcurrentLinkedQueue<>();
         Stream.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6)
@@ -1144,7 +1135,7 @@ public class ServiceTest {
 
 
     private Origin originForRunId(Action a, Long runId) {
-        return origin(a, runId, 0L, new Stack<>());
+        return origin(a, runId, 0L, new CallStack());
     }
 
 }

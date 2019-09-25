@@ -6,13 +6,6 @@ import static miso.ingredients.Origin.origin;
 public class FunctionSignature<T> extends Function<T> {
 
     public final Function<T> body;
-    private boolean peep;
-
-
-    public void peep() {
-        this.peep = true;
-    }
-
 
     /*  FunctionSignature's responsibility are.
      *   - increment the call level for incoming messages and decrement it again for the result
@@ -55,17 +48,13 @@ public class FunctionSignature<T> extends Function<T> {
 
     @Override
     public void process(Message m) {
-        if(peep)
-        {
-            debug(m, m.origin.sender(this), " signature received ");
-        }
-
-         if (m.key.equals(Name.removePartialAppValues)) {
-            removePartialAppValues(m.origin);
-            return;
-        }
-
         trace(m);
+
+        if (m.key.equals(Name.removePartialAppValues)) {
+             removePartialAppValues(m.origin);
+             return;
+         }
+
 
         if (forwardingPartialAppParamValues(m)) {
             super.process(m);
@@ -103,10 +92,7 @@ public class FunctionSignature<T> extends Function<T> {
             FunctionSignatureState state = (FunctionSignatureState) s;
             hdlOnReturns(state.origin, onReturn);
             Origin o = origin(this, m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
-            if(peep)
-            {
-                debug(m.origin(o), o, " signature returns ");
-            }
+
             state.origin.sender.receive(m.origin(o));
             removeState(state.origin);
         }

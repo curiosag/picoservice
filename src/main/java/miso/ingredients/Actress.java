@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static miso.ingredients.Actresses.resolve;
-import static miso.ingredients.Message.message;
 import static miso.ingredients.trace.TraceMessage.traced;
 
 public abstract class Actress implements Runnable {
@@ -30,7 +29,6 @@ public abstract class Actress implements Runnable {
 
     public final Address address;
     Queue<Message> inBox = new ConcurrentLinkedQueue<>();
-    Queue<String> acknowledged = new ConcurrentLinkedQueue<>(); // of Message.id
 
     public boolean idle() {
         return inBox.size() == 0 && idle;
@@ -65,11 +63,8 @@ public abstract class Actress implements Runnable {
     public void receive(Message m) {
         Origin o = m.origin;
         debug(m, o, "<--");
-        if (m.key.equals(Name.ack)) {
-            acknowledged.add((String) m.value);
-        } else {
-            inBox.add(m);
-        }
+
+        inBox.add(m);
     }
 
     protected void debug(Message m, Origin o, String rel) {
@@ -95,13 +90,17 @@ public abstract class Actress implements Runnable {
                 if (m != null) {
                     idle = false;
                     debug(m, m.origin, "!!");
-                    process(m);
+                    if (m.key.equals(Name.ack)) {
+                        onAck((Message) m.value);
+                    } else {
+                        process(m);
+                    }
                     if (m.ack == Acknowledge.Y) {
                         if (!(this instanceof Function)) {
                             //TODO: that's messy
                             throw new IllegalStateException();
                         }
-                        m.origin.sender.receive(message(Name.ack, m.id, m.origin.sender((Function) this)));
+                        m.origin.sender.receive(ackMsg(m));
                     }
                 } else {
                     idle = true;
@@ -113,6 +112,13 @@ public abstract class Actress implements Runnable {
                 throw e;
             }
         stopped = true;
+    }
+
+    private Message ackMsg(Message m) {
+        return new Message(Name.ack, m, m.origin.sender((Function) this));
+    }
+
+    protected void onAck(Message value) {
     }
 
     protected void trace(Message message) {

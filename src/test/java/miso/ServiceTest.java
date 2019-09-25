@@ -375,26 +375,48 @@ public class ServiceTest {
         checkQsort(list(1, 2, 3), list(3, 2, 1), qsortCall);
         checkQsort(list(0, 1, 2, 3, 4, 5), list(5, 4, 3, 2, 1, 0), qsortCall);
         checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
-        //TODO unpredictable java.lang.IllegalStateException: -->  {Iff-20(**outerIff)} {Iff-20(**outerIff)}: execution states left after stop
-        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), list(6, 7, 2, 9, 0, 3, 1, 5, 4, 8), qsortCall);
-//        checkQsort(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), list(11, 6, 10, 7, 14, 8, 2, 13, 3, 12, 4, 19, 5, 18, 9, 15, 1, 17, 0, 16), qsortCall);
 
-//        List<Integer> randList = randomList(100);
-//        List<Integer> randListSorted = new ArrayList<>(randList);
-//        randListSorted.sort(Integer::compareTo);
-//        System.out.println("sorting " + randList.size());
-//        checkQsort(randListSorted, randList, qsortCall);
-//        System.out.println("done sorting " + randList.size());
-//        for (int i = 0; i < 0; i++) {
-//            System.out.println(i);
-//            List<Integer> input = randomList(20);
-//            List<Integer> expected = new ArrayList<>(input);
-//            expected.sort(Integer::compareTo);
-//            checkQsort(expected, input, qsortCall);
-//        }
+        //TODO unpredictable java.lang.IllegalStateException: -->  {Iff-20(**outerIff)} {Iff-20(**outerIff)}: execution states left after stop
+        List<Integer> randList = randomList(30);
+        List<Integer> randListSorted = new ArrayList<>(randList);
+        randListSorted.sort(Integer::compareTo);
+        checkQsort(randListSorted, randList, qsortCall);
+        System.out.println("done sorting " + randList.size());
     }
 
-    private Long executions = 0L;
+    @Test
+    public void testParallelQuicksort() {
+        Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
+
+        Gateway<List<Integer>> gateway = new Gateway<>();
+        ConcurrentLinkedQueue<List<Integer>> resultCollector = new ConcurrentLinkedQueue<>();
+
+        int parallelRuns = 6;
+        int listSize = 6;
+        for (int i = 0; i < parallelRuns; i++) {
+            runQuicksortThread(i, qsortCall, gateway, randomList(listSize), resultCollector);
+        }
+
+        await(() -> resultCollector.size() == parallelRuns);
+        resultCollector.forEach(l -> {
+            ArrayList<Integer> sorted = new ArrayList<>(l);
+            sorted.sort(Integer::compareTo);
+            assertEquals(sorted, l);
+        });
+    }
+
+    private void runQuicksortThread(int runId, Function<List<Integer>> sumCall, Gateway<List<Integer>> gateway, List<Integer> input, ConcurrentLinkedQueue<List<Integer>> resultCollector) {
+        new Thread(() -> {
+            System.out.println(runId +" sorting " + input);
+            gateway.execute(sumCall, v -> {
+                resultCollector.add(v);
+                System.out.println(runId + " received " + v.toString());
+            }).param(Name.list, input);
+        }).start();
+
+    }
+
+    private long executions;
 
     private void checkQsort(List<Integer> expected, List<Integer> input, Function<List<Integer>> qsortCall) {
         System.out.println("sorting " + input.size());
@@ -421,7 +443,7 @@ public class ServiceTest {
         Random rand = new Random();
 
         for (int i = 0; i < size; i++) {
-            list.add(rand.nextInt(100000));
+            list.add(rand.nextInt(100));
         }
 
         return list;

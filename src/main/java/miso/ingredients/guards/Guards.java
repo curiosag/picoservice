@@ -12,7 +12,7 @@ public class Guards {
     }
 
     public static <T extends Collection<?>> T empty(T value) {
-        if (! notNull(value).isEmpty()) {
+        if (!notNull(value).isEmpty()) {
             throw new IllegalStateException();
         }
         return value;
@@ -34,6 +34,12 @@ public class Guards {
 
     public static void isFalse(boolean v) {
         if (v) {
+            throw new IllegalStateException();
+        }
+    }
+
+    public static void isTrue(boolean v) {
+        if (!v) {
             throw new IllegalStateException();
         }
     }

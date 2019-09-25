@@ -31,7 +31,7 @@ public class Execution<T> implements Future<T> {
         origin = Origin.origin(caller, maxExecutionId.addAndGet(1), 0L, new CallStack());
     }
 
-    public Execution<T> param(String key, Integer value) {
+    public Execution<T> param(String key, T value) {
         f.receive(message(key, value, origin));
         return this;
     }

@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import static miso.ingredients.Actresses.await;
 import static miso.ingredients.Message.message;
 
 public abstract class Function<T> extends Actress {
@@ -46,10 +45,12 @@ public abstract class Function<T> extends Actress {
     public void checkSanityOnStop() {
         super.checkSanityOnStop();
         if (!executionStates.isEmpty()) {
-            throw new IllegalStateException(String.format("-->  %s %s: %d execution states left after stop", address.toString(), address.toString(), executionStates.size()));
+            System.out.println(String.format("-->  %s %s: %d execution states left after stop", address.toString(), address.toString(), executionStates.size()));
+            executionStates.clear();
         }
         if (!inBox.isEmpty()) {
-            throw new IllegalStateException(String.format("%s: %d left in inbox", address.toString(), inBox.size()));
+            System.out.println(String.format("%s: %d left in inbox", address.toString(), inBox.size()));
+            inBox.clear();
         }
     }
 
@@ -138,10 +139,6 @@ public abstract class Function<T> extends Actress {
                     keyMapping.getValue().forEach(targetName -> {
                         Message m = message(targetName, message.value, message.origin.sender(this)).ack(ack);
                         prop.getKey().receive(m);
-                        if (m.ack == Acknowledge.Y) {
-                            await(() -> acknowledged.contains(m.id));
-                            acknowledged.remove(m.id);
-                        }
                     });
                 }
             }

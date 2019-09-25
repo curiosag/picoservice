@@ -76,26 +76,27 @@ public class Trace extends Actress implements Closeable {
 
     private void write(TraceMessage m) {
         if (m.traced().key.equals(Name.removeState) || m.traced().key.equals(Name.removePartialAppValues)) {
-            //return;
+            return;
         }
 
         String labelSender = node(m.traced().origin.sender);
         String labelReceiver = node(m.receiver());
 
-        String callString = m.origin.functionCallTreeLocation().toString();
-        String stackSender = callString.endsWith("/") ? callString.substring(0, callString.length() - 1) : callString;
-        String stackReceiver = stackSender;
-
+        CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeLocation().getCallStack());
+        CallStack stackReceiver =  new CallStack(m.traced().origin.functionCallTreeLocation().getCallStack());;
 
         if (functionCallReturning(m)) {
-            stackSender = stackSender + "/" + m.traced().origin.lastPopped;
+            stackSender.push(m.traced().origin.lastPopped);
         }
         if (functionCallReceiving(m)) {
-            stackReceiver = stackReceiver + "/" + m.receiver().address.id;
+            stackReceiver.push(m.receiver().address.id);
         }
+
+        long exId = m.origin.functionCallTreeLocation().getExecutionId();
+
         writeLn(String.format("%s -> %s [label=%s];",
-                renderNode(labelSender, stackSender),
-                renderNode(labelReceiver, stackReceiver),
+                renderNode(labelSender, exId + "//" + stackSender),
+                renderNode(labelReceiver, exId + "//" + stackReceiver),
                 payload(m.traced())));
     }
 

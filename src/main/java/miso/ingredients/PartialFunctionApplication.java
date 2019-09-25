@@ -34,7 +34,8 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     public void checkSanityOnStop() {
         super.checkSanityOnStop();
         if (!partialAppValues.isEmpty()) {
-            throw new IllegalStateException();
+            System.out.println(String.format("-->  %s %s: %d partialAppValues left after stop", address.toString(), address.toString(), partialAppValues.size()));
+            partialAppValues.clear();
         }
     }
 
@@ -68,6 +69,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     public Map<String, Object> getPartialAppValues(Origin o) {
 
         List<Map.Entry<FunctionCallTreeLocation, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
+                .filter(e -> o.functionCallTreeLocation().getExecutionId().equals(e.getKey().getExecutionId()))
                 .filter(e -> o.functionCallTreeLocation().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());

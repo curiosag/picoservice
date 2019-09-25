@@ -24,6 +24,7 @@ public class CallStack {
         addAll(takeFrom);
     }
 
+    //TODO: make callstack immutable
     public void push(int functionId) {
         size++;
         if (stack.isEmpty() || stack.peek().functionId != functionId) {
@@ -108,5 +109,9 @@ public class CallStack {
     @Override
     public int hashCode() {
         return Objects.hash(stack);
+    }
+
+    public boolean isEmpty() {
+        return stack.isEmpty();
     }
 }

@@ -8,7 +8,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static miso.implementations.Filter.filterSignature;
-import static miso.ingredients.PrioiritizedPropagation.conditionalPropagation;
+import static miso.ingredients.PrioritizedPropagation.conditionalPropagation;
 import static miso.ingredients.FunctionCall.functionCall;
 import static miso.ingredients.FunctionSignature.functionSignature;
 import static miso.ingredients.Iff.iffList;
@@ -68,8 +68,10 @@ public class Quicksort {
         Function<List<Integer>> qsortReCallLeft = functionCall(qsortSignature).returnTo(concat, Name.leftArg);
         Function<List<Integer>> qsortReCallRight = functionCall(qsortSignature).returnTo(cons, Name.rightArg);
 
-        FunctionSignature<List<Integer>> filterSignatureLeft = filterSignature().get();
-        FunctionSignature<List<Integer>> filterSignatureRight = filterSignature().get();
+        Implementation<List<Integer>> implLeft = filterSignature();
+        Implementation<List<Integer>> implRight = filterSignature();
+        FunctionSignature<List<Integer>> filterSignatureLeft = implLeft.get();
+        FunctionSignature<List<Integer>> filterSignatureRight = implRight.get();
 
         // function lt(a, b) = a < b;
         // filter(tail, i -> lt(i, head))

@@ -107,10 +107,7 @@ public class Filter {
         innerIff.propagateOnFalse(Name.tail, Name.list, filterReCallOnFalse);
         innerIff.propagateOnFalse(Name.predicate, Name.predicate, filterReCallOnFalse);
 
-        //TODO: occasionally in quicksort you get states left in outerIff where pendingForBranchPropagation constains  predicate:miso.ingredients.PartialFunctionApplication@2ad3ecf2
-        filterSignature.onReturnSend(Name.removeState,null, outerIff);
-
-        return new Implementation<>(filterSignature, Arrays.asList(filterSignature, listEq, outerIff, innerIff, head, tail, cons,
+        return new Implementation<>(filterSignature, Arrays.asList(listEq, outerIff, innerIff, head, tail, cons,
                 predicateStub, filterReCallOnTrue, filterReCallOnFalse));
     }
 

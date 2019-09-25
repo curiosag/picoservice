@@ -156,15 +156,17 @@ public abstract class Function<T> extends Actress {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
         }
 
+        if(m.hasKey(Name.removeState))
+        {
+            removeState(m.origin);
+            return;
+        }
+
         State state = getState(m.origin);
         if (m.key.equals(Name.kickOff)) {
             return;// initializeComputation happens in getState() on new state
         }
 
-        if (m.key.equals(Name.cleanup)) {
-            removeState(m.origin);
-            return;
-        }
         if (!isParameter(m.key)) {
             propagate(m);
             return;

@@ -23,7 +23,6 @@ public interface Name {
     String zero = "zero";
     String one = "one";
     String kickOff = "kickOff";
-    String cleanup = "cleanup";
     String c = "c";
     String y = "y";
     String head = "head";

@@ -2,6 +2,7 @@ package miso.ingredients;
 
 import miso.ingredients.tuples.KeyValuePair;
 import miso.ingredients.tuples.OnReturnForwardItem;
+import miso.ingredients.tuples.Tuple;
 
 import java.util.*;
 
@@ -27,8 +28,8 @@ public class Iff<T> extends Function<T> {
         }
     }
 
-    private Map<Function<?>, Map<String, List<String>>> propagationsOnTrue = new HashMap<>();
-    private Map<Function<?>, Map<String, List<String>>> propagationsOnFalse = new HashMap<>();
+    private Map<String, List<Tuple<String, Function<?>>>> propagationsOnTrue = new HashMap<>();
+    private Map<String, List<Tuple<String, Function<?>>>> propagationsOnFalse = new HashMap<>();
     private List<Function> kickOffOnTrue = new ArrayList<>();
     private List<Function> kickOffOnFalse = new ArrayList<>();
 
@@ -57,7 +58,7 @@ public class Iff<T> extends Function<T> {
         kickOffOnFalse.add(f);
     }
 
-    private Map<Function<?>, Map<String, List<String>>> getBranchPropagations(Boolean branch) {
+    private Map<String, List<Tuple<String, Function<?>>>> getBranchPropagations(Boolean branch) {
         return branch ? propagationsOnTrue : propagationsOnFalse;
     }
 

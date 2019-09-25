@@ -861,6 +861,8 @@ public class ServiceTest {
          *             b - a
          */
 
+        Actresses.debug();
+        Actresses.trace();
         Function<Integer> _if = If.createIf();
 
         Int result = Int(0);

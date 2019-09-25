@@ -16,7 +16,7 @@ public class CallStack {
 
     private int size = 0;
 
-    
+
     public CallStack() {
     }
 
@@ -49,7 +49,7 @@ public class CallStack {
 
     public void addAll(CallStack other) {
         //concurrent modifications on other may happen
-        for(ListIterator<CallStackItem> it = other.stack.listIterator(); it.hasNext();){
+        for (ListIterator<CallStackItem> it = other.stack.listIterator(); it.hasNext(); ) {
             CallStackItem item = it.next();
             stack.add(new CallStackItem(item.functionId, item.recalls));
         }
@@ -78,24 +78,23 @@ public class CallStack {
         if (that.stack.size() == 0) {
             return true;
         }
+        CallStackItem thisItem;
+        CallStackItem thatItem;
+        thisItem = this.stack.get(that.stack.size() - 1);
+        thatItem = that.stack.get(that.stack.size() - 1);
 
-        try {
-            CallStackItem thisItem;
-            CallStackItem thatItem;
-            for (int i = 0; i < that.stack.size() - 1; i++) {
-                thisItem = this.stack.get(i);
-                thatItem = that.stack.get(i);
-                if (thisItem.functionId != thatItem.functionId || thisItem.recalls != thatItem.recalls) {
-                    return false;
-                }
-            }
-
-            thisItem = this.stack.get(that.stack.size() - 1);
-            thatItem = that.stack.get(that.stack.size() - 1);
-            return thisItem.functionId == thatItem.functionId && thisItem.recalls >= thatItem.recalls;
-        } catch (ArrayIndexOutOfBoundsException e) {
-            throw e;
+        if (!(thisItem.functionId == thatItem.functionId && thisItem.recalls >= thatItem.recalls)) {
+            return false;
         }
+
+        for (int i = that.stack.size() - 1; i > 0 ; i--) {
+            thisItem = this.stack.get(i);
+            thatItem = that.stack.get(i);
+            if (!(thisItem.functionId == thatItem.functionId && thisItem.recalls == thatItem.recalls)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override

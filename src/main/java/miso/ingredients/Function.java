@@ -2,12 +2,12 @@ package miso.ingredients;
 
 import miso.ingredients.tuples.KeyValuePair;
 import miso.ingredients.tuples.OnReturnForwardItem;
+import miso.ingredients.tuples.Tuple;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static miso.ingredients.Message.message;
@@ -60,12 +60,12 @@ public abstract class Function<T> extends Actress {
     /*
      *   propagation data structure:
      *
-     *   Map<targetFunc, Map<keyReceived, List<keysToPropagate to targetFunc>>>
+     *   Map<keyReceived , List<Tuple<List<keysToPropagate>,targetFunc>>
      *
      *   all targetFunc know the keyValue used for returning results
      *
      * */
-    protected final Map<Function<?>, Map<String, List<String>>> propagations = new HashMap<>();
+    protected final Map<String, List<Tuple<String, Function<?>>>> propagations = new HashMap<>();
 
     private List<Function> kicks = new ArrayList<>();
 
@@ -99,20 +99,12 @@ public abstract class Function<T> extends Actress {
         return this;
     }
 
-    void propagate(String keyReceived, String keyToPropagate, Function target, Map<Function<?>, Map<String, List<String>>> propagations) {
-        Map<String, List<String>> prop = propagations.get(target);
-        if (prop == null) {
-            propagations.put(target, new HashMap<>());
-            prop = propagations.get(target);
-        }
+    void propagate(String keyReceived, String keyToPropagate, Function targetFunc, Map<String, List<Tuple<String, Function<?>>>>  propagations) {
+        List<Tuple<String, Function<?>>> targets = propagations.computeIfAbsent(keyReceived, k -> new ArrayList<>());
 
-        List<String> targets = prop.get(keyReceived);
-        if (targets == null) {
-            prop.put(keyReceived, new ArrayList<>());
-            targets = prop.get(keyReceived);
+        if (targets.stream().noneMatch(i -> i.left.equals(keyToPropagate) && i.right.equals(targetFunc))){
+            targets.add(new Tuple<String, Function<?>>(keyToPropagate, targetFunc));
         }
-
-        targets.add(keyToPropagate);
     }
 
     public Function<T> propagate(String keyReceived, String keyToPropagate, Function target) {
@@ -128,22 +120,19 @@ public abstract class Function<T> extends Actress {
         propagate(m, ack, propagations);
     }
 
-    void propagate(Message message, Map<Function<?>, Map<String, List<String>>> propagations) {
+    void propagate(Message message, Map<String, List<Tuple<String, Function<?>>>> propagations) {
         propagate(message, Acknowledge.N, propagations);
     }
 
-    void propagate(Message message, Acknowledge ack, Map<Function<?>, Map<String, List<String>>> propagations) {
-        for (Entry<Function<?>, Map<String, List<String>>> prop : propagations.entrySet()) {
-            for (Entry<String, List<String>> keyMapping : prop.getValue().entrySet()) {
-                if (keyMapping.getKey().equals(message.key)) {
-                    keyMapping.getValue().forEach(targetName -> {
-                        Message m = message(targetName, message.value, message.origin.sender(this)).ack(ack);
-                        prop.getKey().receive(m);
-                    });
-                }
-            }
+    void propagate(Message message, Acknowledge ack, Map<String, List<Tuple<String, Function<?>>>> propagations) {
+        List<Tuple<String, Function<?>>> targets = propagations.get(message.key);
+        if (targets != null)
+        {
+            targets.forEach(t -> {
+                Message m = message(t.left, message.value, message.origin.sender(this)).ack(ack);
+                t.right.receive(m);
+            });
         }
-
     }
 
     @Override

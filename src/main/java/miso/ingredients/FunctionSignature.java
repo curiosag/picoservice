@@ -51,9 +51,9 @@ public class FunctionSignature<T> extends Function<T> {
         trace(m);
 
         if (m.key.equals(Name.removePartialAppValues)) {
-             removePartialAppValues(m.origin);
-             return;
-         }
+            removePartialAppValues(m.origin);
+            return;
+        }
 
 
         if (forwardingPartialAppParamValues(m)) {
@@ -64,6 +64,13 @@ public class FunctionSignature<T> extends Function<T> {
         if (isPartialAppParam(m)) {
             setPartialAppParamValue(m);
             return;
+        }
+
+        if(m.key.equals(Name.error))
+        {
+            FunctionSignatureState state = (FunctionSignatureState) getState(m.origin);
+            state.origin.sender.tell(m.origin(m.origin.sender(this)));
+            removeState(state.origin);
         }
 
         if (isDownstreamMessage(m)) {
@@ -79,7 +86,7 @@ public class FunctionSignature<T> extends Function<T> {
     }
 
     private boolean isDownstreamMessage(Message m) {
-        return (m.origin.sender instanceof FunctionCall) && !(m.key.equals(Name.result));
+        return (m.origin.sender instanceof FunctionCall);
     }
 
     private boolean forwardingPartialAppParamValues(Message m) {
@@ -90,9 +97,8 @@ public class FunctionSignature<T> extends Function<T> {
     protected void processInner(Message m, State s) {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
-            hdlOnReturns(state.origin, onReturn);
+            hdlForwarings(state.origin, onReturn);
             Origin o = origin(this, m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
-
             state.origin.sender.tell(m.origin(o));
             removeState(state.origin);
         }

@@ -1,7 +1,7 @@
 package miso.ingredients;
 
 import miso.ingredients.tuples.KeyValuePair;
-import miso.ingredients.tuples.OnReturnForwardItem;
+import miso.ingredients.tuples.ForwardingItem;
 import miso.ingredients.tuples.Tuple;
 
 import java.util.ArrayList;
@@ -16,8 +16,8 @@ public abstract class Function<T> extends Actress {
 
     public Function<?> returnTo;
     public String returnKey;
-    final List<OnReturnForwardItem> onReturn = new ArrayList<>();
-    private final List<OnReturnForwardItem> onReturnReceived = new ArrayList<>();
+    final List<ForwardingItem> onReturn = new ArrayList<>();
+    private final List<ForwardingItem> onReceivedReturn = new ArrayList<>();
 
     public final Map<FunctionCallTreeLocation, State> executionStates = new HashMap<>();
     private final Map<String, Object> consts = new HashMap<>();
@@ -35,11 +35,11 @@ public abstract class Function<T> extends Actress {
     }
 
     public void onReturnSend(String key, Object value, Function<?> target) {
-        onReturn.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+        onReturn.add(ForwardingItem.of(KeyValuePair.of(key, value), target));
     }
 
-    public void onReturnReceivedSend(String key, Object value, Function target) {
-        onReturnReceived.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+    public void onReceivedReturnSend(String key, Object value, Function target) {
+        onReceivedReturn.add(ForwardingItem.of(KeyValuePair.of(key, value), target));
     }
 
     @Override
@@ -96,10 +96,10 @@ public abstract class Function<T> extends Actress {
         return this;
     }
 
-    void propagate(String keyReceived, String keyToPropagate, Function targetFunc, Map<String, List<Tuple<String, Function<?>>>>  propagations) {
+    void propagate(String keyReceived, String keyToPropagate, Function targetFunc, Map<String, List<Tuple<String, Function<?>>>> propagations) {
         List<Tuple<String, Function<?>>> targets = propagations.computeIfAbsent(keyReceived, k -> new ArrayList<>());
 
-        if (targets.stream().noneMatch(i -> i.left.equals(keyToPropagate) && i.right.equals(targetFunc))){
+        if (targets.stream().noneMatch(i -> i.left.equals(keyToPropagate) && i.right.equals(targetFunc))) {
             targets.add(new Tuple<String, Function<?>>(keyToPropagate, targetFunc));
         }
     }
@@ -123,8 +123,7 @@ public abstract class Function<T> extends Actress {
 
     void propagate(Message message, Acknowledge ack, Map<String, List<Tuple<String, Function<?>>>> propagations) {
         List<Tuple<String, Function<?>>> targets = propagations.get(message.key);
-        if (targets != null)
-        {
+        if (targets != null) {
             targets.forEach(t -> {
                 Message m = message(t.left, message.value, message.origin.sender(this)).ack(ack);
                 t.right.tell(m);
@@ -134,13 +133,13 @@ public abstract class Function<T> extends Actress {
 
     @Override
     public void process(Message m) {
+
         trace(m);
         if (!(this instanceof FunctionSignature) && (returnTo == null || returnKey == null)) {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
         }
 
-        if(m.hasKey(Name.removeState))
-        {
+        if (m.hasKey(Name.removeState)) {
             removeState(m.origin);
             return;
         }
@@ -155,9 +154,19 @@ public abstract class Function<T> extends Actress {
             return;
         }
         if (m.key.equals(Name.result)) {
-            hdlOnReturns(m.origin, onReturnReceived);
+            hdlForwarings(m.origin, onReceivedReturn);
         }
-        processInner(m, state);
+
+        try {
+            processInner(m, state);
+        } catch (Exception e) {
+            debug(getExceptionMessage(m, e));
+            returnTo.aRef().tell(errMessage(m, e), aRef());
+        }
+    }
+
+    protected Message errMessage(Message m, Exception e) {
+        return message(Name.error, new Err(this, m, e), m.origin.sender(this));
     }
 
     protected abstract boolean isParameter(String key);
@@ -177,12 +186,15 @@ public abstract class Function<T> extends Actress {
     }
 
     protected void returnResult(T result, Origin origin) {
-        hdlOnReturns(origin, onReturn);
+        hdlForwarings(origin, onReturn);
         returnTo.tell(message(returnKey, result, origin));
     }
 
-    void hdlOnReturns(Origin origin, List<OnReturnForwardItem> items) {
-        items.forEach(v -> v.target().tell(message(v.keyValuePair().key(), v.keyValuePair().value(), origin)));
+    void hdlForwarings(Origin origin, List<ForwardingItem> items) {
+        items.forEach(v -> {
+            KeyValuePair kv = v.keyValuePair();
+            v.target().tell(message(kv.key(), kv.value(), origin));
+        });
     }
 
     static boolean computed(Object value) {

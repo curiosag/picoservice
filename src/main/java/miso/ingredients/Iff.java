@@ -1,7 +1,7 @@
 package miso.ingredients;
 
 import miso.ingredients.tuples.KeyValuePair;
-import miso.ingredients.tuples.OnReturnForwardItem;
+import miso.ingredients.tuples.ForwardingItem;
 import miso.ingredients.tuples.Tuple;
 
 import java.util.*;
@@ -12,8 +12,8 @@ import static miso.ingredients.Message.message;
 public class Iff<T> extends Function<T> {
 
     private static final List<String> params = Arrays.asList(Name.onTrue, Name.onFalse, Name.condition);
-    private final List<OnReturnForwardItem> onReturnOnTrueSend = new ArrayList<>();
-    private final List<OnReturnForwardItem> onReturnOnFalseSend = new ArrayList<>();
+    private final List<ForwardingItem> onReturnOnTrueSend = new ArrayList<>();
+    private final List<ForwardingItem> onReturnOnFalseSend = new ArrayList<>();
 
 
     class StateIff extends State {
@@ -35,11 +35,11 @@ public class Iff<T> extends Function<T> {
 
 
     public void onReturnOnTrueSend(String key, Object value, Function<?> target){
-        onReturnOnTrueSend.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+        onReturnOnTrueSend.add(ForwardingItem.of(KeyValuePair.of(key, value), target));
     }
 
     public void onReturnOnFalseSend(String key, Object value, Function<?> target){
-        onReturnOnFalseSend.add(OnReturnForwardItem.of(KeyValuePair.of(key, value), target));
+        onReturnOnFalseSend.add(ForwardingItem.of(KeyValuePair.of(key, value), target));
     }
 
     public void propagateOnFalse(String keyReceived, String keyToPropagate, Function target) {

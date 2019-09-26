@@ -5,8 +5,8 @@ import miso.ingredients.trace.TraceMessage;
 import miso.misc.Adresses;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import static miso.ingredients.Actresses.getStackTrace;
 import static miso.ingredients.Actresses.resolve;
 import static miso.ingredients.trace.TraceMessage.traced;
 
@@ -15,9 +15,12 @@ public abstract class Actress {
     public ActorRef aref;
     boolean debug = false;
     boolean trace = false;
+    boolean idle = false;
+    boolean stop = false;
+
     protected Actress tracer = resolveTracer();
 
-    public ActorRef getAref() {
+    public ActorRef aRef() {
         return aref;
     }
 
@@ -32,16 +35,14 @@ public abstract class Actress {
     public final Address address;
 
     public boolean idle() {
-        return true;
+        return idle;
     }
 
-    private AtomicBoolean stopping = new AtomicBoolean(false);
+    public void stop() {
+        stop = true;
+    }
 
     private long maxMessageId = 0L;
-
-    boolean isStopped() {
-        return true;
-    }
 
     protected Actress(Address address) {
         this.address = address;
@@ -66,15 +67,12 @@ public abstract class Actress {
 
     public abstract void process(Message message);
 
-    protected void stop() {
-        stopping.compareAndSet(false, true);
-    }
-
     public void tell(Message m) {
-        getAref().tell(m, m.origin.sender.aref);
+        aRef().tell(m, m.origin.sender.aref);
     }
 
     public void receive(Message m) {
+        idle = false;
         try {
             debug(m, m.origin, "!!");
             if (m.key.equals(Name.ack)) {
@@ -83,17 +81,17 @@ public abstract class Actress {
                 process(m);
             }
             if (m.ack == Acknowledge.Y) {
-                if (!(this instanceof Function)) {
-                    //TODO: that's messy
-                    throw new IllegalStateException();
-                }
-                m.origin.sender.getAref().tell(ackMsg(m), this.getAref());
+                m.origin.sender.aRef().tell(ackMsg(m), this.aRef());
             }
 
         } catch (Exception e) {
-            debug(this.address + " " + e.toString());
-            throw e;
+            Actresses.instance().abortFor(e, this);
         }
+        idle = true;
+    }
+
+    protected String getExceptionMessage(Message m, Exception e) {
+        return this.address + " " + m + "\n" + getStackTrace(e);
     }
 
     private Message ackMsg(Message m) {
@@ -105,7 +103,7 @@ public abstract class Actress {
 
     protected void trace(Message message) {
         if (trace) {
-            tracer.getAref().tell(traced(message, this), this.getAref());
+            tracer.aRef().tell(traced(message, this), this.aRef());
         }
     }
 
@@ -128,11 +126,20 @@ public abstract class Actress {
         }
     }
 
+    protected void log(String s) {
+        System.out.println(s);
+    }
+
     public void checkSanityOnStop() {
     }
 
     public void setTrace(boolean trace) {
         this.trace = trace;
         tracer = resolveTracer();
+    }
+
+    @Override
+    public String toString() {
+        return address.toString();
     }
 }

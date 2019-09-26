@@ -37,27 +37,35 @@ public class FunctionCall<T> extends Function<T> {
         trace(message);
 
         Origin origin = message.origin.sender(this);
-        if (message.hasKey(Name.result)) {
+        if (message.hasAnyKey(Name.result, Name.error)) {
             removeState(origin);
             // returnResult((T) message.value, origin); doesn't work here, the popping messes it up
             // it must be hdlOnReturn, popCall, returnTo.tell
-            hdlOnReturns(origin, onReturn);
+            if (message.hasKey(Name.result)) {
+                hdlForwarings(origin, onReturn);
+            }
 
             origin = origin.popCall();
-            if (!this.address.id.equals(origin.lastPopped)) {
-                throw new IllegalStateException();
+
+            if (!this.address.id.equals(origin.callStack.getLastPopped())) {
+                String fmt = "Function call %s attempted to pop itself, but found on stack %d";
+                throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.callStack.getLastPopped()));
             }
-           returnTo.tell(message(returnKey, (T) message.value, origin));
+
+            if (message.hasKey(Name.result)) {
+                returnTo.tell(message(returnKey, (T) message.value, origin));
+            } else {
+                returnTo.tell(message.origin(origin));
+            }
+
         } else {
             if (!isConst(message)) // const already comes with proper stack
             {
-                origin = origin.pushCall(this.address.id);
+                origin = origin.pushCall(this);
                 getState(origin);
             }
-
             function.tell(message.origin(origin));
         }
-
 
     }
 

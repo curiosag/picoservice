@@ -93,13 +93,27 @@ public class Trace extends Actress implements Closeable {
 
         CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
         CallStack stackReceiver = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
-        ;
 
-        if (functionCallReturning(m)) {
-            stackSender.push(m.traced().origin.lastPopped);
+        /*  call level matching: idea is to set each occurance of a function call, no matter if it sends or
+         *  receives messages to the same call level (call stack), so that the graph becomes connected
+         *
+         *       anything (but function signature and function call sending consts to itself)
+         *
+         *       /\ +1       |          1)  anything (receive) <-- call (send)
+         *       |           |              augment stack of sender
+         *       |           |          2)  call (receive) <-- anything (send)
+         *       |           V +1           augment stack of receiver
+         *
+         *       function call
+         *
+         * */
+        if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
+            stackSender = stackSender.push(m.traced().origin.sender.address.id);
         }
-        if (functionCallReceiving(m)) {
-            stackReceiver.push(m.receiver().address.id);
+
+        if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m))
+        {
+            stackReceiver = stackReceiver.push(m.receiver().address.id);
         }
 
         long exId = m.origin.functionCallTreeNode().getExecutionId();
@@ -110,11 +124,11 @@ public class Trace extends Actress implements Closeable {
                 payload(m.traced())));
     }
 
-    private boolean functionCallReceiving(TraceMessage m) {
+    private boolean fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(TraceMessage m) {
         return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.sender.equals(m.receiver())) && !(m.traced().origin.sender instanceof FunctionSignature);
     }
 
-    private boolean functionCallReturning(TraceMessage m) {
+    private boolean fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(TraceMessage m) {
         return (m.traced().origin.sender instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.sender)) && !(m.receiver() instanceof FunctionSignature);
     }
 

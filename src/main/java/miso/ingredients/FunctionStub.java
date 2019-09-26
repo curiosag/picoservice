@@ -1,5 +1,7 @@
 package miso.ingredients;
 
+import static miso.ingredients.Message.message;
+
 public class FunctionStub<T> extends Function<T> {
 
     final String keyFunctionParameter;
@@ -26,17 +28,25 @@ public class FunctionStub<T> extends Function<T> {
     }
 
     @Override
-    public void process(Message message) {
-        trace(message);
+    public void process(Message m) {
+        trace(m);
 
-        FunctionStubState state = (FunctionStubState) getState(message.origin);
-        if (message.key.equals(Name.result)) {
-            removeState(state.origin);
-            returnResult((T) message.value, state.origin.sender(this));
-            return;
+        FunctionStubState state = (FunctionStubState) getState(m.origin);
+        switch (m.key) {
+            case Name.result: {
+                removeState(state.origin);
+                returnResult((T) m.value, state.origin.sender(this));
+                break;
+            }
+            case Name.error: {
+                removeState(state.origin);
+                returnTo.aRef().tell(message(m.key, m.value, m.origin.sender(this)), this.aRef());
+                break;
+            }
+            default:
+                state.forward(m.origin(m.origin.sender(this)));
         }
 
-        state.forward(message.origin(message.origin.sender(this)));
     }
 
     @Override

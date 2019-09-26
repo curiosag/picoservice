@@ -8,6 +8,7 @@ public class UnOp<T, V> extends Function<V> {
 
     public class UnOpState extends State {
         Object arg;
+
         UnOpState(Origin origin) {
             super(origin);
         }
@@ -37,25 +38,8 @@ public class UnOp<T, V> extends Function<V> {
             state.arg = getValue(m, Name.arg);
         }
         if (state.arg != null) {
-            try {
-                T val = convert(state.arg);
-                try {
-                    returnResult(op.apply(val), m.origin.sender(this));
-                    removeState(state.origin);
-                } catch (Exception e) {
-                    throw e;
-                }
-            } catch (Exception e) {
-                throw e;
-            }
-        }
-    }
-
-    private T convert(Object leftArg) {
-        try {
-            return converter.apply(leftArg);
-        } catch (Exception e) {
-            throw new IllegalStateException();
+            returnResult(op.apply(converter.apply(state.arg)), m.origin.sender(this));
+            removeState(state.origin);
         }
     }
 

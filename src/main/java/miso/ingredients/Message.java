@@ -1,5 +1,7 @@
 package miso.ingredients;
 
+import java.util.Arrays;
+
 public class Message {
     public final String id;
     public final Object value;
@@ -37,6 +39,11 @@ public class Message {
     public boolean hasKey(String value)
     {
         return key.equals(value);
+    };
+
+    public boolean hasAnyKey(String ... keys)
+    {
+        return Arrays.asList(keys).contains(key);
     };
 
     @Override

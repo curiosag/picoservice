@@ -93,13 +93,22 @@ public class Trace extends Actress implements Closeable {
 
         CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
         CallStack stackReceiver = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
-        ;
 
-        if (functionCallReturning(m)) {
-            stackSender.push(m.traced().origin.lastPopped);
-        }
-        if (functionCallReceiving(m)) {
+        /*
+         *       anything (but function signature and function call sending consts to itself)
+         *       /\          .
+         *       .           .
+         *       .           .
+         *       . +1        V +1
+         *       function call
+         *
+         * */
+        if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m))
+        {
             stackReceiver.push(m.receiver().address.id);
+        }
+        if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
+            stackSender.push(m.traced().origin.callStack.getLastPopped());
         }
 
         long exId = m.origin.functionCallTreeNode().getExecutionId();
@@ -110,11 +119,11 @@ public class Trace extends Actress implements Closeable {
                 payload(m.traced())));
     }
 
-    private boolean functionCallReceiving(TraceMessage m) {
+    private boolean fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(TraceMessage m) {
         return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.sender.equals(m.receiver())) && !(m.traced().origin.sender instanceof FunctionSignature);
     }
 
-    private boolean functionCallReturning(TraceMessage m) {
+    private boolean fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(TraceMessage m) {
         return (m.traced().origin.sender instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.sender)) && !(m.receiver() instanceof FunctionSignature);
     }
 

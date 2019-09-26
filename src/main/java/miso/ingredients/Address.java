@@ -34,6 +34,6 @@ public class Address {
 
     @Override
     public String toString() {
-        return String.format("{%s(%s)}", value, label);
+        return String.format("{%d %s(%s)}", id, value, label);
     }
 }

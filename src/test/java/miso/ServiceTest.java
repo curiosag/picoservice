@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,6 +48,7 @@ public class ServiceTest {
         Actresses.shutdown();
         Actresses.reset();
     }
+
 
     @Test
     public void testLambda() {
@@ -102,7 +104,63 @@ public class ServiceTest {
     }
 
     @Test
-    public void testSingleLambda() {
+    public void testErrorHandling() {
+
+        /*
+                function div(a) = 8 / a
+                function apply(func, a) = func(a)
+
+                check(apply(div, a))
+         */
+
+        Function<Integer> div = BinOps.div().constant(Name.leftArg, 8);
+        div.label(" div ");
+        FunctionSignature<Integer> functionSignatureDiv = functionSignature(div);
+        functionSignatureDiv.propagate(Name.a, Name.rightArg, div);
+        functionSignatureDiv.label("DIV");
+
+        //function apply(func, a) = func(a)
+        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+        stubFunc.label("funcStub");
+
+        FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
+        functionSignatureApply.propagate(Name.a, Name.a, stubFunc);
+        functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
+        functionSignatureApply.label("APPLY");
+
+        // check(apply(div, a))
+        FunctionCall<Integer> functionCallApply = functionCall(functionSignatureApply);
+        functionCallApply.label("functionCallApply");
+
+        AtomicReference<Message> result = new AtomicReference<>(null);
+
+        Action resultListener = action(result::set);
+        resultListener.param(Name.result);
+        resultListener.param(Name.error);
+        functionCallApply.returnTo(resultListener, Name.result);
+
+        Origin origin = Origin.origin(resultListener);
+        functionCallApply.tell(message(Name.func, functionSignatureDiv, origin));
+
+        result.set(null);
+        functionCallApply.tell(message(Name.a, _2, origin));
+        await(() -> result.get() != null);
+        assertEquals(_4, result.get().value);
+
+        result.set(null);
+        functionCallApply.tell(message(Name.func, functionSignatureDiv, origin));
+        functionCallApply.tell(message(Name.a, _0, origin));
+        await(() -> result.get() != null);
+        assertEquals(Name.error, result.get().key);
+        assertTrue(((Err)result.get().value).exception instanceof ArithmeticException);
+
+
+
+
+    }
+
+    @Test
+    public void testApplySingleLambda() {
         /*
                 function mul(a) = a * 2
                 function apply(func, a) = func(a)
@@ -121,11 +179,12 @@ public class ServiceTest {
 
         //function apply(func, a) = func(a)
         FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
-        stubFunc.label("stubFunc");
+        stubFunc.label("funcStub");
 
         FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
         functionSignatureApply.propagate(Name.a, Name.a, stubFunc);
         functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
+        functionSignatureApply.label("APPLY");
 
         // check(apply(mul, a))
         FunctionCall<Integer> functionCallApply = functionCall(functionSignatureApply);
@@ -136,10 +195,18 @@ public class ServiceTest {
         functionCallApply.returnTo(resultListener, Name.result);
 
         Origin origin = Origin.origin(resultListener);
+
+        result.setValue(0);
         functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
         functionCallApply.tell(message(Name.a, _3, origin));
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(6), result.value);
+
+        result.setValue(0);
+        functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
+        functionCallApply.tell(message(Name.a, _1, origin));
+        await(() -> result.value != 0);
+        assertEquals(Integer.valueOf(2), result.value);
 
     }
 
@@ -343,7 +410,7 @@ public class ServiceTest {
         functionCallApply.returnTo(resultListener, Name.result);
 
         resultListener.propagate(Name.b, Name.b, partialAdd);
-        resultListener.onReturnReceivedSend(Name.removePartialAppValues, null, partialAdd);
+        resultListener.onReceivedReturnSend(Name.removePartialAppValues, null, partialAdd);
         resultListener.tell(message(Name.b, _1, origin));
 
         functionCallApply.tell(message(Name.func, partialAdd, origin));
@@ -1031,6 +1098,8 @@ public class ServiceTest {
             echo(sum(3));
          */
 
+        Actresses.trace();
+
         Int result = Int(0);
         Action resultMonitor = action(i -> result.setValue((int) i.value));
         resultMonitor.param(Name.result);
@@ -1066,16 +1135,17 @@ public class ServiceTest {
         add.returnTo(_if, Name.onFalse);
         sumCall.returnTo(resultMonitor, Name.result);
 
-        int runId = 0;
-        checksum(result, resultMonitor, runId++, 0, 0);
-        checksum(result, resultMonitor, runId++, 1, 1);
-        checksum(result, resultMonitor, runId++, 2, 3);
-        checksum(result, resultMonitor, runId++, 10, 11 * 5);
-        checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
-        checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
-        //checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
 
-        testParallelRecursion(sumCall);
+        int runId = 0;
+//        checksum(result, resultMonitor, runId++, 0, 0);
+//        checksum(result, resultMonitor, runId++, 1, 1);
+//        checksum(result, resultMonitor, runId++, 2, 3);
+        checksum(result, resultMonitor, runId++, 10, 11 * 5);
+//        checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
+//        checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
+//        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+//
+//        testParallelRecursion(sumCall);
     }
 
     private void testParallelRecursion(Function<Integer> sumCall) {

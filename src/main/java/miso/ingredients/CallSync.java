@@ -8,7 +8,7 @@ import static miso.ingredients.Message.message;
 public class CallSync<T> extends Function<T> {
 
     private final Function<T> f;
-    private T result;
+    private Message resultMessage;
     private static Long executions = 0L;
 
     private Map<String, Integer> params = new HashMap<>();
@@ -28,6 +28,7 @@ public class CallSync<T> extends Function<T> {
     }
 
     public T call() {
+        resultMessage = null;
         Origin origin = Origin.origin(this, executions++, 0L, new CallStack());
         if (params.size() == 0) {
             f.tell(message(Name.kickOff, null, origin));
@@ -36,12 +37,19 @@ public class CallSync<T> extends Function<T> {
         }
 
         while (true) {
-            if (result != null) {
-                return result;
+            if (resultMessage != null) {
+                if (resultMessage.key.equals(Name.error)) {
+                    Err e = (Err) resultMessage.value;
+                    throw new RuntimeException(e.exception);
+                } else {
+                    return (T) resultMessage.value;
+                }
             }
             waitSome();
         }
+
     }
+
 
     private void waitSome() {
         try {
@@ -56,7 +64,7 @@ public class CallSync<T> extends Function<T> {
         if (message.value == null || !message.hasKey(Name.result)) {
             throw new IllegalStateException();
         }
-        result = (T) message.value;
+        resultMessage = message;
     }
 
     @Override

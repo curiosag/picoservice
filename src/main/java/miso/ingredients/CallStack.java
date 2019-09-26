@@ -16,6 +16,7 @@ public class CallStack {
 
     private int size = 0;
 
+    private Integer lastPopped;
 
     public CallStack() {
     }
@@ -24,30 +25,44 @@ public class CallStack {
         addAll(takeFrom);
     }
 
-    //TODO: make callstack immutable
-    public void push(int functionId) {
+
+    public Integer getLastPopped() {
+        return lastPopped;
+    }
+
+    public CallStack push(int functionId) {
+        return new CallStack(this).pushInternal(functionId);
+    }
+
+    private CallStack pushInternal(int functionId) {
         size++;
         if (stack.isEmpty() || stack.peek().functionId != functionId) {
             stack.push(new CallStackItem(functionId));
         } else {
             stack.peek().recalls++;
         }
+        return this;
     }
 
-    public int pop() {
+    public CallStack pop(){
+        return new CallStack(this).popInternal();
+    }
+
+    private CallStack popInternal() {
         Guards.isFalse(stack.isEmpty());
         size--;
         CallStackItem item = stack.peek();
-        int result = item.functionId;
+        lastPopped = item.functionId;
         if (item.recalls > 1) {
             item.recalls--;
         } else {
             stack.pop();
         }
-        return result;
+
+        return this;
     }
 
-    public void addAll(CallStack other) {
+    private void addAll(CallStack other) {
         //concurrent modifications on other may happen
         for (ListIterator<CallStackItem> it = other.stack.listIterator(); it.hasNext(); ) {
             CallStackItem item = it.next();
@@ -87,7 +102,7 @@ public class CallStack {
             return false;
         }
 
-        for (int i = that.stack.size() - 1; i > 0 ; i--) {
+        for (int i = that.stack.size() - 1; i > 0; i--) {
             thisItem = this.stack.get(i);
             thatItem = that.stack.get(i);
             if (!(thisItem.functionId == thatItem.functionId && thisItem.recalls == thatItem.recalls)) {

@@ -6,34 +6,21 @@ public class Origin {
     public final Function<?> sender;
     public final Long executionId;
     public final Long seqNr;
-    public final CallStack callStack = new CallStack();
-    public final Integer lastPopped;
+    public final CallStack callStack;
 
-    public Origin pushCall(Integer id) {
-        CallStack stack = new CallStack(callStack);
-        stack.push(id);
-        return new Origin(sender, executionId, seqNr, stack, lastPopped);
-    }
-
-    public Origin popCall() {
-        CallStack stack = new CallStack(callStack);
-        return new Origin(sender, executionId, seqNr, stack, stack.pop());
-    }
-
-    private Origin(Function<?> sender, Long executionId, Long seqNr, CallStack callStack, Integer lastPopped) {
+    Origin(Function<?> sender, Long executionId, Long seqNr, CallStack callStack) {
         this.sender = sender;
         this.executionId = executionId;
         this.seqNr = seqNr;
-        this.callStack.addAll(callStack);
-        this.lastPopped = lastPopped;
+        this.callStack = callStack;
     }
 
     public static Origin origin(Function<?> sender) {
-        return new Origin(sender,  0L, 0L, new CallStack(), null);
+        return new Origin(sender, 0L, 0L, new CallStack());
     }
 
     public static Origin origin(Function<?> sender, Long executionId, Long seqNr, CallStack callStack) {
-        return new Origin(sender, executionId, seqNr, callStack, null);
+        return new Origin(sender, executionId, seqNr, callStack);
     }
 
     Origin sender(Function<?> sender) {
@@ -56,11 +43,21 @@ public class Origin {
     }
 
     private FunctionCallTreeLocation functionCallTreeLocation;
-    public FunctionCallTreeLocation functionCallTreeNode(){
-        if (functionCallTreeLocation == null)
-        {
+
+    public FunctionCallTreeLocation functionCallTreeNode() {
+        if (functionCallTreeLocation == null) {
             functionCallTreeLocation = new FunctionCallTreeLocation(this);
         }
         return functionCallTreeLocation;
+    }
+
+    Origin popCall() {
+        CallStack stack = callStack.pop();
+        return new Origin(sender, executionId, seqNr, stack);
+    }
+
+    Origin pushCall(FunctionCall functionCall) {
+        CallStack stack = callStack.push(functionCall.address.id);
+        return new Origin(sender, executionId, seqNr, stack);
     }
 }

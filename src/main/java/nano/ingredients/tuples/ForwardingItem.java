@@ -2,21 +2,22 @@ package nano.ingredients.tuples;
 
 import nano.ingredients.Function;
 
-public class ForwardingItem extends Tuple<KeyValuePair, Function<?>> {
+public class ForwardingItem extends SerializableTuple<SerializableKeyValuePair, Function<?>> {
 
-    private ForwardingItem(KeyValuePair left, Function<?> right) {
+    private ForwardingItem(SerializableKeyValuePair left, Function<?> right) {
         super(left, right);
     }
 
-    public static ForwardingItem of(KeyValuePair left, Function<?> right){
+    public static ForwardingItem of(SerializableKeyValuePair left, Function<?> right){
         return new ForwardingItem(left,right);
     }
 
-    public KeyValuePair keyValuePair(){
+    public SerializableKeyValuePair keyValuePair(){
         return left;
     }
 
     public Function<?> target(){
         return right;
     }
+
 }

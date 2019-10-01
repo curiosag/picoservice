@@ -1,9 +1,11 @@
 package nano.ingredients;
 
 
+import java.io.Serializable;
 import java.util.function.BiFunction;
 
-public class BinOp<T, U, V> extends Function<V> {
+public class BinOp<T extends Serializable, U extends Serializable, V extends Serializable> extends Function<V> {
+    private static final long serialVersionUID = 0L;
 
     private final BiFunction<T, U, V> op;
     private final java.util.function.Function<Object, T> tConverter;

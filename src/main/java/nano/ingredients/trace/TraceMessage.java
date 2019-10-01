@@ -1,24 +1,24 @@
 package nano.ingredients.trace;
 
 import nano.ingredients.*;
-import nano.ingredients.tuples.Tuple;
+import nano.ingredients.tuples.SerializableTuple;
 
 public class TraceMessage extends Message {
 
     private TraceMessage(Message m, Actress receiver) {
-        super(Name.senderReceiverTuple, Tuple.of(m, receiver), m.origin);
+        super(Name.senderReceiverTuple, SerializableTuple.of(m, receiver), m.origin);
     }
 
     public static TraceMessage traced(Message m, Actress receiver){
         return new TraceMessage(m, receiver);
     };
 
-    private Tuple<Message, Actress> getValue(){
-        return (Tuple<Message, Actress>) value;
+    private SerializableTuple<Message, Actress> getTracedValue(){
+        return (SerializableTuple<Message, Actress>) getValue();
     }
 
     public Message traced(){
-        return getValue().left;
+        return getTracedValue().left;
     }
 
     public Origin sender(){
@@ -26,7 +26,7 @@ public class TraceMessage extends Message {
     }
 
     public Actress receiver(){
-        return getValue().right;
+        return getTracedValue().right;
     }
 
 }

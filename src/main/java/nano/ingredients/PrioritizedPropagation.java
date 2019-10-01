@@ -5,7 +5,7 @@ import nano.ingredients.guards.Guards;
 import java.util.ArrayList;
 import java.util.List;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.wire;
 
 public class PrioritizedPropagation extends Function {
 

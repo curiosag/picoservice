@@ -1,11 +1,13 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-class CallStackItem {
+class CallStackItem implements Serializable {
+    private static final long serialVersionUID = 0L;
 
-    public final int functionId;
-    public int recalls = 1;
+    final Long functionId;
+    int recalls = 1;
 
     /*
      *   say function f has id 1
@@ -18,11 +20,11 @@ class CallStackItem {
      *   Indirect recursion will prevent this kind of optimization
      *
      * */
-    CallStackItem(int functionId) {
+    CallStackItem(Long functionId) {
         this.functionId = functionId;
     }
 
-    CallStackItem(int functionId, int recalls) {
+    CallStackItem(Long functionId, int recalls) {
         this.functionId = functionId;
         this.recalls = recalls;
     }

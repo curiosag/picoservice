@@ -2,13 +2,14 @@ package nano.ingredients;
 
 import nano.ingredients.guards.Guards;
 
-import java.util.ListIterator;
-import java.util.Objects;
-import java.util.Stack;
+import java.io.Serializable;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class CallStack {
-    private final Stack<CallStackItem> stack = new Stack<>();
+public class CallStack implements Serializable {
+    private static final long serialVersionUID = 0L;
+
+    public final Stack<CallStackItem> stack = new Stack<>();
 
     public int size() {
         return size;
@@ -16,27 +17,42 @@ public class CallStack {
 
     private int size = 0;
 
-    private Integer lastPopped;
+    private Long lastPopped;
 
     public CallStack() {
     }
 
-    public CallStack(CallStack takeFrom) {
-        addAll(takeFrom);
+    private static Map<Integer, String> points = new HashMap<>();
+
+    static String points(CallStack s) {
+        String result = points.get(s.size);
+        if (result == null) {
+            result = String.format("%3d %s", s.size, String.join("", Collections.nCopies(s.size, "*")));
+            points.put(s.size, result);
+        }
+        return result;
+    }
+
+    private CallStack(CallStack other) {
+        lastPopped = other.lastPopped;
+        for (CallStackItem item : other.stack) {
+            stack.add(new CallStackItem(item.functionId, item.recalls));
+        }
+        size = stack.stream().map(i -> i.recalls).reduce(0, (i, j) -> i + j);
     }
 
 
-    public Integer getLastPopped() {
+    Long getLastPopped() {
         return lastPopped;
     }
 
-    public CallStack push(int functionId) {
+    public CallStack push(Long functionId) {
         return new CallStack(this).pushInternal(functionId);
     }
 
-    private CallStack pushInternal(int functionId) {
+    private CallStack pushInternal(Long functionId) {
         size++;
-        if (stack.isEmpty() || stack.peek().functionId != functionId) {
+        if (stack.isEmpty() || !stack.peek().functionId.equals(functionId)) {
             stack.push(new CallStackItem(functionId));
         } else {
             stack.peek().recalls++;
@@ -44,7 +60,7 @@ public class CallStack {
         return this;
     }
 
-    public CallStack pop(){
+    CallStack pop() {
         return new CallStack(this).popInternal();
     }
 
@@ -62,20 +78,10 @@ public class CallStack {
         return this;
     }
 
-    private void addAll(CallStack other) {
-        //concurrent modifications on other may happen
-        for (ListIterator<CallStackItem> it = other.stack.listIterator(); it.hasNext(); ) {
-            CallStackItem item = it.next();
-            stack.add(new CallStackItem(item.functionId, item.recalls));
-        }
-        size = stack.stream().map(i -> i.recalls).reduce(0, (i, j) -> i + j);
-    }
 
     @Override
     public String toString() {
-        CallStack calcFrom = new CallStack();
-        calcFrom.addAll(this);
-        return calcFrom.stack.stream()
+        return stack.stream()
                 .map(i -> {
                     if (i.recalls == 1) {
                         return String.valueOf(i.functionId);
@@ -86,7 +92,7 @@ public class CallStack {
                 .collect(Collectors.joining("/"));
     }
 
-    public boolean startsWith(CallStack that) {
+    boolean startsWith(CallStack that) {
         if (this.stack.size() < that.stack.size()) {
             return false;
         }
@@ -98,14 +104,14 @@ public class CallStack {
         thisItem = this.stack.get(that.stack.size() - 1);
         thatItem = that.stack.get(that.stack.size() - 1);
 
-        if (!(thisItem.functionId == thatItem.functionId && thisItem.recalls >= thatItem.recalls)) {
+        if (!(thisItem.functionId.equals(thatItem.functionId) && thisItem.recalls >= thatItem.recalls)) {
             return false;
         }
 
         for (int i = that.stack.size() - 1; i > 0; i--) {
             thisItem = this.stack.get(i);
             thatItem = that.stack.get(i);
-            if (!(thisItem.functionId == thatItem.functionId && thisItem.recalls == thatItem.recalls)) {
+            if (!(thisItem.functionId.equals(thatItem.functionId) && thisItem.recalls == thatItem.recalls)) {
                 return false;
             }
         }

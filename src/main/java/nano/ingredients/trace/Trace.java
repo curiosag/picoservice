@@ -25,7 +25,6 @@ public class Trace extends Actress implements Closeable {
         return this;
     }
 
-    @Override
     public void setTrace(boolean active) {
         if (writer != null) {
             close();
@@ -39,7 +38,7 @@ public class Trace extends Actress implements Closeable {
     }
 
     public Trace(boolean active) {
-        super(new Address(Adresses.trace, 0));
+        super(new Address(Adresses.trace, 0L));
         setTrace(active);
     }
 
@@ -69,15 +68,15 @@ public class Trace extends Actress implements Closeable {
 
     private String payload(Message m) {
         String value;
-        if (m.value == null) {
+        if (m.getValue() == null) {
             value = "NULL";
-        } else if (m.value instanceof Actress) {
-            value = node((Actress) m.value);
+        } else if (m.getValue() instanceof Actress) {
+            value = node((Actress) m.getValue());
         } else {
-            value = (m.value).toString();
+            value = (m.getValue()).toString();
         }
 
-        return '"' + String.format("<%d>(%d/%d)%s:", m.origin.seqNr, m.origin.executionId, m.origin.callStack.size(), m.key) + value
+        return '"' + String.format("(%d/%d)%s:", m.origin.executionId, m.origin.callStack.size(), m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -88,14 +87,13 @@ public class Trace extends Actress implements Closeable {
             return;
         }
 
-        String labelSender = node(m.traced().origin.sender);
+        String labelSender = node(m.traced().origin.getSender());
         String labelReceiver = node(m.receiver());
 
-        CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
-        CallStack stackReceiver = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
 
-        /*  call level matching: idea is to set each occurance of a function call, no matter if it sends or
-         *  receives messages to the same call level (call stack), so that the graph becomes connected
+        /*  call level matching: idea is to set each occurence of a function call in trace messages
+         *  to the same call level (call stack), no matter if it sends or receives messages.
+         *  This way the graph becomes connected.
          *
          *       anything (but function signature and function call sending consts to itself)
          *
@@ -107,16 +105,18 @@ public class Trace extends Actress implements Closeable {
          *       function call
          *
          * */
-        if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
-            stackSender = stackSender.push(m.traced().origin.sender.address.id);
-        }
 
-        if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m))
-        {
-            stackReceiver = stackReceiver.push(m.receiver().address.id);
-        }
+        CallStack stack = m.traced().origin.callTreePath().getCallStack();
 
-        long exId = m.origin.functionCallTreeNode().getExecutionId();
+        CallStack stackSender = fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)
+                ? stack.push(m.traced().origin.getSender().address.id)
+                : stack;
+
+        CallStack stackReceiver = fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)
+                ? stack.push(m.receiver().address.id)
+                : stack;
+
+        long exId = m.origin.callTreePath().getExecutionId();
 
         writeLn(String.format("%s -> %s [label=%s];",
                 renderNode(labelSender, exId + "//" + stackSender),
@@ -125,11 +125,11 @@ public class Trace extends Actress implements Closeable {
     }
 
     private boolean fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(TraceMessage m) {
-        return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.sender.equals(m.receiver())) && !(m.traced().origin.sender instanceof FunctionSignature);
+        return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.getSender().equals(m.receiver())) && !(m.traced().origin.getSender() instanceof FunctionSignature);
     }
 
     private boolean fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(TraceMessage m) {
-        return (m.traced().origin.sender instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.sender)) && !(m.receiver() instanceof FunctionSignature);
+        return (m.traced().origin.getSender() instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.getSender())) && !(m.receiver() instanceof FunctionSignature);
     }
 
     private String renderNode(String label, String stack) {

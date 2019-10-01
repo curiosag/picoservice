@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.wire;
 import static nano.ingredients.Nop.nop;
 
 public class Action extends Function {
@@ -20,6 +20,7 @@ public class Action extends Function {
 
     public Action() {
         super();
+        Ensemble.instance().enlist(this);
     }
 
     @Override

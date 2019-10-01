@@ -2,29 +2,30 @@ package nano.ingredients;
 
 import nano.ingredients.guards.Guards;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.wire;
 import static nano.ingredients.guards.Guards.notEmpty;
 
-public class PartialFunctionApplication<T> extends FunctionSignature<T> {
+public class PartialFunctionApplication<T extends Serializable> extends FunctionSignature<T> {
 
     final List<String> partialAppParams = new ArrayList<>();
     // Map<ExecutionId, stack of preset values of partial function applications>
-    public final Map<FunctionCallTreeLocation, Map<String, Object>> partialAppValues = new ConcurrentHashMap<>();
+    public final Map<FunctionCallTreeLocation, Map<String, Serializable>> partialAppValues = new ConcurrentHashMap<>();
 
     protected PartialFunctionApplication(Function<T> body, List<String> partialAppParams) {
         super(body);
         this.partialAppParams.addAll(partialAppParams);
     }
 
-    public static <T> PartialFunctionApplication<T> partialApplication(Function<T> body, String key) {
+    public static <T extends Serializable> PartialFunctionApplication<T> partialApplication(Function<T> body, String key) {
         return partialApplication(body, Collections.singletonList(key));
     }
 
-    public static <T> PartialFunctionApplication<T> partialApplication(Function<T> body, List<String> keys) {
+    public static <T extends Serializable> PartialFunctionApplication<T> partialApplication(Function<T> body, List<String> keys) {
         PartialFunctionApplication<T> result = new PartialFunctionApplication<>(body, keys);
         wire(result);
         return result;
@@ -46,9 +47,9 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     protected void setPartialAppParamValue(Message m) {
         if (isPartialAppParam(m)) {
-            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallTreeNode(), k -> new HashMap<>());
+            Map<String, Serializable> partials = partialAppValues.computeIfAbsent(m.origin.callTreePath(), k -> new HashMap<>());
             debug(m, m.origin, String.format(" << addPartialAppParamValue (%d) << ", partials.size()));
-            partials.put(m.key, m.value);
+            partials.put(m.key, m.getValue());
         }
     }
 
@@ -56,7 +57,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     protected void forwardPartialAppParamValues(FunctionSignatureState s) {
         Guards.isFalse(s.partialApplicationValuesForwarded);
 
-        Map<String, Object> values = getPartialAppValues(s.origin);
+        Map<String, Serializable> values = getPartialAppValues(s.origin);
         Origin o = s.origin.sender(this);
 
         values.forEach((key, value) -> super.process(Message.message(key, value, o)));
@@ -66,11 +67,11 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     }
 
-    public Map<String, Object> getPartialAppValues(Origin o) {
+    public Map<String, Serializable> getPartialAppValues(Origin o) {
 
-        List<Map.Entry<FunctionCallTreeLocation, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
-                .filter(e -> o.functionCallTreeNode().getExecutionId().equals(e.getKey().getExecutionId()))
-                .filter(e -> o.functionCallTreeNode().getCallStack().startsWith(e.getKey().getCallStack()))
+        List<Map.Entry<FunctionCallTreeLocation, Map<String, Serializable>>> matches = partialAppValues.entrySet().stream()
+                .filter(e -> o.callTreePath().getExecutionId().equals(e.getKey().getExecutionId()))
+                .filter(e -> o.callTreePath().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());
 
@@ -81,7 +82,7 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
 
     @Override
     public void removePartialAppValues(Origin o) {
-        partialAppValues.remove(o.functionCallTreeNode());
+        partialAppValues.remove(o.callTreePath());
     }
 
 

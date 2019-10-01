@@ -1,10 +1,13 @@
 package nano.ingredients;
 
 
-public class UnOp<T, V> extends Function<V> {
+import java.io.Serializable;
+
+public class UnOp<T extends Serializable, V extends Serializable> extends Function<V> {
+    private static final long serialVersionUID = 0L;
 
     private final java.util.function.Function<T, V> op;
-    private final java.util.function.Function<Object, T> converter;
+    private java.util.function.Function<Object, T> converter;
 
     public class UnOpState extends State {
         Object arg;

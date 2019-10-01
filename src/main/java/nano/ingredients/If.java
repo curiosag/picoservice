@@ -1,11 +1,12 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.wire;
 
-public class If<T> extends Function<T> {
+public class If<T extends Serializable> extends Function<T> {
 
 
     private static final List<String> parameters = Arrays. asList(Name.condition, Name.onFalse, Name.onTrue);
@@ -46,15 +47,15 @@ public class If<T> extends Function<T> {
         If.StateIf state = (If.StateIf) s;
 
         if (m.hasKey(Name.condition)) {
-            state.decision = (Boolean) m.value;
+            state.decision = (Boolean) m.getValue();
         }
 
         if (m.hasKey(Name.onTrue)) {
-            state.onTrue = m.value;
+            state.onTrue = m.getValue();
         }
 
         if (m.hasKey(Name.onFalse)) {
-            state.onFalse = m.value;
+            state.onFalse = m.getValue();
         }
 
         if (isTrue(state.decision) && computed(state.onTrue)) {

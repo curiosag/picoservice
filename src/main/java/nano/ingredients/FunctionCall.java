@@ -1,9 +1,11 @@
 package nano.ingredients;
 
-import static nano.ingredients.Actresses.wire;
+import java.io.Serializable;
+
+import static nano.ingredients.Ensemble.wire;
 import static nano.ingredients.Message.message;
 
-public class FunctionCall<T> extends Function<T> {
+public class FunctionCall<T extends Serializable> extends Function<T> {
 
     private final Function<T> function;
 
@@ -11,7 +13,7 @@ public class FunctionCall<T> extends Function<T> {
         this.function = f;
     }
 
-    public static <T> FunctionCall<T> functionCall(Function<T> body) {
+    public static <T extends Serializable > FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
         wire(result);
         return result;
@@ -53,7 +55,7 @@ public class FunctionCall<T> extends Function<T> {
             }
 
             if (message.hasKey(Name.result)) {
-                returnTo.tell(message(returnKey, (T) message.value, origin));
+                returnTo.tell(message(returnKey, (T) message.getValue(), origin));
             } else {
                 returnTo.tell(message.origin(origin));
             }
@@ -69,8 +71,10 @@ public class FunctionCall<T> extends Function<T> {
 
     }
 
+
+
     private boolean isConst(Message message) {
-        return message.origin.sender.equals(this);
+        return message.origin.getSender().equals(this);
     }
 
 }

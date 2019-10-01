@@ -1,14 +1,17 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class FunctionCallTreeLocation {
+public class FunctionCallTreeLocation implements Serializable {
+    private static final long serialVersionUID = 0L;
+
     public final Origin origin;
     private final String stackString;
 
     public FunctionCallTreeLocation(Origin origin) {
         this.origin = origin;
-        this.stackString = origin.executionId.toString() + '/' + origin.callStack.toString();
+        this.stackString = origin.executionId + '/' + origin.callStack.toString();
     }
 
     public Long getExecutionId() {

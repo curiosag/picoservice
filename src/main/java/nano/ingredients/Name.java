@@ -39,4 +39,5 @@ public interface Name {
     String removePartialAppValues = "removePartialAppValues";
     String removeState = "removeState";
     String ack = "ack";
+    String createFunctionCall = "createFunctionCall";
 }

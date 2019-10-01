@@ -1,6 +1,8 @@
 package nano.ingredients;
 
-public class Nop extends Function<Object> {
+import java.io.Serializable;
+
+public class Nop extends Function<Serializable> {
 
     public static Nop nop = createNop();
 
@@ -9,6 +11,10 @@ public class Nop extends Function<Object> {
         result.address.value = "nop";
         result.address.label = "~~~~~~~~";
         return result;
+    }
+    @Override
+    Address createAddress() {
+        return new Address(this.getClass().getSimpleName(), -1L); //can't have an assigned id, it would sabotage recoveries in test
     }
 
     @Override

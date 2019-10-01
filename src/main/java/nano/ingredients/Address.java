@@ -1,16 +1,18 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class Address {
+public class Address implements Serializable {
+    private static final long serialVersionUID = 0L;
 
-    public Integer id;
+    public Long id;
 
     public String value;
 
     public String label = "";
 
-    public Address(String value, Integer id) {
+    public Address(String value, Long id) {
         this.value = value + "-" + id;
         this.id = id;
     }

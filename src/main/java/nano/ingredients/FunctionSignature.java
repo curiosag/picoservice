@@ -1,9 +1,11 @@
 package nano.ingredients;
 
-import static nano.ingredients.Actresses.wire;
+import java.io.Serializable;
+
+import static nano.ingredients.Ensemble.wire;
 import static nano.ingredients.Origin.origin;
 
-public class FunctionSignature<T> extends Function<T> {
+public class FunctionSignature<T extends Serializable> extends Function<T> {
 
     public final Function<T> body;
 
@@ -26,7 +28,7 @@ public class FunctionSignature<T> extends Function<T> {
         body.returnTo(this, Name.result);
     }
 
-    public static <T> FunctionSignature<T> functionSignature(Function<T> body) {
+    public static <T extends Serializable > FunctionSignature<T> functionSignature(Function<T> body) {
         FunctionSignature<T> result = new FunctionSignature<>(body);
         wire(result);
         return result;
@@ -69,7 +71,7 @@ public class FunctionSignature<T> extends Function<T> {
         if(m.key.equals(Name.error))
         {
             FunctionSignatureState state = (FunctionSignatureState) getState(m.origin);
-            state.origin.sender.tell(m.origin(m.origin.sender(this)));
+            state.origin.getSender().tell(m.origin(m.origin.sender(this)));
             removeState(state.origin);
         }
 
@@ -86,11 +88,11 @@ public class FunctionSignature<T> extends Function<T> {
     }
 
     private boolean isDownstreamMessage(Message m) {
-        return (m.origin.sender instanceof FunctionCall);
+        return (m.origin.getSender() instanceof FunctionCall);
     }
 
     private boolean forwardingPartialAppParamValues(Message m) {
-        return m.origin.sender.equals(this) && isPartialAppParam(m);
+        return m.origin.getSender().equals(this) && isPartialAppParam(m);
     }
 
     @Override
@@ -98,8 +100,8 @@ public class FunctionSignature<T> extends Function<T> {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
             hdlForwarings(state.origin, onReturn);
-            Origin o = origin(this, m.origin.executionId, m.origin.seqNr + 1L, m.origin.callStack);
-            state.origin.sender.tell(m.origin(o));
+            Origin o = origin(this, m.origin.executionId, m.origin.callStack, m.origin.prevFunctionCallId, m.origin.lastFunctionCallId);
+            state.origin.getSender().tell(m.origin(o));
             removeState(state.origin);
         }
     }

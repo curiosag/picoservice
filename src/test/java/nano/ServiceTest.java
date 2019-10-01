@@ -1,15 +1,17 @@
 package nano;
 
+import nano.implementations.nativeImpl.BinOps;
 import nano.ingredients.*;
 import nano.ingredients.gateway.Execution;
 import nano.ingredients.gateway.Gateway;
-import nano.ingredients.nativeImpl.BinOps;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,8 +19,9 @@ import static java.util.Arrays.asList;
 import static nano.Int.Int;
 import static nano.implementations.Filter.filterSignature;
 import static nano.implementations.Quicksort.getQuicksortSignature;
+import static nano.implementations.nativeImpl.BinOps.add;
 import static nano.ingredients.Action.action;
-import static nano.ingredients.Actresses.await;
+import static nano.ingredients.AsyncStuff.await;
 import static nano.ingredients.CallSync.sync;
 import static nano.ingredients.Const.constant;
 import static nano.ingredients.FunctionCall.functionCall;
@@ -28,12 +31,14 @@ import static nano.ingredients.Message.message;
 import static nano.ingredients.Nop.nop;
 import static nano.ingredients.Origin.origin;
 import static nano.ingredients.PartialFunctionApplication.partialApplication;
+import static nano.ingredients.RunProperty.*;
 import static nano.ingredients.gateway.Gateway.intGateway;
-import static nano.ingredients.nativeImpl.BinOps.add;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class ServiceTest {
+    private final static ArrayList<Integer> emptyList = new ArrayList<>();
+
     private static final Integer _6 = 6;
     private static final Integer _5 = 5;
     private static final Integer _4 = 4;
@@ -45,10 +50,9 @@ public class ServiceTest {
 
     @After
     public void after() {
-        Actresses.shutdown();
-        Actresses.reset();
+        Ensemble.terminate();
+        Ensemble.reset();
     }
-
 
     @Test
     public void testLambda() {
@@ -85,7 +89,7 @@ public class ServiceTest {
         // check(double(mul, a))
         FunctionCall<Integer> functionCallDouble = functionCall(functionSignatureDouble);
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
         functionCallDouble.returnTo(resultListener, Name.result);
 
@@ -134,7 +138,7 @@ public class ServiceTest {
 
         AtomicReference<Message> result = new AtomicReference<>(null);
 
-        Action resultListener = action(result::set);
+        Action resultListener = action((Consumer<Message> & Serializable) result::set);
         resultListener.param(Name.result);
         resultListener.param(Name.error);
         functionCallApply.returnTo(resultListener, Name.result);
@@ -145,16 +149,14 @@ public class ServiceTest {
         result.set(null);
         functionCallApply.tell(message(Name.a, _2, origin));
         await(() -> result.get() != null);
-        assertEquals(_4, result.get().value);
+        assertEquals(_4, result.get().getValue());
 
         result.set(null);
         functionCallApply.tell(message(Name.func, functionSignatureDiv, origin));
         functionCallApply.tell(message(Name.a, _0, origin));
         await(() -> result.get() != null);
         assertEquals(Name.error, result.get().key);
-        assertTrue(((Err)result.get().value).exception instanceof ArithmeticException);
-
-
+        assertTrue(((Err) result.get().getValue()).exception instanceof ArithmeticException);
 
 
     }
@@ -190,7 +192,7 @@ public class ServiceTest {
         FunctionCall<Integer> functionCallApply = functionCall(functionSignatureApply);
         functionCallApply.label("functionCallApply");
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
         functionCallApply.returnTo(resultListener, Name.result);
 
@@ -241,7 +243,7 @@ public class ServiceTest {
         FunctionCall<Integer> functionCallApply = functionCall(functionSignatureApply);
         functionCallApply.label("apply");
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
         functionCallApply.returnTo(resultListener, Name.result);
 
@@ -289,7 +291,7 @@ public class ServiceTest {
         FunctionCall<Integer> functionCallApply = functionCall(functionSignatureApply);
         functionCallApply.label("apply");
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
         functionCallApply.returnTo(resultListener, Name.result);
 
@@ -311,7 +313,7 @@ public class ServiceTest {
          */
 
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
 
 
@@ -348,7 +350,7 @@ public class ServiceTest {
          */
 
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
         Origin origin = Origin.origin(resultListener);
 
@@ -383,7 +385,7 @@ public class ServiceTest {
          */
 
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
         Origin origin = Origin.origin(resultListener);
 
@@ -433,11 +435,11 @@ public class ServiceTest {
     @Test
     public void testQuicksort() {
 
-        Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
+        Function<ArrayList<Integer>> qsortCall = functionCall(getQuicksortSignature());
         qsortCall.label("qsortCall");
 
 
-        checkQsort(Collections.emptyList(), Collections.emptyList(), qsortCall);
+        checkQsort(emptyList, emptyList, qsortCall);
         checkQsort(list(2), list(2), qsortCall);
         checkQsort(list(1, 2), list(2, 1), qsortCall);
         checkQsort(list(1, 2, 3), list(2, 1, 3), qsortCall);
@@ -445,8 +447,8 @@ public class ServiceTest {
         checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
 
         //TODO unpredictable java.lang.IllegalStateException: -->  {Iff-20(**outerIff)} {Iff-20(**outerIff)}: execution states left after stop
-        List<Integer> randList = randomList(100);
-        List<Integer> randListSorted = new ArrayList<>(randList);
+        ArrayList<Integer> randList = randomList(100);
+        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
         randListSorted.sort(Integer::compareTo);
         checkQsort(randListSorted, randList, qsortCall);
         System.out.println("done sorting " + randList.size());
@@ -454,10 +456,11 @@ public class ServiceTest {
 
     @Test
     public void testParallelQuicksort() {
-        Function<List<Integer>> qsortCall = functionCall(getQuicksortSignature());
 
-        Gateway<List<Integer>> gateway = new Gateway<>();
-        ConcurrentLinkedQueue<List<Integer>> resultCollector = new ConcurrentLinkedQueue<>();
+        Function<ArrayList<Integer>> qsortCall = functionCall(getQuicksortSignature());
+
+        Gateway<ArrayList<Integer>> gateway = new Gateway<>();
+        ConcurrentLinkedQueue<ArrayList<Integer>> resultCollector = new ConcurrentLinkedQueue<>();
 
         int parallelRuns = 10;
         int listSize = 100;
@@ -473,7 +476,7 @@ public class ServiceTest {
         });
     }
 
-    private void runQuicksortThread(int runId, Function<List<Integer>> sumCall, Gateway<List<Integer>> gateway, List<Integer> input, ConcurrentLinkedQueue<List<Integer>> resultCollector) {
+    private void runQuicksortThread(int runId, Function<ArrayList<Integer>> sumCall, Gateway<ArrayList<Integer>> gateway, ArrayList<Integer> input, ConcurrentLinkedQueue<ArrayList<Integer>> resultCollector) {
         new Thread(() -> {
             System.out.println(runId + " sorting " + input);
             gateway.execute(sumCall, v -> {
@@ -486,28 +489,29 @@ public class ServiceTest {
 
     private long executions;
 
-    private void checkQsort(List<Integer> expected, List<Integer> input, Function<List<Integer>> qsortCall) {
+    private List<Integer> checkQsort(List<Integer> expected, ArrayList<Integer> input, Function<ArrayList<Integer>> qsortCall) {
         System.out.println("sorting " + input.size());
         ArrayList<Integer> result = new ArrayList<>();
         Int lastInt = Int(-1);
-        Action resultListener = action(i -> {
-            result.addAll((List<Integer>) i.value);
+        Action resultListener = action((Consumer<Message> & Serializable) i -> {
+            result.addAll((List<Integer>) i.getValue());
             lastInt.value = 1;
         }).param(Name.result);
         resultListener.propagate(Name.list, Name.list, qsortCall);
 
         qsortCall.returnTo(resultListener, Name.result);
 
-        Origin origin = origin(nop, executions++, 0L, new CallStack());
+        Origin origin = origin(nop, executions++, new CallStack(), -1L, 0L);
         resultListener.tell(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
         result.sort(Integer::compareTo);
         assertEquals(expected, result);
+        return result;
     }
 
-    private List<Integer> randomList(int size) {
-        List<Integer> list = new ArrayList<>();
+    private ArrayList<Integer> randomList(int size) {
+        ArrayList<Integer> list = new ArrayList<>();
         Random rand = new Random();
 
         for (int i = 0; i < size; i++) {
@@ -524,32 +528,29 @@ public class ServiceTest {
             check(filter(input, a -> iff (a == null) {false} else {a mod 2 == 0}))
             */
 
-        Function<List<Integer>> filterCall = functionCall(filterSignature().get());
+        Function<ArrayList<Integer>> filterCall = functionCall(filterSignature().get());
         filterCall.label("filter");
         FunctionSignature<Boolean> predicate = getModEqZero();
         predicate.constant(Name.m, 2);
-        checkFilter(Collections.emptyList(), Collections.emptyList(), filterCall, predicate);
+        checkFilter(emptyList, emptyList, filterCall, predicate);
         checkFilter(list(2), list(2), filterCall, predicate);
         checkFilter(list(2, 2), list(2, 2), filterCall, predicate);
-        checkFilter(emptyList(), list(1), filterCall, predicate);
-        checkFilter(emptyList(), list(1, 1), filterCall, predicate);
+        checkFilter(emptyList, list(1), filterCall, predicate);
+        checkFilter(emptyList, list(1, 1), filterCall, predicate);
         checkFilter(list(2), list(1, 2, 3), filterCall, predicate);
         checkFilter(list(0, 2, 4, 6, 8), list(6, 7, 8, 2, 3, 4, 5, 9, 1, 0), filterCall, predicate);
     }
 
-    private List<Integer> list(Integer... i) {
-        return asList(i);
+    private ArrayList<Integer> list(Integer... i) {
+        return new ArrayList<>(asList(i));
     }
 
-    private List<Integer> emptyList() {
-        return Collections.emptyList();
-    }
 
-    private void checkFilter(List<Integer> expected, List<Integer> input, Function<List<Integer>> filterCall, FunctionSignature<Boolean> predicate) {
+    private void checkFilter(ArrayList<Integer> expected, ArrayList<Integer> input, Function<ArrayList<Integer>> filterCall, FunctionSignature<Boolean> predicate) {
         ArrayList<Integer> result = new ArrayList<>();
         Int lastInt = Int(-1);
-        Action resultListener = action(i -> {
-            result.addAll((List<Integer>) i.value);
+        Action resultListener = action((Consumer<Message> & Serializable) i -> {
+            result.addAll((List<Integer>) i.getValue());
             lastInt.value = 1;
         }).param(Name.result);
         resultListener.propagate(Name.list, Name.list, filterCall);
@@ -689,7 +690,7 @@ public class ServiceTest {
          */
 
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
 
         resultListener.param(Name.result);
         Function<Integer> add = add()
@@ -730,7 +731,7 @@ public class ServiceTest {
         */
 
         Int result = Int(0);
-        Action resultListener = action(i -> result.setValue((Integer) i.value));
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
 
         Function<Integer> mul = BinOps.mul();
         Function<Integer> functionSignature = functionSignature(mul);
@@ -770,7 +771,7 @@ public class ServiceTest {
 
          */
         Int result = Int(0);
-        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
 
         Const constOne = constant(1);
         Function<Integer> callee = functionSignature(constOne);
@@ -811,7 +812,7 @@ public class ServiceTest {
         functionAdd.propagate(Name.a, Name.leftArg, add);
         functionAdd.propagate(Name.b, Name.rightArg, add);
 
-        Action resultMonitor = action(i -> results.put(i.key, (int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> results.put(i.key, (int) i.getValue()));
 
         Function<Integer> callerA = functionCall(functionAdd).returnTo(resultMonitor, "resultA");
         Function<Integer> callerB = functionCall(functionAdd).returnTo(resultMonitor, "resultB");
@@ -857,7 +858,7 @@ public class ServiceTest {
         callerL.label("callerL");
         callerR.label("callerR");
 
-        Action resultMonitor = action(i -> result.setValue((int) i.value)).param(Name.result);
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue())).param(Name.result);
         resultMonitor.propagate(Name.a, Name.a, mul);
         mul.returnTo(resultMonitor, Name.result);
         mul.propagate(Name.a, Name.a, callerL);
@@ -881,11 +882,6 @@ public class ServiceTest {
 
          */
 
-        if (1 == 1) {
-            System.out.println("NestedFunctionCall geht so ned");
-            return;
-        }
-
         Int result = Int(0);
 
         Function<Integer> mul = BinOps.mul();
@@ -897,7 +893,7 @@ public class ServiceTest {
         Function<Integer> outerCaller = functionCall(mulSignature);
         innerCaller.returnTo(outerCaller, Name.a);
 
-        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
         resultMonitor.param(Name.result);
         outerCaller.returnTo(resultMonitor, Name.result);
 
@@ -931,7 +927,7 @@ public class ServiceTest {
         Function<Integer> _if = If.createIf();
 
         Int result = Int(0);
-        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
         resultMonitor.param(Name.result);
 
         Function<Boolean> gt = BinOps.gt().returnTo(_if, Name.condition);
@@ -995,7 +991,7 @@ public class ServiceTest {
         Iff<Integer> iff = iff();
 
         Int result = Int(0);
-        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
         resultMonitor.param(Name.result);
 
         Function<Boolean> gt = BinOps.gt()
@@ -1053,7 +1049,7 @@ public class ServiceTest {
         Function<Integer> _if = iff();
 
         Int result = Int(0);
-        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
         resultMonitor.param(Name.result);
 
         Function<Boolean> gt = BinOps.gt();
@@ -1088,6 +1084,8 @@ public class ServiceTest {
 
     }
 
+    private static int runId = 0;
+
     @Test
     public void testRecursion() {
 
@@ -1098,10 +1096,24 @@ public class ServiceTest {
             echo(sum(3));
          */
 
-        Actresses.trace();
-
         Int result = Int(0);
-        Action resultMonitor = action(i -> result.setValue((int) i.value));
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
+        resultMonitor.param(Name.result);
+
+        Function<Integer> sumCall = getRecursiveSumAction(resultMonitor);
+
+        checksum(result, resultMonitor, runId++, 0, 0);
+        checksum(result, resultMonitor, runId++, 1, 1);
+        checksum(result, resultMonitor, runId++, 2, 3);
+        checksum(result, resultMonitor, runId++, 10, 11 * 5);
+        checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
+        checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
+//        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+
+        testParallelRecursion(sumCall);
+    }
+
+    private Action getRecursiveSumAction(Action resultMonitor) {
         resultMonitor.param(Name.result);
 
         Iff<Integer> _if = iff();
@@ -1135,17 +1147,7 @@ public class ServiceTest {
         add.returnTo(_if, Name.onFalse);
         sumCall.returnTo(resultMonitor, Name.result);
 
-
-        int runId = 0;
-//        checksum(result, resultMonitor, runId++, 0, 0);
-//        checksum(result, resultMonitor, runId++, 1, 1);
-//        checksum(result, resultMonitor, runId++, 2, 3);
-        checksum(result, resultMonitor, runId++, 10, 11 * 5);
-//        checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
-//        checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
-//        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
-//
-//        testParallelRecursion(sumCall);
+        return resultMonitor;
     }
 
     private void testParallelRecursion(Function<Integer> sumCall) {
@@ -1231,7 +1233,165 @@ public class ServiceTest {
 
 
     private Origin originForRunId(Action a, Long runId) {
-        return origin(a, runId, 0L, new CallStack());
+        return origin(a, runId, new CallStack(), -1L, 0L);
     }
 
+    private List<Integer> sorted(List<Integer> list) {
+        ArrayList<Integer> result = new ArrayList<>(list);
+        result.sort(Integer::compareTo);
+        return result;
+    }
+
+    @Test
+    public void testRecoveryRecursion() {
+        Ensemble.instance().setRunProperties(PERSIST);
+        Int result = Int(0);
+        Action action = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
+        action = getRecursiveSumAction(action);
+
+        Origin run = originForRunId(action, (long) ++runId);
+        action.tell(message(Name.a, 10, run));
+
+
+        await(175);
+        System.out.println("terminating before resume");
+        Ensemble.terminate();
+        Ensemble.reset();
+        Ensemble.instance().setRunProperties(PERSIST);
+        await(5000);
+        System.out.println("resuming");
+
+        result.setValue(0);
+        getRecursiveSumAction(action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue())));
+
+        await(() -> result.value > 0);
+        System.out.println("recovered sum was: " + result.value);
+        Integer expected = 11 * 5;
+        assertEquals(expected, result.value);
+    }
+
+    @Test
+    public void testRecoveryQuicksort() {
+        Ensemble.instance().setRunProperties(PERSIST);
+
+        ArrayList<Integer> input = randomList(200);
+        List<Integer> result = new ArrayList<>();
+
+        Origin origin = origin(nop, executions++, new CallStack(), -1L, 0L);
+        setUpResultListener(functionCall(getQuicksortSignature()), result)
+                .tell(message(Name.list, input, origin));
+
+        await(3000);
+        System.out.println("terminating before resume");
+        Ensemble.terminate();
+        Ensemble.reset();
+        Ensemble.instance().setRunProperties(PERSIST, SHOW_STACKS);
+        await(3000);
+        System.out.println("resuming");
+
+        // only recreate actors. they should replay all messages until now and resume the computation
+        setUpResultListener(functionCall(getQuicksortSignature()), result);
+
+        await(() -> result.size() == input.size());
+        assertEquals(sorted(input), result);
+        System.out.println(result);/**/
+    }
+
+    @Test
+    public void testRecoveryPartialApplicationOnLambda() {
+        /*
+                function inc = a -> a + 1
+                function apply(func, a) = func(a)
+
+                check(apply(inc, 0))
+                check(apply(inc, 1))
+         */
+        Ensemble.instance().setRunProperties(PERSIST, DEBUG);
+        Int result = Int(0);
+        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
+        resultListener.param(Name.result);
+        Origin origin = Origin.origin(resultListener);
+
+        PartialAppOnLambda partialAppOnLambda = new PartialAppOnLambda(resultListener).create();
+        FunctionCall<Integer> functionCallApply = partialAppOnLambda.getFunctionCallApply();
+
+        resultListener.tell(message(Name.b, _1, origin));
+        functionCallApply.tell(message(Name.func, partialAppOnLambda.getPartialAdd(), origin));
+        functionCallApply.tell(message(Name.a, _3, origin));
+
+        result.setValue(0);
+        await(() -> result.value != 0);
+        assertEquals(Integer.valueOf(4), result.value);
+
+        await(10000);
+        System.out.println("terminating before resume");
+        Ensemble.terminate();
+        Ensemble.reset();
+        Ensemble.instance().setRunProperties(PERSIST, DEBUG);
+        await(1000);
+        System.out.println("resuming");
+
+        result.setValue(0);
+        resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
+        resultListener.param(Name.result);
+        new PartialAppOnLambda(resultListener).create();
+        await(() -> result.value != 0);
+        assertEquals(Integer.valueOf(4), result.value);
+    }
+
+
+    private Action setUpResultListener(Function<ArrayList<Integer>> qsortCall, List<Integer> result) {
+        Action resultListener = action((Consumer<Message> & Serializable) i -> {
+            result.addAll((List<Integer>) i.getValue());
+        }).param(Name.result);
+        resultListener.propagate(Name.list, Name.list, qsortCall);
+        qsortCall.returnTo(resultListener, Name.result);
+        return resultListener;
+    }
+
+    private class PartialAppOnLambda {
+        private Action resultListener;
+        private PartialFunctionApplication<Integer> partialAdd;
+        private FunctionCall<Integer> functionCallApply;
+
+        public PartialAppOnLambda(Action resultListener) {
+            this.resultListener = resultListener;
+        }
+
+        public PartialFunctionApplication<Integer> getPartialAdd() {
+            return partialAdd;
+        }
+
+        public FunctionCall<Integer> getFunctionCallApply() {
+            return functionCallApply;
+        }
+
+        public PartialAppOnLambda create() {
+            BinOp<Integer, Integer, Integer> add = add();
+            partialAdd = partialApplication(add, list(Name.b));
+            partialAdd.label("ADD(_,X)");
+            partialAdd.propagate(Name.a, Name.leftArg, add);
+            partialAdd.propagate(Name.b, Name.rightArg, add);
+
+            // by way of using the apply function
+            //function apply(func, a) = func(a)
+            FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+            stubFunc.label("stubFunc");
+
+            // it is intended that the partialy applied function is created before passing it to apply
+            // applying values and removing them again has to happen at the same function call level
+            FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
+            functionSignatureApply.propagate(Name.a, Name.a, stubFunc);
+            functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
+
+            // check(apply(mul, a))
+            functionCallApply = functionCall(functionSignatureApply);
+            functionCallApply.label("functionCallApply");
+            functionCallApply.returnTo(resultListener, Name.result);
+
+            resultListener.propagate(Name.b, Name.b, partialAdd);
+            resultListener.onReceivedReturnSend(Name.removePartialAppValues, null, partialAdd);
+            return this;
+        }
+    }
 }

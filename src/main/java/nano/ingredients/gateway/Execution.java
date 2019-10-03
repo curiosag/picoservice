@@ -28,8 +28,8 @@ public class Execution<T extends Serializable> implements Future<T> {
     public Execution(Function<T> f, Consumer<T> onFinished) {
         this.f = f;
         this.onFinished = onFinished;
-        Function<T> caller = new Action();
-        origin = Origin.origin(caller, maxExecutionId.addAndGet(1), new CallStack(), -1L, 0L);
+        Function caller = new Action();
+        origin = Origin.origin(caller, maxExecutionId.addAndGet(1), new ComputationBough(), -1L, 0L);
     }
 
     public Execution<T> param(String key, T value) {

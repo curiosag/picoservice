@@ -9,17 +9,17 @@ public class FunctionCallTreeLocation implements Serializable {
     public final Origin origin;
     private final String stackString;
 
-    public FunctionCallTreeLocation(Origin origin) {
+    FunctionCallTreeLocation(Origin origin) {
         this.origin = origin;
-        this.stackString = origin.executionId + '/' + origin.callStack.toString();
+        this.stackString = origin.executionId + "/" + origin.getComputationBough().getStack().toString();
     }
 
     public Long getExecutionId() {
         return origin.executionId;
     }
 
-    public CallStack getCallStack() {
-        return origin.callStack;
+    ComputationStackView getCallStack() {
+        return origin.getComputationBough().getStack();
     }
 
     @Override
@@ -28,12 +28,12 @@ public class FunctionCallTreeLocation implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         FunctionCallTreeLocation that = (FunctionCallTreeLocation) o;
         return Objects.equals(this.origin.executionId, that.origin.executionId) &&
-                Objects.equals(this.origin.callStack, that.origin.callStack);
+                Objects.equals(this.origin.getComputationBough().getStack(), that.origin.getComputationBough().getStack());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.origin.executionId, this.origin.callStack);
+        return Objects.hash(this.origin.executionId, this.origin.getComputationBough().getStack());
     }
 
     @Override

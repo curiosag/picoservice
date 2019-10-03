@@ -1,5 +1,7 @@
 package nano.ingredients;
 
+import nano.ingredients.tuples.ComputationOriginBranch;
+
 import java.io.Serializable;
 
 import static nano.ingredients.Ensemble.wire;
@@ -13,7 +15,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
         this.function = f;
     }
 
-    public static <T extends Serializable > FunctionCall<T> functionCall(Function<T> body) {
+    public static <T extends Serializable> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
         wire(result);
         return result;
@@ -49,9 +51,9 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
             origin = origin.popCall();
 
-            if (!this.address.id.equals(origin.callStack.getLastPopped())) {
+            if (!this.address.id.equals(origin.getComputationBough().getLastPopped())) {
                 String fmt = "Function call %s attempted to pop itself, but found on stack %d";
-                throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.callStack.getLastPopped()));
+                throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.getComputationBough().getLastPopped()));
             }
 
             if (message.hasKey(Name.result)) {
@@ -63,7 +65,9 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
         } else {
             if (!isConst(message)) // const already comes with proper stack
             {
-                origin = origin.pushCall(this);
+                ComputationOriginBranch maybeOriginBranchedOffFrom = origin.pushCall(this);
+                notifyBranching(origin, maybeOriginBranchedOffFrom);
+                origin = maybeOriginBranchedOffFrom.getOrigin();
                 getState(origin);
             }
             function.tell(message.origin(origin));
@@ -71,6 +75,15 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
     }
 
+    private void notifyBranching(Origin origin, ComputationOriginBranch maybeOriginBranchedOffFrom) {
+        if (maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().isPresent()) {
+            tell(branchMessage(maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().get(), origin));
+        }
+    }
+
+    private Message branchMessage(ComputationBough b, Origin origin) {
+        return new Message(Name.branch, b, origin);
+    }
 
 
     private boolean isConst(Message message) {

@@ -4,6 +4,7 @@ import akka.actor.ActorRef;
 import nano.ingredients.trace.Trace;
 import nano.ingredients.trace.TraceMessage;
 import nano.misc.Adresses;
+import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -19,7 +20,7 @@ import static nano.ingredients.trace.TraceMessage.traced;
 
 public abstract class Actress implements Serializable {
     private static final long serialVersionUID = 0L;
-
+    private static Logger logger = Logger.getRootLogger();
     ActorRef aref;
     private Set<RunProperty> runProperties = new HashSet<>();
 
@@ -81,7 +82,7 @@ public abstract class Actress implements Serializable {
 
     void debug(Message m, Origin o, String rel) {
         if (!(m instanceof TraceMessage))
-            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.callStack.toString(), o.executionId, o.callStack.size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
+            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationBough().toString(), o.executionId, o.getComputationBough().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
     }
 
     public abstract void process(Message message);
@@ -96,7 +97,7 @@ public abstract class Actress implements Serializable {
         try {
             debug(m, m.origin, "!!");
             if (hasRunProperty(SHOW_STACKS)) {
-                System.out.println(CallStack.points(m.origin.callStack));
+                System.out.println(m.origin.getComputationBough().getStack().stackPoints());
             }
             if (m.key.equals(Name.ack)) {
                 onAck((Message) m.getValue());
@@ -145,7 +146,7 @@ public abstract class Actress implements Serializable {
 
     void debug(String s) {
         if (hasRunProperty(DEBUG)) {
-            System.out.println(s);
+            logger.debug(s);
         }
     }
 

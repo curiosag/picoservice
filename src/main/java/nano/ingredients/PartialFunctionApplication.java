@@ -47,8 +47,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
 
     protected void setPartialAppParamValue(Message m) {
         if (isPartialAppParam(m)) {
-            Map<String, Serializable> partials = partialAppValues.computeIfAbsent(m.origin.callTreePath(), k -> new HashMap<>());
-            debug(m, m.origin, String.format(" << addPartialAppParamValue (%d) << ", partials.size()));
+            Map<String, Serializable> partials = partialAppValues.computeIfAbsent(m.origin.functionCallTreeLocation(), k -> new HashMap<>());
             partials.put(m.key, m.getValue());
         }
     }
@@ -70,8 +69,8 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
     public Map<String, Serializable> getPartialAppValues(Origin o) {
 
         List<Map.Entry<FunctionCallTreeLocation, Map<String, Serializable>>> matches = partialAppValues.entrySet().stream()
-                .filter(e -> o.callTreePath().getExecutionId().equals(e.getKey().getExecutionId()))
-                .filter(e -> o.callTreePath().getCallStack().startsWith(e.getKey().getCallStack()))
+                .filter(e -> o.functionCallTreeLocation().getExecutionId().equals(e.getKey().getExecutionId()))
+                .filter(e -> o.functionCallTreeLocation().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());
 
@@ -82,7 +81,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
 
     @Override
     public void removePartialAppValues(Origin o) {
-        partialAppValues.remove(o.callTreePath());
+        partialAppValues.remove(o.functionCallTreeLocation());
     }
 
 

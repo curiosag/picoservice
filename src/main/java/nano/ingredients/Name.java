@@ -40,4 +40,5 @@ public interface Name {
     String removeState = "removeState";
     String ack = "ack";
     String createFunctionCall = "createFunctionCall";
+    String branch = "branch";
 }

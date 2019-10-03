@@ -434,10 +434,8 @@ public class ServiceTest {
 
     @Test
     public void testQuicksort() {
-
         Function<ArrayList<Integer>> qsortCall = functionCall(getQuicksortSignature());
         qsortCall.label("qsortCall");
-
 
         checkQsort(emptyList, emptyList, qsortCall);
         checkQsort(list(2), list(2), qsortCall);
@@ -446,7 +444,6 @@ public class ServiceTest {
         checkQsort(list(0, 1, 2, 3, 4, 5), list(5, 4, 3, 2, 1, 0), qsortCall);
         checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
 
-        //TODO unpredictable java.lang.IllegalStateException: -->  {Iff-20(**outerIff)} {Iff-20(**outerIff)}: execution states left after stop
         ArrayList<Integer> randList = randomList(100);
         ArrayList<Integer> randListSorted = new ArrayList<>(randList);
         randListSorted.sort(Integer::compareTo);
@@ -462,8 +459,8 @@ public class ServiceTest {
         Gateway<ArrayList<Integer>> gateway = new Gateway<>();
         ConcurrentLinkedQueue<ArrayList<Integer>> resultCollector = new ConcurrentLinkedQueue<>();
 
-        int parallelRuns = 10;
-        int listSize = 100;
+        int parallelRuns = 5;
+        int listSize = 15;
         for (int i = 0; i < parallelRuns; i++) {
             runQuicksortThread(i, qsortCall, gateway, randomList(listSize), resultCollector);
         }
@@ -501,7 +498,7 @@ public class ServiceTest {
 
         qsortCall.returnTo(resultListener, Name.result);
 
-        Origin origin = origin(nop, executions++, new CallStack(), -1L, 0L);
+        Origin origin = origin(nop, executions++, new ComputationBough(), -1L, 0L);
         resultListener.tell(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
@@ -882,6 +879,10 @@ public class ServiceTest {
 
          */
 
+        if (1 == 1) {
+            throw new IllegalStateException("geht ned so");
+        }
+
         Int result = Int(0);
 
         Function<Integer> mul = BinOps.mul();
@@ -891,7 +892,8 @@ public class ServiceTest {
 
         Function<Integer> innerCaller = functionCall(mulSignature).constant(Name.a, 2);
         Function<Integer> outerCaller = functionCall(mulSignature);
-        innerCaller.returnTo(outerCaller, Name.a);
+        outerCaller.propagate(Name.a, Name.a, innerCaller);
+        innerCaller.returnTo(outerCaller, Name.result);
 
         Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
         resultMonitor.param(Name.result);
@@ -1088,33 +1090,34 @@ public class ServiceTest {
 
     @Test
     public void testRecursion() {
-
-        /* function sum(a) = if (a = 0 )
-                                        0
-                                   else
-                                        a + sum(a - 1);
-            echo(sum(3));
-         */
-
         Int result = Int(0);
         Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
         resultMonitor.param(Name.result);
 
-        Function<Integer> sumCall = getRecursiveSumAction(resultMonitor);
+        Function sumCall = getRecursiveSumCall();
+        resultMonitor.propagate(Name.a, Name.a, sumCall);
+        sumCall.returnTo(resultMonitor, Name.result);
+
 
         checksum(result, resultMonitor, runId++, 0, 0);
         checksum(result, resultMonitor, runId++, 1, 1);
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 10, 11 * 5);
-        checksum(result, resultMonitor, runId++, 1000, 1001 * 500);
-        checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
-//        checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+        checksum(result, resultMonitor, runId++, 100, 101 * 50);
+  //      checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
+  //      checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
 
         testParallelRecursion(sumCall);
     }
 
-    private Action getRecursiveSumAction(Action resultMonitor) {
-        resultMonitor.param(Name.result);
+    private Function<Integer> getRecursiveSumCall() {
+
+               /* function sum(a) = if (a = 0 )
+                                        0
+                                   else
+                                        a + sum(a - 1);
+                    echo(sum(3));
+         */
 
         Iff<Integer> _if = iff();
         _if.constant(Name.onTrue, _0);
@@ -1126,8 +1129,6 @@ public class ServiceTest {
         Function<Integer> sumReCall = functionCall(sumSignature);
         Function<Integer> sumCall = functionCall(sumSignature);
 
-        resultMonitor.propagate(Name.a, Name.a, sumCall);
-
         sumSignature.propagate(Name.a, Name.a, _if);
         _if.propagate(Name.a, Name.leftArg, eq);
         _if.propagateOnFalse(Name.a, Name.leftArg, add);
@@ -1137,7 +1138,7 @@ public class ServiceTest {
         // sum(a) will also tell a second "a" from the "a - 1", but that doesen't matter any more then)
         // one would have to distinguish somehow by key the "a" as the parameter in sum(a) from the a in "a - 1"
         // -> so this doesen't work:
-        // mul.propagate(Name.a, Name.a, sumCallRec);
+        // add.propagate(Name.a, Name.a, sumCallRec);
         add.propagate(Name.a, Name.leftArg, sub);
 
         //TODO: the returning structure is symmetrical to the dependency structure, maybe setting up both can be unified
@@ -1145,9 +1146,8 @@ public class ServiceTest {
         sub.returnTo(sumReCall, Name.a);
         sumReCall.returnTo(add, Name.rightArg);
         add.returnTo(_if, Name.onFalse);
-        sumCall.returnTo(resultMonitor, Name.result);
 
-        return resultMonitor;
+        return sumCall;
     }
 
     private void testParallelRecursion(Function<Integer> sumCall) {
@@ -1186,11 +1186,6 @@ public class ServiceTest {
 
                         })
                         .param(Name.a, next);
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    //
-                }
                 next = input.poll();
             }
         });
@@ -1233,7 +1228,7 @@ public class ServiceTest {
 
 
     private Origin originForRunId(Action a, Long runId) {
-        return origin(a, runId, new CallStack(), -1L, 0L);
+        return origin(a, runId, new ComputationBough(), -1L, 0L);
     }
 
     private List<Integer> sorted(List<Integer> list) {
@@ -1244,13 +1239,18 @@ public class ServiceTest {
 
     @Test
     public void testRecoveryRecursion() {
+        if (1 == 1) {
+            throw new IllegalStateException();
+        }
         Ensemble.instance().setRunProperties(PERSIST);
         Int result = Int(0);
-        Action action = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
-        action = getRecursiveSumAction(action);
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
+        Function<Integer> sumCall = getRecursiveSumCall();
+        resultMonitor.propagate(Name.a, Name.a, sumCall);
+        sumCall.returnTo(resultMonitor, Name.result);
 
-        Origin run = originForRunId(action, (long) ++runId);
-        action.tell(message(Name.a, 10, run));
+        Origin run = originForRunId(resultMonitor, (long) ++runId);
+        resultMonitor.tell(message(Name.a, 10, run));
 
 
         await(175);
@@ -1262,7 +1262,11 @@ public class ServiceTest {
         System.out.println("resuming");
 
         result.setValue(0);
-        getRecursiveSumAction(action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue())));
+        resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
+        sumCall = getRecursiveSumCall();
+        resultMonitor.propagate(Name.a, Name.a, sumCall);
+        sumCall.returnTo(resultMonitor, Name.result);
+
 
         await(() -> result.value > 0);
         System.out.println("recovered sum was: " + result.value);
@@ -1272,12 +1276,15 @@ public class ServiceTest {
 
     @Test
     public void testRecoveryQuicksort() {
+        if (1 == 1) {
+            throw new IllegalStateException();
+        }
         Ensemble.instance().setRunProperties(PERSIST);
 
         ArrayList<Integer> input = randomList(200);
         List<Integer> result = new ArrayList<>();
 
-        Origin origin = origin(nop, executions++, new CallStack(), -1L, 0L);
+        Origin origin = origin(nop, executions++, new ComputationBough(), -1L, 0L);
         setUpResultListener(functionCall(getQuicksortSignature()), result)
                 .tell(message(Name.list, input, origin));
 
@@ -1306,7 +1313,10 @@ public class ServiceTest {
                 check(apply(inc, 0))
                 check(apply(inc, 1))
          */
-        Ensemble.instance().setRunProperties(PERSIST, DEBUG);
+
+        if (1 == 1) {
+            throw new IllegalStateException();
+        }
         Int result = Int(0);
         Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);

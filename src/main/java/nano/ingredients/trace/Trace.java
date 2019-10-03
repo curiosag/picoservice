@@ -11,14 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Trace extends Actress implements Closeable {
 
     private boolean active;
     private BufferedWriter writer;
-    private List<TraceMessage> messages = new ArrayList<>();
 
     @Override
     protected Actress resolveTracer() {
@@ -76,7 +74,7 @@ public class Trace extends Actress implements Closeable {
             value = (m.getValue()).toString();
         }
 
-        return '"' + String.format("(%d/%d)%s:", m.origin.executionId, m.origin.callStack.size(), m.key) + value
+        return '"' + String.format("(%d/%d)%s:", m.origin.executionId, m.origin.getComputationBough().size(), m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -106,17 +104,19 @@ public class Trace extends Actress implements Closeable {
          *
          * */
 
-        CallStack stack = m.traced().origin.callTreePath().getCallStack();
+        ComputationBough bough = m.traced().origin.getComputationBough();
 
-        CallStack stackSender = fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)
-                ? stack.push(m.traced().origin.getSender().address.id)
-                : stack;
+        List<Long> stackSender = bough.getStack().getItems();
+        if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
+            stackSender.add(m.traced().origin.getSender().address.id);
+        }
 
-        CallStack stackReceiver = fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)
-                ? stack.push(m.receiver().address.id)
-                : stack;
+        List<Long> stackReceiver = bough.getStack().getItems();
+        if(fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)){
+            stackReceiver.add(m.receiver().address.id);
+        }
 
-        long exId = m.origin.callTreePath().getExecutionId();
+        long exId = m.origin.functionCallTreeLocation().getExecutionId();
 
         writeLn(String.format("%s -> %s [label=%s];",
                 renderNode(labelSender, exId + "//" + stackSender),

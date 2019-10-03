@@ -24,7 +24,7 @@ public abstract class Function<T extends Serializable> extends Actress {
     private final Map<String, Serializable> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
-        executionStates.remove(origin.callTreePath());
+        executionStates.remove(origin.functionCallTreeLocation());
         //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
@@ -69,10 +69,10 @@ public abstract class Function<T extends Serializable> extends Actress {
     private List<Function> kicks = new ArrayList<>();
 
     State getState(Origin origin) {
-        State result = executionStates.get(origin.callTreePath());
+        State result = executionStates.get(origin.functionCallTreeLocation());
         if (result == null) {
             result = newState(origin);
-            executionStates.put(origin.callTreePath(), result);
+            executionStates.put(origin.functionCallTreeLocation(), result);
             fowardConsts(origin);
             forwardKickOff(origin);
         }

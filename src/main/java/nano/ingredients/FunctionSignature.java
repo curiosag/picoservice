@@ -100,7 +100,7 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
             hdlForwarings(state.origin, onReturn);
-            Origin o = origin(this, m.origin.executionId, m.origin.callStack, m.origin.prevFunctionCallId, m.origin.lastFunctionCallId);
+            Origin o = origin(this, m.origin.executionId, m.origin.getComputationBough(), m.origin.prevFunctionCallId, m.origin.lastFunctionCallId);
             state.origin.getSender().tell(m.origin(o));
             removeState(state.origin);
         }

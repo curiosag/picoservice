@@ -39,7 +39,7 @@ public class PrioritizedPropagation extends Function {
         return true;
     }
 
-    public static PrioritizedPropagation conditionalPropagation() {
+    public static PrioritizedPropagation prioritizedPropagation() {
         PrioritizedPropagation result = new PrioritizedPropagation();
         wire(result);
         return result;
@@ -76,7 +76,6 @@ public class PrioritizedPropagation extends Function {
         }
 
         PrioritizedPropagationState state = (PrioritizedPropagationState) getState(m.origin);
-
         if (state.allPriorityParamsProcessedDownstream()) {
             Guards.isFalse(priorityParams.contains(m.key));
             super.propagate(m);

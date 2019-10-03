@@ -16,7 +16,7 @@ import static nano.ingredients.FunctionCall.functionCall;
 import static nano.ingredients.FunctionSignature.functionSignature;
 import static nano.ingredients.Iff.iffList;
 import static nano.ingredients.PartialFunctionApplication.partialApplication;
-import static nano.ingredients.PrioritizedPropagation.conditionalPropagation;
+import static nano.ingredients.PrioritizedPropagation.prioritizedPropagation;
 
 public class Quicksort {
 
@@ -83,7 +83,7 @@ public class Quicksort {
                         .constant(Name.predicate, ltPredicate)
                         .returnTo(qsortReCallLeft, Name.list);
 
-        Function propagateLeftOnCondition = conditionalPropagation()
+        Function propagateLeftOnCondition = prioritizedPropagation()
                 .addPriorityParam(Name.rightArg)
                 .propagate(Name.rightArg, Name.rightArg, ltPredicate)
                 .propagate(Name.list, Name.list, filterCallLeft);
@@ -103,7 +103,7 @@ public class Quicksort {
                         .constant(Name.predicate, gtEqPredicate)
                         .returnTo(qsortReCallRight, Name.list);
 
-        Function propagateRightOnCondition = conditionalPropagation()
+        Function propagateRightOnCondition = prioritizedPropagation()
                 .addPriorityParam(Name.rightArg)
                 .propagate(Name.rightArg, Name.rightArg, gtEqPredicate)
                 .propagate(Name.list, Name.list, filterCallRight);

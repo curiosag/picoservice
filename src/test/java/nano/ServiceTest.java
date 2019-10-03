@@ -879,24 +879,22 @@ public class ServiceTest {
 
          */
 
-        if (1 == 1) {
-            throw new IllegalStateException("geht ned so");
-        }
-
         Int result = Int(0);
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
+        resultMonitor.param(Name.result);
 
         Function<Integer> mul = BinOps.mul();
         Function<Integer> mulSignature = functionSignature(mul);
+        // each nested function call needs its separate key
         mulSignature.propagate(Name.a, Name.leftArg, mul);
         mulSignature.propagate(Name.a, Name.rightArg, mul);
+        mulSignature.propagate(Name.a1, Name.leftArg, mul);
+        mulSignature.propagate(Name.a1, Name.rightArg, mul);
 
         Function<Integer> innerCaller = functionCall(mulSignature).constant(Name.a, 2);
         Function<Integer> outerCaller = functionCall(mulSignature);
         outerCaller.propagate(Name.a, Name.a, innerCaller);
-        innerCaller.returnTo(outerCaller, Name.result);
-
-        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
-        resultMonitor.param(Name.result);
+        innerCaller.returnTo(outerCaller, Name.a1);
         outerCaller.returnTo(resultMonitor, Name.result);
 
         mul.label("mul");

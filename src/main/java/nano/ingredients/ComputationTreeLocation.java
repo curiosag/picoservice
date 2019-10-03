@@ -3,13 +3,13 @@ package nano.ingredients;
 import java.io.Serializable;
 import java.util.Objects;
 
-public class FunctionCallTreeLocation implements Serializable {
+public class ComputationTreeLocation implements Serializable {
     private static final long serialVersionUID = 0L;
 
     public final Origin origin;
     private final String stackString;
 
-    FunctionCallTreeLocation(Origin origin) {
+    ComputationTreeLocation(Origin origin) {
         this.origin = origin;
         this.stackString = origin.executionId + "/" + origin.getComputationBough().getStack().toString();
     }
@@ -26,14 +26,13 @@ public class FunctionCallTreeLocation implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FunctionCallTreeLocation that = (FunctionCallTreeLocation) o;
-        return Objects.equals(this.origin.executionId, that.origin.executionId) &&
-                Objects.equals(this.origin.getComputationBough().getStack(), that.origin.getComputationBough().getStack());
+        ComputationTreeLocation that = (ComputationTreeLocation) o;
+        return stackString.equals(that.stackString);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.origin.executionId, this.origin.getComputationBough().getStack());
+        return Objects.hash(stackString);
     }
 
     @Override

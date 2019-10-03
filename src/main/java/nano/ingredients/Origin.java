@@ -55,13 +55,13 @@ public class Origin implements Serializable {
         return Objects.hash(getSender(), executionId, computationBough);
     }
 
-    private FunctionCallTreeLocation functionCallTreeLocation;
+    private ComputationTreeLocation computationTreeLocation;
 
-    public FunctionCallTreeLocation functionCallTreeLocation() {
-        if (functionCallTreeLocation == null) {
-            functionCallTreeLocation = new FunctionCallTreeLocation(this);
+    public ComputationTreeLocation functionCallTreeLocation() {
+        if (computationTreeLocation == null) {
+            computationTreeLocation = new ComputationTreeLocation(this);
         }
-        return functionCallTreeLocation;
+        return computationTreeLocation;
     }
 
     Origin popCall() {

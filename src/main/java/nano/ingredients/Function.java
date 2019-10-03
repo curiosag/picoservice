@@ -20,17 +20,16 @@ public abstract class Function<T extends Serializable> extends Actress {
     final List<ForwardingItem> onReturn = new ArrayList<>();
     private final List<ForwardingItem> onReceivedReturn = new ArrayList<>();
 
-    public final Map<FunctionCallTreeLocation, State> executionStates = new HashMap<>();
+    public final Map<ComputationTreeLocation, State> executionStates = new HashMap<>();
     private final Map<String, Serializable> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
         executionStates.remove(origin.functionCallTreeLocation());
-        //debug(String.format("-->  %s:%d States. Removed (%d/%d) %s ", address.toString(), executionStates.size(), origin.executionId, origin.callLevel, origin.sender.address.toString()));
     }
 
     void cleanup(Long runId) {
         // TODO implement
-        List<FunctionCallTreeLocation> toRemove = executionStates.keySet().stream()
+        List<ComputationTreeLocation> toRemove = executionStates.keySet().stream()
                 .filter(k -> k.getExecutionId().equals(runId))
                 .collect(Collectors.toList());
         toRemove.forEach(executionStates::remove);
@@ -115,8 +114,8 @@ public abstract class Function<T extends Serializable> extends Actress {
         propagate(m, Acknowledge.N, propagations);
     }
 
-    void propagate(Message m, Acknowledge ack) {
-        propagate(m, ack, propagations);
+    void propagateAck(Message m) {
+        propagate(m, Acknowledge.Y, propagations);
     }
 
     void propagate(Message message, Map<String, List<SerializableTuple<String, Function<?>>>> propagations) {

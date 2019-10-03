@@ -81,7 +81,7 @@ public class PrioritizedPropagation extends Function {
             super.propagate(m);
         } else {
             if (priorityParams.contains(m.key)) {
-                super.propagate(m, Acknowledge.Y);
+                super.propagateAck(m);
             } else {
                 state.otherParamsPending.add(m);
             }

@@ -14,7 +14,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
 
     final List<String> partialAppParams = new ArrayList<>();
     // Map<ExecutionId, stack of preset values of partial function applications>
-    public final Map<FunctionCallTreeLocation, Map<String, Serializable>> partialAppValues = new ConcurrentHashMap<>();
+    public final Map<ComputationTreeLocation, Map<String, Serializable>> partialAppValues = new ConcurrentHashMap<>();
 
     protected PartialFunctionApplication(Function<T> body, List<String> partialAppParams) {
         super(body);
@@ -68,7 +68,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
 
     public Map<String, Serializable> getPartialAppValues(Origin o) {
 
-        List<Map.Entry<FunctionCallTreeLocation, Map<String, Serializable>>> matches = partialAppValues.entrySet().stream()
+        List<Map.Entry<ComputationTreeLocation, Map<String, Serializable>>> matches = partialAppValues.entrySet().stream()
                 .filter(e -> o.functionCallTreeLocation().getExecutionId().equals(e.getKey().getExecutionId()))
                 .filter(e -> o.functionCallTreeLocation().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))

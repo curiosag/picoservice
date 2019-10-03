@@ -41,4 +41,6 @@ public interface Name {
     String ack = "ack";
     String createFunctionCall = "createFunctionCall";
     String branch = "branch";
+    String a1 = "a1";
+    String a2 = "a2";
 }

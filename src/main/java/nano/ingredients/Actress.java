@@ -1,8 +1,8 @@
 package nano.ingredients;
 
 import akka.actor.ActorRef;
-import nano.ingredients.trace.Trace;
-import nano.ingredients.trace.TraceMessage;
+import nano.ingredients.infrastructure.TraceMessage;
+import nano.ingredients.infrastructure.Tracer;
 import nano.misc.Adresses;
 import org.apache.log4j.Logger;
 
@@ -13,10 +13,9 @@ import java.util.Set;
 
 import static nano.ingredients.Ensemble.getStackTrace;
 import static nano.ingredients.Ensemble.resolve;
-import static nano.ingredients.RunMode.RECOVERY;
 import static nano.ingredients.RunMode.RUN;
 import static nano.ingredients.RunProperty.*;
-import static nano.ingredients.trace.TraceMessage.traced;
+import static nano.ingredients.infrastructure.TraceMessage.traced;
 
 public abstract class Actress implements Serializable {
     private static final long serialVersionUID = 0L;
@@ -30,11 +29,9 @@ public abstract class Actress implements Serializable {
 
     private boolean stopped = false;
 
-    private long maxMessageId = 0L;
+    protected transient Tracer tracer = resolveTracer();
 
-    private transient Actress tracer = resolveTracer();
-
-    ActorRef aRef() {
+    protected ActorRef aRef() {
         return aref;
     }
 
@@ -42,8 +39,8 @@ public abstract class Actress implements Serializable {
         this.aref = aref;
     }
 
-    protected Actress resolveTracer() {
-        return resolve(Adresses.trace);
+    protected Tracer resolveTracer() {
+        return (Tracer) resolve(Adresses.trace);
     }
 
     public final Address address;
@@ -67,7 +64,7 @@ public abstract class Actress implements Serializable {
 
     Actress() {
         address = createAddress();
-        if (!(this instanceof Trace)) {
+        if (!(this instanceof Tracer)) {
             tracer = resolveTracer();
         }
     }
@@ -162,12 +159,7 @@ public abstract class Actress implements Serializable {
         return address.toString();
     }
 
-    public void receiveRecover(Message m) {
-        runMode = RECOVERY;
-        trace(m);
-        receive(m);
-        runMode = RUN;
-    }
+    public abstract void receiveRecover(Message m)  ;
 
     private boolean hasRunProperty(RunProperty p) {
         return runProperties.contains(p);

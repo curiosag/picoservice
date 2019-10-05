@@ -1,4 +1,4 @@
-package nano.ingredients.trace;
+package nano.ingredients.infrastructure;
 
 import nano.ingredients.*;
 import nano.ingredients.tuples.SerializableTuple;

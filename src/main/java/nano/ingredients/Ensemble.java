@@ -2,7 +2,7 @@ package nano.ingredients;
 
 import akka.actor.ActorSystem;
 import nano.ingredients.akka.Akktor;
-import nano.ingredients.trace.Trace;
+import nano.ingredients.infrastructure.Tracer;
 import nano.misc.Adresses;
 
 import java.io.PrintWriter;
@@ -27,7 +27,7 @@ public class Ensemble {
     private static final long reservedIds = 99;
     private static AtomicLong maxId = new AtomicLong(reservedIds); // tracer, callCreator
 
-    public static Trace tracer;
+    public static Tracer tracer;
     private static Ensemble instance;
 
     public Ensemble() {
@@ -37,7 +37,7 @@ public class Ensemble {
     public static Ensemble instance() {
         if (instance == null) {
             instance = new Ensemble();
-            tracer = new Trace(false);
+            tracer = new Tracer(false);
             instance.wireActress(tracer);
             registerTracer();
         }

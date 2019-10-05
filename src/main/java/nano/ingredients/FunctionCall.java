@@ -66,7 +66,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
             if (!isConst(message)) // const already comes with proper stack
             {
                 ComputationOriginBranch maybeOriginBranchedOffFrom = origin.pushCall(this);
-                notifyBranching(origin, maybeOriginBranchedOffFrom);
+                notifyBranching(maybeOriginBranchedOffFrom, origin);
                 origin = maybeOriginBranchedOffFrom.getOrigin();
                 getState(origin);
             }
@@ -75,14 +75,14 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
     }
 
-    private void notifyBranching(Origin origin, ComputationOriginBranch maybeOriginBranchedOffFrom) {
+    private void notifyBranching(ComputationOriginBranch maybeOriginBranchedOffFrom, Origin origin) {
         if (maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().isPresent()) {
-            tell(branchMessage(maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().get(), origin));
+            tracer.tell(branchMessage(maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().get(), origin));
         }
     }
 
     private Message branchMessage(ComputationBough b, Origin origin) {
-        return new Message(Name.branch, b, origin);
+        return new Message(Name.computationBranch, b, origin);
     }
 
 

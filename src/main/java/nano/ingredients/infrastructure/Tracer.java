@@ -1,4 +1,4 @@
-package nano.ingredients.trace;
+package nano.ingredients.infrastructure;
 
 import nano.ingredients.*;
 import nano.misc.Adresses;
@@ -13,14 +13,20 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class Trace extends Actress implements Closeable {
+public class Tracer extends Actress implements Closeable {
 
     private boolean active;
     private BufferedWriter writer;
 
+    private ComputationBoughs boughs = new ComputationBoughs();
+
     @Override
-    protected Actress resolveTracer() {
+    protected Tracer resolveTracer() {
         return this;
+    }
+
+    public ComputationBoughs getBoughs() {
+        return boughs;
     }
 
     public void setTrace(boolean active) {
@@ -35,7 +41,7 @@ public class Trace extends Actress implements Closeable {
         }
     }
 
-    public Trace(boolean active) {
+    public Tracer(boolean active) {
         super(new Address(Adresses.trace, 0L));
         setTrace(active);
     }
@@ -138,10 +144,21 @@ public class Trace extends Actress implements Closeable {
 
     @Override
     public void process(Message message) {
+        if (message.key.equals(Name.computationBranch))
+        {
+            boughs.add((ComputationBough) message.getValue());
+            return;
+        }
+
         if (!(message instanceof TraceMessage)) {
             throw new IllegalStateException();
         }
         write((TraceMessage) message);
+    }
+
+    @Override
+    public void receiveRecover(Message m) {
+
     }
 
     private BufferedWriter createWriter() {

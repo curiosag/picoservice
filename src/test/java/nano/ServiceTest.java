@@ -975,7 +975,7 @@ public class ServiceTest {
     @Test
     public void testSequentialIf() {
 
-        /* sequential if requires specific control of branch initializations and propagations
+        /* sequential if requires specific control of computationBranch initializations and propagations
            depending on the calculated value of the condition
 
              for cases      a   b
@@ -1102,8 +1102,8 @@ public class ServiceTest {
         checksum(result, resultMonitor, runId++, 2, 3);
         checksum(result, resultMonitor, runId++, 10, 11 * 5);
         checksum(result, resultMonitor, runId++, 100, 101 * 50);
-  //      checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
-  //      checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
+        //      checksum(result, resultMonitor, runId++, 20000, 20001 * 10000);
+        //      checksum(result, resultMonitor, runId, 64000, 64001 * 32000); // close to MaxInt, isn't overflow-save
 
         testParallelRecursion(sumCall);
     }
@@ -1347,7 +1347,6 @@ public class ServiceTest {
         assertEquals(Integer.valueOf(4), result.value);
     }
 
-
     private Action setUpResultListener(Function<ArrayList<Integer>> qsortCall, List<Integer> result) {
         Action resultListener = action((Consumer<Message> & Serializable) i -> {
             result.addAll((List<Integer>) i.getValue());
@@ -1362,19 +1361,19 @@ public class ServiceTest {
         private PartialFunctionApplication<Integer> partialAdd;
         private FunctionCall<Integer> functionCallApply;
 
-        public PartialAppOnLambda(Action resultListener) {
+        PartialAppOnLambda(Action resultListener) {
             this.resultListener = resultListener;
         }
 
-        public PartialFunctionApplication<Integer> getPartialAdd() {
+        PartialFunctionApplication<Integer> getPartialAdd() {
             return partialAdd;
         }
 
-        public FunctionCall<Integer> getFunctionCallApply() {
+        FunctionCall<Integer> getFunctionCallApply() {
             return functionCallApply;
         }
 
-        public PartialAppOnLambda create() {
+        PartialAppOnLambda create() {
             BinOp<Integer, Integer, Integer> add = add();
             partialAdd = partialApplication(add, list(Name.b));
             partialAdd.label("ADD(_,X)");

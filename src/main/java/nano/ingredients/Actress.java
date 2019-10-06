@@ -29,7 +29,7 @@ public abstract class Actress implements Serializable {
 
     private boolean stopped = false;
 
-    protected transient Tracer tracer = resolveTracer();
+    transient Tracer tracer = resolveTracer();
 
     protected ActorRef aRef() {
         return aref;
@@ -77,7 +77,7 @@ public abstract class Actress implements Serializable {
         address.setLabel(sticker);
     }
 
-    void debug(Message m, Origin o, String rel) {
+    private void debug(Message m, Origin o, String rel) {
         if (!(m instanceof TraceMessage))
             debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationPath().toString(), o.getExecutionId(), o.getComputationPath().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
     }
@@ -85,7 +85,7 @@ public abstract class Actress implements Serializable {
     public abstract void process(Message message);
 
     public void tell(Message m) {
-        if (runMode == RUN) {
+        if (! m.isReplay()) {
             aRef().tell(m, m.origin.getSender().aref);
         }
     }
@@ -164,7 +164,7 @@ public abstract class Actress implements Serializable {
 
     public boolean shouldPersist(Message m){
         return false;
-    };
+    }
 
     private boolean hasRunProperty(RunProperty p) {
         return runProperties.contains(p);

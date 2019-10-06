@@ -63,17 +63,23 @@
             <artifactId>commons-codec</artifactId>
             <version>1.11</version>
         </dependency>
-<!--        <dependency>
-            <groupId>com.hootsuite</groupId>
-            <artifactId>akka-persistence-redis_2.12</artifactId>
-            <version>0.8.0</version>
-            <scope>runtime</scope>
-        </dependency>
         <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-persistence_2.12</artifactId>
-            <version>2.5.25</version>
-        </dependency>-->
+            <groupId>org.jooq</groupId>
+            <artifactId>jool</artifactId>
+            <version>0.9.10</version>
+        </dependency>
+
+        <!--        <dependency>
+                    <groupId>com.hootsuite</groupId>
+                    <artifactId>akka-persistence-redis_2.12</artifactId>
+                    <version>0.8.0</version>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.typesafe.akka</groupId>
+                    <artifactId>akka-persistence_2.12</artifactId>
+                    <version>2.5.25</version>
+                </dependency>-->
     </dependencies>
 
 </project>

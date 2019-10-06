@@ -21,16 +21,22 @@ public class Tracer extends Actress implements Closeable {
     private boolean active;
     private BufferedWriter writer;
 
-    private ComputationPaths boughs = new ComputationPaths();
+    private final ComputationPaths paths = new ComputationPaths();
+    private final ComputationPaths replayedPaths = new ComputationPaths();
 
     @Override
     protected Tracer resolveTracer() {
         return this;
     }
 
-    public ComputationPaths getBoughs() {
-        return boughs;
+    public ComputationPaths getComputationPaths() {
+        return paths;
     }
+
+    public ComputationPaths getReplayedComputationPaths() {
+        return replayedPaths;
+    }
+
 
     public void setTrace(boolean active) {
         if (writer != null) {
@@ -121,7 +127,7 @@ public class Tracer extends Actress implements Closeable {
         }
 
         List<Long> stackReceiver = bough.getStack().getItems();
-        if(fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)){
+        if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)) {
             stackReceiver.add(m.receiver().address.id);
         }
 
@@ -147,9 +153,8 @@ public class Tracer extends Actress implements Closeable {
 
     @Override
     public void process(Message message) {
-        if (message.key.equals(Name.computationBranch))
-        {
-            boughs.add((ComputationPath) message.getValue());
+        if (message.key.equals(Name.computationBranch)) {
+            paths.add((ComputationPath) message.getValue());
             return;
         }
 
@@ -161,19 +166,22 @@ public class Tracer extends Actress implements Closeable {
 
     @Override
     public void receiveRecover(Message m) {
-        maybeBough(m).ifPresent(boughs::add);
+        maybePath(m).ifPresent(p -> {
+            if (paths.add(p)) {
+                replayedPaths.add(p);
+            }
+        });
     }
 
     @Override
     public boolean shouldPersist(Message m) {
-        return maybeBough(m)
-                .map(b -> ! boughs.contains(b))
+        return maybePath(m)
+                .map(b -> !paths.contains(b))
                 .orElse(FALSE);
     }
 
-    private Optional<ComputationPath> maybeBough(Message m)
-    {
-        if (m.getValue() instanceof ComputationPath){
+    private Optional<ComputationPath> maybePath(Message m) {
+        if (m.getValue() instanceof ComputationPath) {
             return Optional.of((ComputationPath) m.getValue());
         }
         return Optional.empty();

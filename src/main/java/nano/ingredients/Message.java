@@ -11,6 +11,17 @@ public class Message implements Serializable {
     public final String key;
     public final Origin origin;
     public Acknowledge ack = Acknowledge.N;
+    private transient boolean isReplay;
+
+
+    public boolean isReplay() {
+        return isReplay;
+    }
+
+    public Message setReplay(boolean replay) {
+        isReplay = replay;
+        return this;
+    }
 
     private static Long maxMessageId = 0L;
 

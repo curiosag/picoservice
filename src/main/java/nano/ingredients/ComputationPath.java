@@ -5,6 +5,7 @@ import nano.ingredients.tuples.ComputationBranch;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -25,14 +26,15 @@ public class ComputationPath implements Serializable {
      *                        (1,3,7,9), topIndex = 3
      * */
 
-    public final long executionId;
+    final long executionId;
     private final ArrayList<Long> functionCalls;
     private final Long lastPopped;
     private final int topIndex;
+    private final Long sum;
 
-    // only the positive elements of bough, stack.size() == topIndex + 1;
+    // only the positive elements of path, stack.size() == topIndex + 1;
+
     private transient ComputationStack stackView;
-
     public ComputationStack getStack() {
         if (stackView == null) {
             stackView = new ComputationStack(functionCalls, topIndex);
@@ -45,16 +47,18 @@ public class ComputationPath implements Serializable {
         topIndex = branchOffFrom.topIndex;
         functionCalls = branchOffFrom.getStack().getItems();
         lastPopped = null;
+        sum = branchOffFrom.sum;
     }
 
-    private static final ArrayList<Long> emptyBough = new ArrayList<>();
+    private static final ArrayList<Long> empty = new ArrayList<>();
+
     public ComputationPath(long executionId) {
         this.executionId = executionId;
-        functionCalls = emptyBough;
+        functionCalls = empty;
         lastPopped = null;
         topIndex = -1;
+        sum = 0L;
     }
-
     private ComputationPath(ComputationPath current, Long toPush) {
         functionCalls = new ArrayList<>(current.functionCalls);
         this.executionId = current.executionId;
@@ -62,6 +66,7 @@ public class ComputationPath implements Serializable {
         functionCalls.add(toPush);
         topIndex = current.topIndex + 1;
         lastPopped = current.lastPopped;
+        sum = current.sum + toPush;
     }
 
     private ComputationPath(ComputationPath current, boolean pop) {
@@ -74,6 +79,11 @@ public class ComputationPath implements Serializable {
         functionCalls.remove(current.topIndex);
         functionCalls.add(current.topIndex, lastPopped * -1);
         topIndex = current.topIndex - 1;
+        sum = current.sum + lastPopped;
+    }
+
+    public Long getSum() {
+        return sum;
     }
 
     Long getLastPopped() {
@@ -129,4 +139,7 @@ public class ComputationPath implements Serializable {
         return functionCalls.size();
     }
 
+    public List<Long> items() {
+        return functionCalls;
+    }
 }

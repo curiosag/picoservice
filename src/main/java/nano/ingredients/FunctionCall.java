@@ -1,6 +1,5 @@
 package nano.ingredients;
 
-import nano.ingredients.tuples.ComputationBranch;
 import nano.ingredients.tuples.ComputationOriginBranch;
 
 import java.io.Serializable;
@@ -8,8 +7,6 @@ import java.util.List;
 
 import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Message.message;
-import static nano.ingredients.RunMode.RESUME;
-import static nano.ingredients.RunMode.RUN;
 
 public class FunctionCall<T extends Serializable> extends Function<T> {
 
@@ -98,30 +95,24 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
     @Override
     public void receiveRecover(Message m) {
         trace(m);
-        ComputationPaths bs = tracer.getBoughs();
-        ComputationPath b = m.origin.getComputationPath();
-
-
-        if (descendingTheCallStack(m)) {
-        } else { // we're piling up stack layers
-            ComputationBranch expectedAfterFunctionCall = b.push(this.address.id);
-            List<ComputationPath> matches = bs.getMatches(expectedAfterFunctionCall.getExecutionPath());
-
-        }
-
-        if (bs.isEmpty()) {
-            runMode = RUN;
-        }
-
-        runMode = RESUME;
-
-
-        receive(m);
-        runMode = RUN;
+        receive(m.setReplay(isReplay(m)));
     }
 
-    private boolean descendingTheCallStack(Message m) {
-        return m.key.equals(Name.result);
+    private boolean isReplay(Message m) {
+        ComputationPaths ps = tracer.getReplayedComputationPaths();
+        ComputationPath p = m.origin.getComputationPath();
+
+        if (ps.isEmpty()) {
+            return false;
+        }
+        ComputationPath expectedAfterFunctionCall;
+        if (!m.key.equals(Name.result)) {
+            expectedAfterFunctionCall = p.pop();
+        } else { // we're piling up stack frames
+            expectedAfterFunctionCall = p.push(this.address.id).getExecutionPath();
+        }
+        List<ComputationPath> matches = ps.getMatches(expectedAfterFunctionCall);
+        return !matches.isEmpty();
     }
 
     @Override

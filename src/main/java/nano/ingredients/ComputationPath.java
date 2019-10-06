@@ -1,7 +1,7 @@
 package nano.ingredients;
 
 import nano.ingredients.guards.Guards;
-import nano.ingredients.tuples.ComputationBoughBranch;
+import nano.ingredients.tuples.ComputationBranch;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -9,18 +9,20 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class ComputationBough implements Serializable {
+public class ComputationPath implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /*
-     * a bough (a branch without the notion of branching) of functionIds from root to a leaf of the
-     * execution tree. Also resonates with the title of a strange book, "The Golden Baugh". And if anybody's interested
-     * in that, then Julian Jayne's "The Origin of Consciousness in The Breakdown of The Bicameral Mind" should not be
-     * avoided.
+     * a path of functionIds from root to a leaf of the execution tree.
      *
-     * during pushing it just grows, the topIndex gets increased by 1. e.g (1,3,7).push(3) = (1,3,7,3), topIndex = 3
-     * popping inverts items and decreases the topIndex. e.g. (1,3,7,3).pop() = (1,3,7,-3), topIndex = 2
+     * pushing: (1,3,7).push(3) = (1,3,7,3), topIndex = 3
+     * pop: (1,3,7,3).pop() = (1,3,7,-3), topIndex = 2
      *
+     * pushing again on a path where already something has been popped results in branching
+     *
+     *                        (1,3,7,-3), topIndex = 2
+     * (1,3,7,-3).push(9)  = {
+     *                        (1,3,7,9), topIndex = 3
      * */
 
     public final long executionId;
@@ -38,7 +40,7 @@ public class ComputationBough implements Serializable {
         return stackView;
     }
 
-    public ComputationBough(ComputationBough branchOffFrom) {
+    public ComputationPath(ComputationPath branchOffFrom) {
         this.executionId = branchOffFrom.executionId;
         topIndex = branchOffFrom.topIndex;
         functionCalls = branchOffFrom.getStack().getItems();
@@ -46,14 +48,14 @@ public class ComputationBough implements Serializable {
     }
 
     private static final ArrayList<Long> emptyBough = new ArrayList<>();
-    public ComputationBough(long executionId) {
+    public ComputationPath(long executionId) {
         this.executionId = executionId;
         functionCalls = emptyBough;
         lastPopped = null;
         topIndex = -1;
     }
 
-    private ComputationBough(ComputationBough current, Long toPush) {
+    private ComputationPath(ComputationPath current, Long toPush) {
         functionCalls = new ArrayList<>(current.functionCalls);
         this.executionId = current.executionId;
         Guards.isTrue(functionCalls.isEmpty() || functionCalls.get(functionCalls.size() - 1) >= 0);
@@ -62,7 +64,7 @@ public class ComputationBough implements Serializable {
         lastPopped = current.lastPopped;
     }
 
-    private ComputationBough(ComputationBough current, boolean pop) {
+    private ComputationPath(ComputationPath current, boolean pop) {
         this.executionId = current.executionId;
         Guards.isTrue(pop);
         Guards.isFalse(current.getStack().isEmpty());
@@ -78,13 +80,13 @@ public class ComputationBough implements Serializable {
         return lastPopped;
     }
 
-    ComputationBoughBranch push(Long functionId) {
+    ComputationBranch push(Long functionId) {
         if (nothingPoppedYet()) {
-            return ComputationBoughBranch.of(new ComputationBough(this, functionId), Optional.empty());
+            return ComputationBranch.of(new ComputationPath(this, functionId), Optional.empty());
         } else {
             // TODO could be a bit less of, eh, ...
-            ComputationBough branchedOff = new ComputationBough(new ComputationBough(this), functionId);
-            return ComputationBoughBranch.of(branchedOff, Optional.of(this));
+            ComputationPath branchedOff = new ComputationPath(new ComputationPath(this), functionId);
+            return ComputationBranch.of(branchedOff, Optional.of(this));
         }
     }
 
@@ -92,9 +94,9 @@ public class ComputationBough implements Serializable {
         return topIndex + 1 == functionCalls.size();
     }
 
-    ComputationBough pop() {
+    ComputationPath pop() {
         Guards.isTrue(topIndex >= 0);
-        return new ComputationBough(this, true);
+        return new ComputationPath(this, true);
     }
 
     @Override
@@ -108,7 +110,7 @@ public class ComputationBough implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ComputationBough that = (ComputationBough) o;
+        ComputationPath that = (ComputationPath) o;
         return  executionId == that.executionId &&
                 topIndex == that.topIndex &&
                 functionCalls.equals(that.functionCalls);

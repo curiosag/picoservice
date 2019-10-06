@@ -6,7 +6,7 @@ import nano.implementations.nativeImpl.ListBinOps;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.FunctionCall.functionCall;
 import static nano.ingredients.FunctionSignature.functionSignature;
 import static nano.ingredients.Iff.iffList;
@@ -18,7 +18,7 @@ public class Filter {
 
     public static Implementation<ArrayList<Integer>> filterSignatureJava() {
         FilterJava filter = new FilterJava();
-        wire(filter);
+        attachActor(filter);
         return new Implementation<>(filter, new ArrayList<>());
     }
 

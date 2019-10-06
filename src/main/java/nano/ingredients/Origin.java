@@ -1,6 +1,6 @@
 package nano.ingredients;
 
-import nano.ingredients.tuples.ComputationBoughBranch;
+import nano.ingredients.tuples.ComputationBranch;
 import nano.ingredients.tuples.ComputationOriginBranch;
 
 import java.io.Serializable;
@@ -11,29 +11,29 @@ public class Origin implements Serializable {
 
     transient Function<?> sender; // not serialized, rehydrated by asking for Function for senderId
     public final long senderId;
-    private final ComputationBough computationBough;
+    private final ComputationPath computationPath;
     final long prevFunctionCallId;
     final long lastFunctionCallId;
 
-    Origin(Function<?> sender, ComputationBough computationBough, long lastFunctionCallId, long prevFunctionCallId) {
+    Origin(Function<?> sender, ComputationPath computationPath, long lastFunctionCallId, long prevFunctionCallId) {
         this.senderId = sender.address.id;
         this.sender = sender;
-        this.computationBough = computationBough;
+        this.computationPath = computationPath;
         this.prevFunctionCallId = prevFunctionCallId;
         this.lastFunctionCallId = lastFunctionCallId;
     }
 
     public static Origin origin(Function<?> sender) {
         Long id = sender.address.id;
-        return new Origin(sender, new ComputationBough(0L), id, -1L);
+        return new Origin(sender, new ComputationPath(0L), id, -1L);
     }
 
-    public static Origin origin(Function<?> sender, ComputationBough computationBough, long prevFunctionCallId, long lastFunctionCallId) {
-        return new Origin(sender, computationBough, prevFunctionCallId, lastFunctionCallId);
+    public static Origin origin(Function<?> sender, ComputationPath computationPath, long prevFunctionCallId, long lastFunctionCallId) {
+        return new Origin(sender, computationPath, prevFunctionCallId, lastFunctionCallId);
     }
 
     Origin sender(Function<?> sender) {
-        return origin(sender, computationBough, prevFunctionCallId, lastFunctionCallId);
+        return origin(sender, computationPath, prevFunctionCallId, lastFunctionCallId);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class Origin implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getSender(), getExecutionId(), computationBough);
+        return Objects.hash(getSender(), getExecutionId(), computationPath);
     }
 
     private ComputationTreeLocation computationTreeLocation;
@@ -63,15 +63,15 @@ public class Origin implements Serializable {
     }
 
     Origin popCall() {
-        ComputationBough bough = computationBough.pop();
+        ComputationPath bough = computationPath.pop();
         return new Origin(getSender(), bough, bough.getLastPopped(), lastFunctionCallId);
     }
 
     ComputationOriginBranch pushCall(FunctionCall functionCall) {
-        ComputationBoughBranch maybeBranch = computationBough.push(functionCall.address.id);
+        ComputationBranch maybeBranch = computationPath.push(functionCall.address.id);
 
-        Origin o = new Origin(getSender(), maybeBranch.getExecutionBough(), functionCall.address.id, lastFunctionCallId);
-        return ComputationOriginBranch.of(o, maybeBranch.getBoughBranchedOffFrom());
+        Origin o = new Origin(getSender(), maybeBranch.getExecutionPath(), functionCall.address.id, lastFunctionCallId);
+        return ComputationOriginBranch.of(o, maybeBranch.getPathBranchedOffFrom());
     }
 
     public Function<?> getSender() {
@@ -81,11 +81,11 @@ public class Origin implements Serializable {
         return sender;
     }
 
-    public ComputationBough getComputationBough() {
-        return computationBough;
+    public ComputationPath getComputationPath() {
+        return computationPath;
     }
 
     public long getExecutionId() {
-        return getComputationBough().executionId;
+        return getComputationPath().executionId;
     }
 }

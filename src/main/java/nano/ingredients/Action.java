@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Nop.nop;
 
 public class Action extends Function {
@@ -41,7 +41,7 @@ public class Action extends Function {
     public static Action action(Consumer<Message> action) {
         Action result = new Action(action);
         result.returnTo(nop, Name.nop);
-        wire(result);
+        attachActor(result);
         return result;
     }
 

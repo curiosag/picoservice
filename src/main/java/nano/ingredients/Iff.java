@@ -7,7 +7,7 @@ import nano.ingredients.tuples.SerializableTuple;
 import java.io.Serializable;
 import java.util.*;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Message.message;
 
 public class Iff<T extends Serializable> extends Function<T> {
@@ -81,13 +81,13 @@ public class Iff<T extends Serializable> extends Function<T> {
 
     public static Iff<Integer> iff() {
         Iff<Integer> result = new Iff<>();
-        wire(result);
+        attachActor(result);
         return result;
     }
 
     public static Iff<ArrayList<Integer>> iffList() {
         Iff<ArrayList<Integer>> result = new Iff<>();
-        wire(result);
+        attachActor(result);
         return result;
     }
 

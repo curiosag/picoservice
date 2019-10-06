@@ -21,14 +21,14 @@ public class Tracer extends Actress implements Closeable {
     private boolean active;
     private BufferedWriter writer;
 
-    private ComputationBoughs boughs = new ComputationBoughs();
+    private ComputationPaths boughs = new ComputationPaths();
 
     @Override
     protected Tracer resolveTracer() {
         return this;
     }
 
-    public ComputationBoughs getBoughs() {
+    public ComputationPaths getBoughs() {
         return boughs;
     }
 
@@ -83,7 +83,7 @@ public class Tracer extends Actress implements Closeable {
             value = (m.getValue()).toString();
         }
 
-        return '"' + String.format("(%d/%d)%s:", m.origin.getExecutionId(), m.origin.getComputationBough().size(), m.key) + value
+        return '"' + String.format("(%d/%d)%s:", m.origin.getExecutionId(), m.origin.getComputationPath().size(), m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -113,7 +113,7 @@ public class Tracer extends Actress implements Closeable {
          *
          * */
 
-        ComputationBough bough = m.traced().origin.getComputationBough();
+        ComputationPath bough = m.traced().origin.getComputationPath();
 
         List<Long> stackSender = bough.getStack().getItems();
         if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
@@ -149,7 +149,7 @@ public class Tracer extends Actress implements Closeable {
     public void process(Message message) {
         if (message.key.equals(Name.computationBranch))
         {
-            boughs.add((ComputationBough) message.getValue());
+            boughs.add((ComputationPath) message.getValue());
             return;
         }
 
@@ -171,10 +171,10 @@ public class Tracer extends Actress implements Closeable {
                 .orElse(FALSE);
     }
 
-    private Optional<ComputationBough> maybeBough(Message m)
+    private Optional<ComputationPath> maybeBough(Message m)
     {
-        if (m.getValue() instanceof ComputationBough){
-            return Optional.of((ComputationBough) m.getValue());
+        if (m.getValue() instanceof ComputationPath){
+            return Optional.of((ComputationPath) m.getValue());
         }
         return Optional.empty();
     }

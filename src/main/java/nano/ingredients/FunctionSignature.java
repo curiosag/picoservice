@@ -2,7 +2,7 @@ package nano.ingredients;
 
 import java.io.Serializable;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Origin.origin;
 
 public class FunctionSignature<T extends Serializable> extends Function<T> {
@@ -30,7 +30,7 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
 
     public static <T extends Serializable > FunctionSignature<T> functionSignature(Function<T> body) {
         FunctionSignature<T> result = new FunctionSignature<>(body);
-        wire(result);
+        attachActor(result);
         return result;
     }
 
@@ -100,7 +100,7 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
         if (m.hasKey(Name.result)) {
             FunctionSignatureState state = (FunctionSignatureState) s;
             hdlForwarings(state.origin, onReturn);
-            Origin o = origin(this, m.origin.getComputationBough(), m.origin.prevFunctionCallId, m.origin.lastFunctionCallId);
+            Origin o = origin(this, m.origin.getComputationPath(), m.origin.prevFunctionCallId, m.origin.lastFunctionCallId);
             state.origin.getSender().tell(m.origin(o));
             removeState(state.origin);
         }

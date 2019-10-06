@@ -16,7 +16,7 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
     public static <T extends Serializable> FunctionStub<T> of(String keyFuncStubbed) {
         FunctionStub<T> result = new FunctionStub<>(keyFuncStubbed);
         result.label("stub:" + keyFuncStubbed);
-        Ensemble.wire(result);
+        Ensemble.attachActor(result);
         return result;
     }
 

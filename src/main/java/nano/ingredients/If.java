@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 
 public class If<T extends Serializable> extends Function<T> {
 
@@ -37,7 +37,7 @@ public class If<T extends Serializable> extends Function<T> {
 
     public static If<Integer> createIf() {
         If<Integer> result = new If<>();
-        wire(result);
+        attachActor(result);
         return result;
     }
 

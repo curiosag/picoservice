@@ -1,6 +1,5 @@
 package nano.ingredients;
 
-import nano.ingredients.tuples.ComputationBoughBranch;
 import nano.ingredients.tuples.ForwardingItem;
 import nano.ingredients.tuples.SerializableKeyValuePair;
 import nano.ingredients.tuples.SerializableTuple;
@@ -13,8 +12,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static nano.ingredients.Message.message;
-import static nano.ingredients.RunMode.RECOVERY;
-import static nano.ingredients.RunMode.RUN;
 
 public abstract class Function<T extends Serializable> extends Actress {
 
@@ -200,40 +197,6 @@ public abstract class Function<T extends Serializable> extends Actress {
             v.target().tell(message(kv.key(), kv.value(), origin));
         });
     }
-
-    @Override
-    public void receiveRecover(Message m) {
-        trace(m);
-        ComputationBoughs bs = tracer.getBoughs();
-        ComputationBough b = m.origin.getComputationBough();
-
-        List<ComputationBough> matches = bs.getMatches(b);
-
-        if (descendingTheCallStack(m, Name.result)) {
-        } else { // we're piling up stack layers
-            ComputationBoughBranch extendedBough = b.push(this.address.id);
-        }
-
-        if (bs.isEmpty()) {
-            runMode = RUN;
-        }
-
-        runMode = RECOVERY;
-
-
-        receive(m);
-        runMode = RUN;
-    }
-
-    @Override
-    public boolean shouldPersist(Message m) {
-        return (this instanceof FunctionCall);
-    }
-
-    private boolean descendingTheCallStack(Message m, String result) {
-        return m.key.equals(result);
-    }
-
 
     static boolean computed(Object value) {
         return value != null;

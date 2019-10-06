@@ -498,7 +498,7 @@ public class ServiceTest {
 
         qsortCall.returnTo(resultListener, Name.result);
 
-        Origin origin = origin(nop, new ComputationBough(executions++), -1L, 0L);
+        Origin origin = origin(nop, new ComputationPath(executions++), -1L, 0L);
         resultListener.tell(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
@@ -1226,7 +1226,7 @@ public class ServiceTest {
 
 
     private Origin originForExecutionId(Action a, Long executionId) {
-        return origin(a, new ComputationBough(executionId), -1L, 0L);
+        return origin(a, new ComputationPath(executionId), -1L, 0L);
     }
 
     private List<Integer> sorted(List<Integer> list) {
@@ -1282,7 +1282,7 @@ public class ServiceTest {
         ArrayList<Integer> input = randomList(200);
         List<Integer> result = new ArrayList<>();
 
-        Origin origin = origin(nop, new ComputationBough(executions++), -1L, 0L);
+        Origin origin = origin(nop, new ComputationPath(executions++), -1L, 0L);
         setUpResultListener(functionCall(getQuicksortSignature()), result)
                 .tell(message(Name.list, input, origin));
 

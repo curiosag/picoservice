@@ -79,7 +79,7 @@ public abstract class Actress implements Serializable {
 
     void debug(Message m, Origin o, String rel) {
         if (!(m instanceof TraceMessage))
-            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationBough().toString(), o.getExecutionId(), o.getComputationBough().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
+            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationPath().toString(), o.getExecutionId(), o.getComputationPath().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
     }
 
     public abstract void process(Message message);
@@ -94,7 +94,7 @@ public abstract class Actress implements Serializable {
         try {
             debug(m, m.origin, "!!");
             if (hasRunProperty(SHOW_STACKS)) {
-                System.out.println(m.origin.getComputationBough().getStack().stackPoints());
+                System.out.println(m.origin.getComputationPath().getStack().stackPoints());
             }
             if (m.key.equals(Name.ack)) {
                 onAck((Message) m.getValue());
@@ -159,11 +159,14 @@ public abstract class Actress implements Serializable {
         return address.toString();
     }
 
-    public abstract void receiveRecover(Message m)  ;
+    public void receiveRecover(Message m) {
+    }
+
+    public boolean shouldPersist(Message m){
+        return false;
+    };
 
     private boolean hasRunProperty(RunProperty p) {
         return runProperties.contains(p);
     }
-
-    public abstract boolean shouldPersist(Message m);
 }

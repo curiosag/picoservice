@@ -1,11 +1,15 @@
 package nano.ingredients;
 
+import nano.ingredients.tuples.ComputationBranch;
 import nano.ingredients.tuples.ComputationOriginBranch;
 
 import java.io.Serializable;
+import java.util.List;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Message.message;
+import static nano.ingredients.RunMode.RESUME;
+import static nano.ingredients.RunMode.RUN;
 
 public class FunctionCall<T extends Serializable> extends Function<T> {
 
@@ -17,7 +21,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
     public static <T extends Serializable> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
-        wire(result);
+        attachActor(result);
         return result;
     }
 
@@ -51,9 +55,9 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
             origin = origin.popCall();
 
-            if (!this.address.id.equals(origin.getComputationBough().getLastPopped())) {
+            if (!this.address.id.equals(origin.getComputationPath().getLastPopped())) {
                 String fmt = "Function call %s attempted to pop itself, but found on stack %d";
-                throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.getComputationBough().getLastPopped()));
+                throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.getComputationPath().getLastPopped()));
             }
 
             if (message.hasKey(Name.result)) {
@@ -81,13 +85,48 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
         }
     }
 
-    private Message branchMessage(ComputationBough b, Origin origin) {
+    private Message branchMessage(ComputationPath b, Origin origin) {
         return new Message(Name.computationBranch, b, origin);
     }
 
 
     private boolean isConst(Message message) {
         return message.origin.getSender().equals(this);
+    }
+
+
+    @Override
+    public void receiveRecover(Message m) {
+        trace(m);
+        ComputationPaths bs = tracer.getBoughs();
+        ComputationPath b = m.origin.getComputationPath();
+
+
+        if (descendingTheCallStack(m)) {
+        } else { // we're piling up stack layers
+            ComputationBranch expectedAfterFunctionCall = b.push(this.address.id);
+            List<ComputationPath> matches = bs.getMatches(expectedAfterFunctionCall.getExecutionPath());
+
+        }
+
+        if (bs.isEmpty()) {
+            runMode = RUN;
+        }
+
+        runMode = RESUME;
+
+
+        receive(m);
+        runMode = RUN;
+    }
+
+    private boolean descendingTheCallStack(Message m) {
+        return m.key.equals(Name.result);
+    }
+
+    @Override
+    public boolean shouldPersist(Message m) {
+        return true;
     }
 
 }

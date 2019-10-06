@@ -1,6 +1,6 @@
 package nano.ingredients.guards;
 
-import nano.ingredients.ComputationBough;
+import nano.ingredients.ComputationPath;
 
 import java.util.Collection;
 import java.util.Map;
@@ -46,7 +46,7 @@ public class Guards {
         }
     }
 
-    public static void isEmpty(ComputationBough computationBough) {
-        isTrue(computationBough.isEmpty());
+    public static void isEmpty(ComputationPath computationPath) {
+        isTrue(computationPath.isEmpty());
     }
 }

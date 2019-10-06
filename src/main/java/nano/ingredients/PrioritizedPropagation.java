@@ -5,7 +5,7 @@ import nano.ingredients.guards.Guards;
 import java.util.ArrayList;
 import java.util.List;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 
 public class PrioritizedPropagation extends Function {
 
@@ -41,7 +41,7 @@ public class PrioritizedPropagation extends Function {
 
     public static PrioritizedPropagation prioritizedPropagation() {
         PrioritizedPropagation result = new PrioritizedPropagation();
-        wire(result);
+        attachActor(result);
         return result;
     }
 

@@ -11,7 +11,7 @@ public class ComputationTreeLocation implements Serializable {
 
     ComputationTreeLocation(Origin origin) {
         this.origin = origin;
-        this.stackString = origin.getExecutionId() + "/" + origin.getComputationBough().getStack().toString();
+        this.stackString = origin.getExecutionId() + "/" + origin.getComputationPath().getStack().toString();
     }
 
     public Long getExecutionId() {
@@ -19,7 +19,7 @@ public class ComputationTreeLocation implements Serializable {
     }
 
     ComputationStack getCallStack() {
-        return origin.getComputationBough().getStack();
+        return origin.getComputationPath().getStack();
     }
 
     @Override

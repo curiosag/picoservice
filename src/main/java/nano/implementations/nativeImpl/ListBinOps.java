@@ -16,7 +16,7 @@ public class ListBinOps {
     public static BinOp<ArrayList<Integer>, ArrayList<Integer>, Boolean> eq() {
         BinOp<ArrayList<Integer>, ArrayList<Integer>, Boolean> result = new BinOp<>((BiFunction<ArrayList<Integer>, ArrayList<Integer>, Boolean> & Serializable) List::equals, listConverter, listConverter);
         result.label("equal");
-        Ensemble.wire(result);
+        Ensemble.attachActor(result);
         return result;
     }
 
@@ -27,7 +27,7 @@ public class ListBinOps {
             return conc;
         }, listConverter, listConverter);
         result.label("conc");
-        Ensemble.wire(result);
+        Ensemble.attachActor(result);
         return result;
     }
 
@@ -39,7 +39,7 @@ public class ListBinOps {
             return cons;
         }, intConverter, listConverter);
         result.label("cons");
-        Ensemble.wire(result);
+        Ensemble.attachActor(result);
         return result;
     }
 }

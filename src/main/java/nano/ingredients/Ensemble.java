@@ -97,7 +97,7 @@ public class Ensemble {
         return maxId.addAndGet(1);
     }
 
-    public static void wire(Actress a) {
+    public static void attachActor(Actress a) {
         instance().ensemble.add(instance().wireActress(a));
     }
 

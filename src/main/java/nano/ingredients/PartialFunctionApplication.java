@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static nano.ingredients.Ensemble.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.guards.Guards.notEmpty;
 
 public class PartialFunctionApplication<T extends Serializable> extends FunctionSignature<T> {
@@ -27,7 +27,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
 
     public static <T extends Serializable> PartialFunctionApplication<T> partialApplication(Function<T> body, List<String> keys) {
         PartialFunctionApplication<T> result = new PartialFunctionApplication<>(body, keys);
-        wire(result);
+        attachActor(result);
         return result;
     }
 

@@ -79,7 +79,7 @@ public abstract class Actress implements Serializable {
 
     void debug(Message m, Origin o, String rel) {
         if (!(m instanceof TraceMessage))
-            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationBough().toString(), o.executionId, o.getComputationBough().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
+            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationBough().toString(), o.getExecutionId(), o.getComputationBough().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
     }
 
     public abstract void process(Message message);
@@ -165,4 +165,5 @@ public abstract class Actress implements Serializable {
         return runProperties.contains(p);
     }
 
+    public abstract boolean shouldPersist(Message m);
 }

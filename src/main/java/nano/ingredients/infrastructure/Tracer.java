@@ -12,6 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+
+import static java.lang.Boolean.FALSE;
 
 public class Tracer extends Actress implements Closeable {
 
@@ -80,7 +83,7 @@ public class Tracer extends Actress implements Closeable {
             value = (m.getValue()).toString();
         }
 
-        return '"' + String.format("(%d/%d)%s:", m.origin.executionId, m.origin.getComputationBough().size(), m.key) + value
+        return '"' + String.format("(%d/%d)%s:", m.origin.getExecutionId(), m.origin.getComputationBough().size(), m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -158,7 +161,22 @@ public class Tracer extends Actress implements Closeable {
 
     @Override
     public void receiveRecover(Message m) {
+        maybeBough(m).ifPresent(boughs::add);
+    }
 
+    @Override
+    public boolean shouldPersist(Message m) {
+        return maybeBough(m)
+                .map(b -> ! boughs.contains(b))
+                .orElse(FALSE);
+    }
+
+    private Optional<ComputationBough> maybeBough(Message m)
+    {
+        if (m.getValue() instanceof ComputationBough){
+            return Optional.of((ComputationBough) m.getValue());
+        }
+        return Optional.empty();
     }
 
     private BufferedWriter createWriter() {

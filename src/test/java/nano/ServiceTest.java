@@ -498,7 +498,7 @@ public class ServiceTest {
 
         qsortCall.returnTo(resultListener, Name.result);
 
-        Origin origin = origin(nop, executions++, new ComputationBough(), -1L, 0L);
+        Origin origin = origin(nop, new ComputationBough(executions++), -1L, 0L);
         resultListener.tell(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
@@ -861,7 +861,7 @@ public class ServiceTest {
         mul.propagate(Name.a, Name.a, callerL);
         mul.propagate(Name.a, Name.a, callerR);
 
-        Origin origin = originForRunId(resultMonitor, 0L);
+        Origin origin = originForExecutionId(resultMonitor, 0L);
         resultMonitor.tell(message(Name.a, _1, origin));
 
         await(() -> result.value == 4);
@@ -903,7 +903,7 @@ public class ServiceTest {
         outerCaller.label("outerCaller");
         innerCaller.label("innerCaller");
 
-        Origin origin = originForRunId(resultMonitor, 0L);
+        Origin origin = originForExecutionId(resultMonitor, 0L);
         innerCaller.tell(message(Name.a, _2, origin));
 
         await(() -> result.value == 16);
@@ -956,7 +956,7 @@ public class ServiceTest {
 //        _if.kickOff(subF);
 
         // True-path
-        Origin originA = originForRunId(resultMonitor, 0L);
+        Origin originA = originForExecutionId(resultMonitor, 0L);
         resultMonitor.tell(message(Name.a, _4, originA));
         resultMonitor.tell(message(Name.b, _1, originA));
         await(() -> result.value != 0);
@@ -964,7 +964,7 @@ public class ServiceTest {
 
         // False-path
         result.setValue(0);
-        Origin originB = originForRunId(resultMonitor, 1L);
+        Origin originB = originForExecutionId(resultMonitor, 1L);
         resultMonitor.tell(message(Name.a, _1, originB));
         resultMonitor.tell(message(Name.b, _4, originB));
         await(() -> result.value != 0);
@@ -1018,7 +1018,7 @@ public class ServiceTest {
         resultMonitor.propagate(Name.b, Name.b, iff);
 
         // True-path
-        Origin computationA = originForRunId(resultMonitor, 0L);
+        Origin computationA = originForExecutionId(resultMonitor, 0L);
         resultMonitor.tell(message(Name.a, _4, computationA));
         resultMonitor.tell(message(Name.b, _1, computationA));
         await(() -> result.value != 0);
@@ -1026,7 +1026,7 @@ public class ServiceTest {
 
         // False-path
         result.setValue(0);
-        Origin computationB = originForRunId(resultMonitor, 1L);
+        Origin computationB = originForExecutionId(resultMonitor, 1L);
         resultMonitor.tell(message(Name.a, _1, computationB));
         resultMonitor.tell(message(Name.b, _4, computationB));
         await(() -> result.value != 0);
@@ -1067,7 +1067,7 @@ public class ServiceTest {
         resultMonitor.propagate(Name.b, Name.onFalse, _if);
 
         // True-path
-        Origin originA = originForRunId(resultMonitor, 0L);
+        Origin originA = originForExecutionId(resultMonitor, 0L);
         resultMonitor.tell(message(Name.a, _4, originA));
         resultMonitor.tell(message(Name.b, _1, originA));
         await(() -> result.value != 0);
@@ -1075,7 +1075,7 @@ public class ServiceTest {
 
         // False-path
         result.setValue(0);
-        Origin originB = originForRunId(resultMonitor, 1L);
+        Origin originB = originForExecutionId(resultMonitor, 1L);
         resultMonitor.tell(message(Name.a, _1, originB));
         resultMonitor.tell(message(Name.b, _4, originB));
         await(() -> result.value != 0);
@@ -1189,12 +1189,12 @@ public class ServiceTest {
         });
     }
 
-    private void checksum(Int result, Action resultMonitor, int runId, int sumOf, Integer expected) {
+    private void checksum(Int result, Action resultMonitor, int executionId, int sumOf, Integer expected) {
         Long start = System.nanoTime();
 
         result.value = -1;
 
-        Origin run = originForRunId(resultMonitor, (long) runId);
+        Origin run = originForExecutionId(resultMonitor, (long) executionId);
         resultMonitor.tell(message(Name.a, sumOf, run));
 
         await(() -> result.value >= 0);
@@ -1225,8 +1225,8 @@ public class ServiceTest {
     }
 
 
-    private Origin originForRunId(Action a, Long runId) {
-        return origin(a, runId, new ComputationBough(), -1L, 0L);
+    private Origin originForExecutionId(Action a, Long executionId) {
+        return origin(a, new ComputationBough(executionId), -1L, 0L);
     }
 
     private List<Integer> sorted(List<Integer> list) {
@@ -1247,7 +1247,7 @@ public class ServiceTest {
         resultMonitor.propagate(Name.a, Name.a, sumCall);
         sumCall.returnTo(resultMonitor, Name.result);
 
-        Origin run = originForRunId(resultMonitor, (long) ++runId);
+        Origin run = originForExecutionId(resultMonitor, (long) ++runId);
         resultMonitor.tell(message(Name.a, 10, run));
 
 
@@ -1282,7 +1282,7 @@ public class ServiceTest {
         ArrayList<Integer> input = randomList(200);
         List<Integer> result = new ArrayList<>();
 
-        Origin origin = origin(nop, executions++, new ComputationBough(), -1L, 0L);
+        Origin origin = origin(nop, new ComputationBough(executions++), -1L, 0L);
         setUpResultListener(functionCall(getQuicksortSignature()), result)
                 .tell(message(Name.list, input, origin));
 

@@ -1,5 +1,6 @@
 package nano.ingredients;
 
+import nano.ingredients.tuples.ComputationBoughBranch;
 import nano.ingredients.tuples.ForwardingItem;
 import nano.ingredients.tuples.SerializableKeyValuePair;
 import nano.ingredients.tuples.SerializableTuple;
@@ -208,10 +209,29 @@ public abstract class Function<T extends Serializable> extends Actress {
 
         List<ComputationBough> matches = bs.getMatches(b);
 
+        if (descendingTheCallStack(m, Name.result)) {
+        } else { // we're piling up stack layers
+            ComputationBoughBranch extendedBough = b.push(this.address.id);
+        }
+
+        if (bs.isEmpty()) {
+            runMode = RUN;
+        }
+
         runMode = RECOVERY;
+
 
         receive(m);
         runMode = RUN;
+    }
+
+    @Override
+    public boolean shouldPersist(Message m) {
+        return (this instanceof FunctionCall);
+    }
+
+    private boolean descendingTheCallStack(Message m, String result) {
+        return m.key.equals(result);
     }
 
 

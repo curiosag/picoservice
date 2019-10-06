@@ -35,7 +35,7 @@ public class Gateway<T extends Serializable> extends Function<T> {
     @Override
     public void tell(Message message) {
         Optional<Execution<T>> ex = executions.stream()
-                .filter(e -> e.origin.executionId == message.origin.executionId)
+                .filter(e -> e.origin.getExecutionId() == message.origin.getExecutionId())
                 .findAny();
         if (! ex.isPresent())
         {

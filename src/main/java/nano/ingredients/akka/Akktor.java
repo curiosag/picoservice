@@ -3,10 +3,7 @@ package nano.ingredients.akka;
 import akka.actor.Props;
 import akka.persistence.AbstractPersistentActor;
 import akka.persistence.SnapshotOffer;
-import nano.ingredients.Actress;
-import nano.ingredients.ComputationBough;
-import nano.ingredients.Ensemble;
-import nano.ingredients.Message;
+import nano.ingredients.*;
 import nano.ingredients.tuples.SerializableTuple;
 
 import java.util.HashMap;
@@ -49,17 +46,13 @@ public class Akktor extends AbstractPersistentActor {
         return receiveBuilder()
                 .match(Message.class,
                         m -> {
-                            if (Ensemble.instance().hasRunProperty(PERSIST)) {
+                            if (related.shouldPersist(m) && Ensemble.instance().hasRunProperty(PERSIST)) {
                                 System.out.println(String.format("%s ppers %s (%d<-%d) %s:%s", m.origin.getComputationBough().toString(), m.id, related.address.id, m.origin.senderId, m.key, m.getValue().toString()));
-                                persistInternal(m);
+                                persist(m, (Message i) -> eventStream.publish(i));
                             }
                             related.receive(m);
                         }
                 ).build();
-    }
-
-    private <T> void  persistInternal(Message m) {
-        persist(m, (Message i) -> eventStream.publish(i));
     }
 
     @Override

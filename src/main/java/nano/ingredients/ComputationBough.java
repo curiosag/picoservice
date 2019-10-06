@@ -23,49 +23,54 @@ public class ComputationBough implements Serializable {
      *
      * */
 
-    private final ArrayList<Long> bough;
+    public final long executionId;
+    private final ArrayList<Long> functionCalls;
     private final Long lastPopped;
     private final int topIndex;
 
     // only the positive elements of bough, stack.size() == topIndex + 1;
-    private transient ComputationStackView stackView;
+    private transient ComputationStack stackView;
 
-    public ComputationStackView getStack() {
+    public ComputationStack getStack() {
         if (stackView == null) {
-            stackView = new ComputationStackView(bough, topIndex);
+            stackView = new ComputationStack(functionCalls, topIndex);
         }
         return stackView;
     }
 
     public ComputationBough(ComputationBough branchOffFrom) {
+        this.executionId = branchOffFrom.executionId;
         topIndex = branchOffFrom.topIndex;
-        bough = branchOffFrom.getStack().getItems();
+        functionCalls = branchOffFrom.getStack().getItems();
         lastPopped = null;
     }
 
     private static final ArrayList<Long> emptyBough = new ArrayList<>();
-    public ComputationBough() {
-        bough = emptyBough;
+    public ComputationBough(long executionId) {
+        this.executionId = executionId;
+        functionCalls = emptyBough;
         lastPopped = null;
         topIndex = -1;
     }
 
     private ComputationBough(ComputationBough current, Long toPush) {
-        bough = new ArrayList<>(current.bough);
-        Guards.isTrue(bough.isEmpty() || bough.get(bough.size() - 1) >= 0);
-        bough.add(toPush);
+        functionCalls = new ArrayList<>(current.functionCalls);
+        this.executionId = current.executionId;
+        Guards.isTrue(functionCalls.isEmpty() || functionCalls.get(functionCalls.size() - 1) >= 0);
+        functionCalls.add(toPush);
         topIndex = current.topIndex + 1;
         lastPopped = current.lastPopped;
     }
 
     private ComputationBough(ComputationBough current, boolean pop) {
+        this.executionId = current.executionId;
         Guards.isTrue(pop);
         Guards.isFalse(current.getStack().isEmpty());
 
-        bough = new ArrayList<>(current.bough);
-        lastPopped = bough.get(current.topIndex);
-        bough.remove(current.topIndex);
-        bough.add(current.topIndex, lastPopped * -1);
+        functionCalls = new ArrayList<>(current.functionCalls);
+        lastPopped = functionCalls.get(current.topIndex);
+        functionCalls.remove(current.topIndex);
+        functionCalls.add(current.topIndex, lastPopped * -1);
         topIndex = current.topIndex - 1;
     }
 
@@ -77,14 +82,14 @@ public class ComputationBough implements Serializable {
         if (nothingPoppedYet()) {
             return ComputationBoughBranch.of(new ComputationBough(this, functionId), Optional.empty());
         } else {
-            // TODO could be a bit less, eh, ...
+            // TODO could be a bit less of, eh, ...
             ComputationBough branchedOff = new ComputationBough(new ComputationBough(this), functionId);
             return ComputationBoughBranch.of(branchedOff, Optional.of(this));
         }
     }
 
     private boolean nothingPoppedYet() {
-        return topIndex + 1 == bough.size();
+        return topIndex + 1 == functionCalls.size();
     }
 
     ComputationBough pop() {
@@ -94,7 +99,7 @@ public class ComputationBough implements Serializable {
 
     @Override
     public String toString() {
-        return bough.stream()
+        return functionCalls.stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining("/"));
     }
@@ -104,21 +109,22 @@ public class ComputationBough implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ComputationBough that = (ComputationBough) o;
-        return topIndex == that.topIndex &&
-                bough.equals(that.bough);
+        return  executionId == that.executionId &&
+                topIndex == that.topIndex &&
+                functionCalls.equals(that.functionCalls);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(bough, topIndex);
+        return Objects.hash(executionId, functionCalls, topIndex);
     }
 
     public boolean isEmpty() {
-        return bough.isEmpty();
+        return functionCalls.isEmpty();
     }
 
     public int size() {
-        return bough.size();
+        return functionCalls.size();
     }
 
 }

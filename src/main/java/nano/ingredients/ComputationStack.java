@@ -3,7 +3,7 @@ package nano.ingredients;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ComputationStackView {
+public class ComputationStack {
 
     private final List<Long> stack;
 
@@ -31,11 +31,11 @@ public class ComputationStackView {
         return result;
     }
 
-    ComputationStackView(ArrayList<Long> items) {
+    ComputationStack(ArrayList<Long> items) {
         stack = items;
     }
 
-    public ComputationStackView(ArrayList<Long> bough, int topIndex) {
+    public ComputationStack(ArrayList<Long> bough, int topIndex) {
         stack = new ArrayList<>(bough.subList(0, topIndex + 1));
     }
 
@@ -46,7 +46,7 @@ public class ComputationStackView {
                 .collect(Collectors.joining("/"));
     }
 
-    boolean startsWith(ComputationStackView that) {
+    boolean startsWith(ComputationStack that) {
         if (this.size() < that.size()) {
             return false;
         }
@@ -63,7 +63,7 @@ public class ComputationStackView {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ComputationStackView that = (ComputationStackView) o;
+        ComputationStack that = (ComputationStack) o;
         return stack.equals(that.stack);
     }
 

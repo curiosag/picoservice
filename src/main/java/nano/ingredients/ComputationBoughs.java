@@ -1,10 +1,11 @@
 package nano.ingredients;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ComputationBoughs {
-    private ArrayList<ComputationBough> boughs = new ArrayList<>();
+    private Set<ComputationBough> boughs = new HashSet<>();
 
     public void add(ComputationBough b){
         boughs.add(b);
@@ -12,5 +13,13 @@ public class ComputationBoughs {
 
     public List<ComputationBough> getMatches(ComputationBough b) {
         throw new IllegalStateException();
+    }
+
+    public boolean isEmpty(){
+        return boughs.isEmpty();
+    }
+
+    public boolean contains(ComputationBough b){
+        return boughs.contains(b);
     }
 }

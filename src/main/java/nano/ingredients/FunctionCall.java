@@ -111,7 +111,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
         } else { // we're piling up stack frames
             expectedAfterFunctionCall = p.push(this.address.id).getExecutionPath();
         }
-        List<ComputationPath> matches = ps.getMatches(expectedAfterFunctionCall);
+        List<ComputationPath> matches = ps.getMatching(expectedAfterFunctionCall);
         return !matches.isEmpty();
     }
 

@@ -4,7 +4,7 @@ An execution model for some functional language constructs based on message pass
 Harks back to Hewitt's papers but unlike smalltalk puts functions center stage rather than objects. The idea is to create
 something remotely similar to e.g. Spring integration, just with bearable syntax.
 
-##pico?
+## pico?
 
 Now that there are services, micro- and even nanoservices there wasn't much of a choice.
 

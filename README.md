@@ -22,7 +22,7 @@ A picoservice is:
 
 >- Deployable
 > 
->- Reusable
+>- Reusable (sometimes)
 >
 >- Useless (except in comination with others)
 

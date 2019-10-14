@@ -1,10 +1,15 @@
 package nano.ingredients;
 
-public class FunctionSignatureState extends State {
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PartialFunctionApplicationState extends State {
+    Map<String, Serializable> partialAppValues = new HashMap<>();
 
     public boolean partialApplicationValuesForwarded;
 
-    public FunctionSignatureState(Origin origin) {
+    public PartialFunctionApplicationState(Origin origin) {
         super(origin);
     }
 

@@ -4,6 +4,7 @@ import nano.implementations.nativeImpl.BinOps;
 import nano.ingredients.*;
 import nano.ingredients.gateway.Execution;
 import nano.ingredients.gateway.Gateway;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Test;
 
@@ -37,6 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class ServiceTest {
+    private static Logger logger = Logger.getLogger("ServiceTest");
     private final static ArrayList<Integer> emptyList = new ArrayList<>();
 
     private static final Integer _6 = 6;
@@ -316,63 +318,31 @@ public class ServiceTest {
         Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
 
-
         Origin origin = Origin.origin(resultListener);
         BinOp<Integer, Integer, Integer> add = add();
         PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
+        add.returnTo(partialAdd, Name.result);
         partialAdd.label("+X");
         partialAdd.propagate(Name.b, Name.rightArg, add);
         partialAdd.propagate(Name.a, Name.leftArg, add);
 
         FunctionCall<Integer> inc = functionCall(partialAdd);
+        partialAdd.returnTo(inc, Name.result);
         inc.returnTo(resultListener, Name.result);
         inc.label("INC");
 
-        partialAdd.tell(message(Name.b, _1, origin));
+        inc.tell(message(Name.b, _1, origin));
         assertResult(_1, _0, inc, result, origin);
         assertResult(_2, _1, inc, result, origin);
-        partialAdd.tell(message(Name.removePartialAppValues, null, origin));
+        inc.tell(message(Name.removePartialAppValues, null, origin));
 
-        partialAdd.tell(message(Name.b, _2, origin));
-        assertResult(_2, _0, inc, result, origin);
-        assertResult(_3, _1, inc, result, origin);
-        partialAdd.removePartialAppValues(origin);
+        inc.tell(message(Name.b, _3, origin));
+        assertResult(_3, _0, inc, result, origin);
+        assertResult(_4, _1, inc, result, origin);
+        inc.tell(message(Name.removePartialAppValues, null, origin));
 
     }
 
-    @Test
-    public void testPartialApplicationDirectCall() {
-        /*
-                function inc = a -> a + 1
-
-                check(inc(0))
-                check(inc(0))
-         */
-
-        Int result = Int(0);
-        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
-        resultListener.param(Name.result);
-        Origin origin = Origin.origin(resultListener);
-
-        BinOp<Integer, Integer, Integer> add = add();
-        PartialFunctionApplication<Integer> partialAdd = partialApplication(add, list(Name.b));
-        partialAdd.label("ADD(_,X)");
-        partialAdd.propagate(Name.a, Name.leftArg, add);
-        partialAdd.propagate(Name.b, Name.rightArg, add);
-
-        FunctionCall<Integer> inc = functionCall(partialAdd);
-        inc.onReturnSend(Name.removePartialAppValues, null, partialAdd);
-        inc.returnTo(resultListener, Name.result);
-        inc.label("INC");
-
-        // by way of direct call of the partially applied function
-        inc.tell(message(Name.b, _1, origin));
-        assertResult(_1, _0, inc, result, origin);
-
-        inc.tell(message(Name.b, _1, origin));
-        assertResult(_2, _1, inc, result, origin);
-
-    }
 
     @Test
     public void testPartialApplicationOnLambda() {
@@ -429,7 +399,7 @@ public class ServiceTest {
         inc.tell(message(Name.a, a, origin));
         await(() -> result.value != 0);
         assertEquals(expected, result.value);
-
+        logger.info("asserted " + expected);
     }
 
     @Test
@@ -437,17 +407,17 @@ public class ServiceTest {
         Function<ArrayList<Integer>> qsortCall = functionCall(getQuicksortSignature());
         qsortCall.label("qsortCall");
 
-        checkQsort(emptyList, emptyList, qsortCall);
-        checkQsort(list(2), list(2), qsortCall);
-        checkQsort(list(1, 2), list(2, 1), qsortCall);
-        checkQsort(list(1, 2, 3), list(2, 1, 3), qsortCall);
-        checkQsort(list(0, 1, 2, 3, 4, 5), list(5, 4, 3, 2, 1, 0), qsortCall);
-        checkQsort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
+        checkQuicksort(emptyList, emptyList, qsortCall);
+        checkQuicksort(list(2), list(2), qsortCall);
+        checkQuicksort(list(1, 2), list(2, 1), qsortCall);
+        checkQuicksort(list(1, 2, 3), list(2, 1, 3), qsortCall);
+        checkQuicksort(list(0, 1, 2, 3, 4, 5), list(5, 4, 3, 2, 1, 0), qsortCall);
+        checkQuicksort(list(0, 1, 2, 3, 4, 5), list(0, 1, 2, 3, 4, 5), qsortCall);
 
         ArrayList<Integer> randList = randomList(100);
         ArrayList<Integer> randListSorted = new ArrayList<>(randList);
         randListSorted.sort(Integer::compareTo);
-        checkQsort(randListSorted, randList, qsortCall);
+        checkQuicksort(randListSorted, randList, qsortCall);
         System.out.println("done sorting " + randList.size());
     }
 
@@ -486,8 +456,8 @@ public class ServiceTest {
 
     private long executions;
 
-    private List<Integer> checkQsort(List<Integer> expected, ArrayList<Integer> input, Function<ArrayList<Integer>> qsortCall) {
-        System.out.println("sorting " + input.size());
+    private List<Integer> checkQuicksort(List<Integer> expected, ArrayList<Integer> input, Function<ArrayList<Integer>> qsortCall) {
+        System.out.println("sorting a list of size " + input.size());
         ArrayList<Integer> result = new ArrayList<>();
         Int lastInt = Int(-1);
         Action resultListener = action((Consumer<Message> & Serializable) i -> {
@@ -828,6 +798,7 @@ public class ServiceTest {
         await(() -> results.size() == 2);
         assertEquals(results.get(callerA.returnKey), _3);
         assertEquals(results.get(callerB.returnKey), Integer.valueOf(7));
+        results.put("", 0);
     }
 
     @Test

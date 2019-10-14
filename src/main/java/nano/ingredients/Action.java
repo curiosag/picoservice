@@ -24,7 +24,7 @@ public class Action extends Function {
     }
 
     @Override
-    public boolean isParameter(String key) {
+    public boolean belongsToMe(String key) {
         return expectedParams.contains(key);
     }
 

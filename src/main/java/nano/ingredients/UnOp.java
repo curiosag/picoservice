@@ -23,7 +23,7 @@ public class UnOp<T extends Serializable, V extends Serializable> extends Functi
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return key.equals(Name.arg);
     }
 

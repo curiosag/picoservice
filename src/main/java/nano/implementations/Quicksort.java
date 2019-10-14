@@ -41,6 +41,7 @@ public class Quicksort {
             if (list == [])
                 []
      */
+
         Iff<ArrayList<Integer>> iff = iffList();
         FunctionSignature<ArrayList<Integer>> qsortSignature = functionSignature(iff);
         qsortSignature.propagate(Name.list, Name.list, iff);
@@ -74,7 +75,7 @@ public class Quicksort {
         // function lt(a, b) = a < b;
         // filter(tail, i -> lt(i, head))
         BinOp<Integer, Integer, Boolean> lt = lt();
-        Function<Boolean> ltPredicate = partialApplication(lt, Name.rightArg)
+        PartialFunctionApplication<Boolean> ltPredicate = partialApplication(lt, Name.rightArg)
                 .propagate(Name.arg, Name.leftArg, lt)
                 .propagate(Name.rightArg, Name.rightArg, lt);
 
@@ -94,7 +95,7 @@ public class Quicksort {
         // function gteq(a, b) = a >= b;
         // filter(filter(tail, i -> gteq(i, head))
         Function<Boolean> gteq = gteq();
-        Function<Boolean> gtEqPredicate = partialApplication(gteq, Name.rightArg)
+        PartialFunctionApplication<Boolean> gtEqPredicate = partialApplication(gteq, Name.rightArg)
                 .propagate(Name.arg, Name.leftArg, gteq)
                 .propagate(Name.rightArg, Name.rightArg, gteq);
 

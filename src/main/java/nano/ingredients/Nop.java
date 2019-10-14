@@ -18,7 +18,7 @@ public class Nop extends Function<Serializable> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return false;
     }
 

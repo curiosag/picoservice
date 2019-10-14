@@ -46,12 +46,6 @@ public class Message implements Serializable {
         return this;
     }
 
-    public Message usingKey(String key)
-    {
-        return new Message(key, getValue(), origin);
-    }
-
-
     public boolean hasKey(String value)
     {
         return key.equals(value);

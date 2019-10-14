@@ -73,7 +73,7 @@ public class Iff<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         // a hack. make super.process only kickOf the decision part
         // nothing else, no propagation or anything
         return true;
@@ -95,7 +95,7 @@ public class Iff<T extends Serializable> extends Function<T> {
     @SuppressWarnings("unchecked")
     protected void processInner(Message m, State s) {
         //TODO: there's a bad dependecy on the implemenation of If, they should be logically separated
-        // see also the use of Sif.isParameter
+        // see also the use of Sif.belongsToMe
         StateIff state = (StateIff) s;
 
         if (hdlIncomingParams(m, state)) {

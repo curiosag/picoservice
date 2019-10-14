@@ -35,7 +35,7 @@ public class PrioritizedPropagation extends Function {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return true;
     }
 

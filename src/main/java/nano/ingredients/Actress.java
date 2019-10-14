@@ -19,7 +19,7 @@ import static nano.ingredients.infrastructure.TraceMessage.traced;
 
 public abstract class Actress implements Serializable {
     private static final long serialVersionUID = 0L;
-    private static Logger logger = Logger.getRootLogger();
+    private static Logger logger = Logger.getLogger("");
     ActorRef aref;
     private Set<RunProperty> runProperties = new HashSet<>();
 
@@ -29,7 +29,7 @@ public abstract class Actress implements Serializable {
 
     private boolean stopped = false;
 
-    transient Tracer tracer = resolveTracer();
+    private transient Tracer tracer;
 
     protected ActorRef aRef() {
         return aref;
@@ -64,9 +64,6 @@ public abstract class Actress implements Serializable {
 
     Actress() {
         address = createAddress();
-        if (!(this instanceof Tracer)) {
-            tracer = resolveTracer();
-        }
     }
 
     Address createAddress() {
@@ -124,7 +121,11 @@ public abstract class Actress implements Serializable {
 
     protected void trace(Message message) {
         if (hasRunProperty(TRACE)) {
-            tracer.aRef().tell(traced(message, this), this.aRef());
+            try {
+                getTracer().aRef().tell(traced(message, this), this.aRef());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -169,4 +170,17 @@ public abstract class Actress implements Serializable {
     private boolean hasRunProperty(RunProperty p) {
         return runProperties.contains(p);
     }
+
+    public Tracer getTracer() {
+        if (this instanceof Tracer)
+        {
+            throw new IllegalStateException();
+        }
+        if (tracer == null)
+        {
+            tracer = resolveTracer();
+        }
+        return tracer;
+    }
+
 }

@@ -26,14 +26,16 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return true;  // propagate nothing
     }
 
     @Override
     public void process(Message m) {
         trace(m);
-
+        //TODO maybe: FunctionSignature and PartialFunctionApplication can come in lie of stub
+        // one FunctionSignature can be used multipe times in different stubs, PartialApp can not.
+        // due to: actual.returnTo(state.functionCall, Name.result);
         FunctionStubState state = (FunctionStubState) getState(m.origin);
         if (m.key.equals(keyFunctionParameter)) {
             if (!(m.getValue() instanceof Function)) {
@@ -44,10 +46,16 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
             switch (m.key) {
                 case Name.createFunctionCall: {
                     Long signatureId = (Long) m.getValue();
-                    Function signature = (Function) Ensemble.resolve(signatureId);
-                    state.functionCall = functionCall(signature);
-                    state.functionCall.label(signature.address.label.toLowerCase());
+                    Function actual = (Function) Ensemble.resolve(signatureId);
+
+                    state.functionCall = functionCall(actual);
+                    state.functionCall.label(actual.address.label.toLowerCase());
                     state.functionCall.returnTo(this, Name.result);
+
+                    if (actual instanceof PartialFunctionApplication)
+                    {
+                        actual.returnTo(state.functionCall, Name.result);
+                    }
 
                     state.pendingForPropagation.forEach(state.functionCall::tell);
                     state.pendingForPropagation.clear();

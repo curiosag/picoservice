@@ -27,7 +27,7 @@ public class BinOp<T extends Serializable, U extends Serializable, V extends Ser
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return key.equals(Name.leftArg) || key.equals(Name.rightArg);
     }
 

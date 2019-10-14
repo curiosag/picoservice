@@ -52,7 +52,7 @@ public class Gateway<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         throw new IllegalStateException();
     }
 

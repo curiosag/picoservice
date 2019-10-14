@@ -45,7 +45,7 @@ public class Origin implements Serializable {
         Origin origin = (Origin) o;
         return senderId == origin.senderId && // sender isn't necessarily in the call stack, can be something which is not a FunctionCall
                 getExecutionId() == origin.getExecutionId() &&
-                functionCallTreeLocation().getCallStack().equals(origin.functionCallTreeLocation().getCallStack());
+                computationPathLocation().getCallStack().equals(origin.computationPathLocation().getCallStack());
     }
 
     @Override
@@ -53,13 +53,13 @@ public class Origin implements Serializable {
         return Objects.hash(getSender(), getExecutionId(), computationPath);
     }
 
-    private ComputationTreeLocation computationTreeLocation;
+    private ComputationPathLocation computationPathLocation;
 
-    public ComputationTreeLocation functionCallTreeLocation() {
-        if (computationTreeLocation == null) {
-            computationTreeLocation = new ComputationTreeLocation(this);
+    public ComputationPathLocation computationPathLocation() {
+        if (computationPathLocation == null) {
+            computationPathLocation = new ComputationPathLocation(this);
         }
-        return computationTreeLocation;
+        return computationPathLocation;
     }
 
     Origin popCall() {

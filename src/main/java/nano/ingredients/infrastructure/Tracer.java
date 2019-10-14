@@ -131,7 +131,7 @@ public class Tracer extends Actress implements Closeable {
             stackReceiver.add(m.receiver().address.id);
         }
 
-        long exId = m.origin.functionCallTreeLocation().getExecutionId();
+        long exId = m.origin.computationPathLocation().getExecutionId();
 
         writeLn(String.format("%s -> %s [label=%s];",
                 renderNode(labelSender, exId + "//" + stackSender),

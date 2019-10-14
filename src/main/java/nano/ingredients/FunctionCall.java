@@ -23,7 +23,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return true;
     }
 
@@ -78,7 +78,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
     private void notifyBranching(ComputationOriginBranch maybeOriginBranchedOffFrom, Origin origin) {
         if (maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().isPresent()) {
-            tracer.tell(branchMessage(maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().get(), origin));
+            getTracer().tell(branchMessage(maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().get(), origin));
         }
     }
 
@@ -99,7 +99,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
     }
 
     private boolean isReplay(Message m) {
-        ComputationPaths ps = tracer.getReplayedComputationPaths();
+        ComputationPaths ps = getTracer().getReplayedComputationPaths();
         ComputationPath p = m.origin.getComputationPath();
 
         if (ps.isEmpty()) {

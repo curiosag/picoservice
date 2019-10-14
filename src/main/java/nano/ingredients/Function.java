@@ -20,16 +20,16 @@ public abstract class Function<T extends Serializable> extends Actress {
     final List<ForwardingItem> onReturn = new ArrayList<>();
     private final List<ForwardingItem> onReceivedReturn = new ArrayList<>();
 
-    public final Map<ComputationTreeLocation, State> executionStates = new HashMap<>();
+    public final Map<ComputationPathLocation, State> executionStates = new HashMap<>();
     private final Map<String, Serializable> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
-        executionStates.remove(origin.functionCallTreeLocation());
+        executionStates.remove(origin.computationPathLocation());
     }
 
     void cleanup(Long runId) {
         // TODO implement
-        List<ComputationTreeLocation> toRemove = executionStates.keySet().stream()
+        List<ComputationPathLocation> toRemove = executionStates.keySet().stream()
                 .filter(k -> k.getExecutionId().equals(runId))
                 .collect(Collectors.toList());
         toRemove.forEach(executionStates::remove);
@@ -68,10 +68,10 @@ public abstract class Function<T extends Serializable> extends Actress {
     private List<Function> kicks = new ArrayList<>();
 
     State getState(Origin origin) {
-        State result = executionStates.get(origin.functionCallTreeLocation());
+        State result = executionStates.get(origin.computationPathLocation());
         if (result == null) {
             result = newState(origin);
-            executionStates.put(origin.functionCallTreeLocation(), result);
+            executionStates.put(origin.computationPathLocation(), result);
             fowardConsts(origin);
             forwardKickOff(origin);
         }
@@ -136,7 +136,8 @@ public abstract class Function<T extends Serializable> extends Actress {
     public void process(Message m) {
 
         trace(m);
-        if (!(this instanceof FunctionSignature) && (returnTo == null || returnKey == null)) {
+        if (!((this instanceof FunctionSignature) || (this instanceof PartialFunctionApplication)) &&
+                (returnTo == null || returnKey == null)) {
             throw new IllegalStateException("return target not defined in " + this.getClass().getSimpleName());
         }
 
@@ -150,7 +151,7 @@ public abstract class Function<T extends Serializable> extends Actress {
             return;// initializeComputation happens in getState() on new state
         }
 
-        if (!isParameter(m.key)) {
+        if (!belongsToMe(m.key)) {
             propagate(m);
             return;
         }
@@ -170,7 +171,7 @@ public abstract class Function<T extends Serializable> extends Actress {
         return message(Name.error, new Err(this, m, e), m.origin.sender(this));
     }
 
-    protected abstract boolean isParameter(String key);
+    protected abstract boolean belongsToMe(String key);
 
     protected abstract void processInner(Message m, State state);
 

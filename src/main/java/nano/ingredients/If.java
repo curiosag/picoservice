@@ -31,7 +31,7 @@ public class If<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         return parameters.contains(key);
     }
 

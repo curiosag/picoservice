@@ -25,7 +25,7 @@ public class Const extends Function<Integer> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean belongsToMe(String key) {
         throw new IllegalStateException();
     }
 

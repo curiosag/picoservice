@@ -1,9 +1,38 @@
-# microservice
-An execution model for some functional language constructs based on message passing with actors
+# picoservice
+An execution model for some functional language constructs based on message passing with actors.
 
-TODO: &&, ||
+Harks back to Hewitt's papers but unlike smalltalk puts functions center stage rather than objects. The idea is to create
+something remotely similar to e.g. Spring integration, just with bearable syntax.
 
-java.lang.IllegalArgumentException: invalid ActorSystem name [microsörvis], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-' or '_')
+##pico?
+
+Now that there are services, micro- and even nanoservices there wasn't much of a choice.
+
+As of the promotors of [such stuff](https://www.serverlessops.io/blog/rise-of-the-nanoservice) a picoservice is
+
+A nanoservice is:
+
+>- Deployable
+>  
+>- Reusable
+>
+>- Useful
+
+From that characteristics for a picoservice can be derived.
+
+A picoservice is:
+
+>- Deployable
+> 
+>- Reusable
+>
+>- Useless (except in comination with others)
+
+
+
+TODO: &&, ||, split/join
+
+java.lang.IllegalArgumentException: invalid ActorSystem name [picosörvis], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-' or '_')
 
 	at akka.actor.ActorSystemImpl.<init>(ActorSystem.scala:698)
 	at akka.actor.ActorSystem$.apply(ActorSystem.scala:258)

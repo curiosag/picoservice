@@ -8,9 +8,7 @@ something remotely similar to e.g. Spring integration, just with bearable syntax
 
 Now that there are services, micro- and even nanoservices there wasn't much of a choice.
 
-As of the promotors of [such stuff](https://www.serverlessops.io/blog/rise-of-the-nanoservice) a picoservice is
-
-A nanoservice is:
+As of the promotors of [such stuff](https://www.serverlessops.io/blog/rise-of-the-nanoservice) a nanoservice is
 
 >- Deployable
 >  

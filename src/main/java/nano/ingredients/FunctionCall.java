@@ -23,17 +23,17 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return true;
+    protected boolean shouldPropagate(String key) {
+        return false;
     }
 
     @Override
-    protected State newState(Origin origin) {
-        return new State(origin);
+    protected FunctionState newState(Origin origin) {
+        return new FunctionState(origin);
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
         throw new IllegalStateException();
     }
 
@@ -47,7 +47,7 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
             // returnResult((T) message.value, origin); doesn't work here, the popping messes it up
             // it must be hdlOnReturn, popCall, returnTo.tell
             if (message.hasKey(Name.result)) {
-                hdlForwarings(origin, onReturn);
+                hdlForwardings(origin, onReturn);
             }
 
             origin = origin.popCall();

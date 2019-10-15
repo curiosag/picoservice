@@ -18,8 +18,8 @@ public class Nop extends Function<Serializable> {
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return false;
+    protected boolean shouldPropagate(String key) {
+        return true;
     }
 
     @Override
@@ -27,12 +27,12 @@ public class Nop extends Function<Serializable> {
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
     }
 
 

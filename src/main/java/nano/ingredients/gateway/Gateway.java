@@ -47,17 +47,17 @@ public class Gateway<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
+    protected boolean shouldPropagate(String key) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
         throw new IllegalStateException();
     }
 

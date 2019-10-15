@@ -11,7 +11,7 @@ public class If<T extends Serializable> extends Function<T> {
 
     private static final List<String> parameters = Arrays. asList(Name.condition, Name.onFalse, Name.onTrue);
 
-    class StateIf extends State {
+    class StateIf extends FunctionState {
         Object onTrue;
         Object onFalse;
         Boolean decision;
@@ -31,8 +31,8 @@ public class If<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return parameters.contains(key);
+    protected boolean shouldPropagate(String key) {
+        return ! parameters.contains(key);
     }
 
     public static If<Integer> createIf() {
@@ -43,7 +43,7 @@ public class If<T extends Serializable> extends Function<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         If.StateIf state = (If.StateIf) s;
 
         if (m.hasKey(Name.condition)) {

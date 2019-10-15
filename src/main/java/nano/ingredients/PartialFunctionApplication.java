@@ -20,6 +20,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
     private PartialFunctionApplication(FunctionSignature<T> inner, List<String> partialAppParams) {
         this.inner = inner;
         this.partialAppParams.addAll(partialAppParams);
+        inner.returnTo(this, Name.result);
     }
 
     public static <T extends Serializable> PartialFunctionApplication<T> partialApplication(Function<T> body, String key) {
@@ -45,17 +46,17 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         return new PartialFunctionApplicationState(origin);
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return true;
+    protected boolean shouldPropagate(String key) {
+        return false;
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
     }
 
     @Override
@@ -74,7 +75,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
         }
 
         if (forwardingPartialAppParamValues(m)) {
-            inner.tell(m);
+            inner.tell(m.origin(m.origin.sender(this)));//TODO...
             return;
         }
 

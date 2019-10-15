@@ -17,7 +17,7 @@ public class Iff<T extends Serializable> extends Function<T> {
     private final List<ForwardingItem> onReturnOnFalseSend = new ArrayList<>();
 
 
-    class StateIff extends State {
+    class StateIff extends FunctionState {
         // messages must not be propagated to branches before decision has been calculated
         List<Message> pendingForBranchPropagation = new ArrayList<>();
         Object onTrue;
@@ -73,10 +73,10 @@ public class Iff<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
+    protected boolean shouldPropagate(String key) {
         // a hack. make super.process only kickOf the decision part
         // nothing else, no propagation or anything
-        return true;
+        return false;
     }
 
     public static Iff<Integer> iff() {
@@ -93,9 +93,9 @@ public class Iff<T extends Serializable> extends Function<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         //TODO: there's a bad dependecy on the implemenation of If, they should be logically separated
-        // see also the use of Sif.belongsToMe
+        // see also the use of Sif.shouldPropagate
         StateIff state = (StateIff) s;
 
         if (hdlIncomingParams(m, state)) {

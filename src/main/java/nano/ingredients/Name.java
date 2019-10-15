@@ -43,4 +43,5 @@ public interface Name {
     String computationBranch = "computationBranch";
     String a1 = "a1";
     String a2 = "a2";
+    String stackFrame = "stackFrame";
 }

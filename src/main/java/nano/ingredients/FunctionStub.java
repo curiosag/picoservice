@@ -21,13 +21,13 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         return new FunctionStubState(origin);
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return true;  // propagate nothing
+    protected boolean shouldPropagate(String key) {
+        return false;  // propagate nothing
     }
 
     @Override
@@ -87,6 +87,6 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
 
 
     @Override
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
     }
 }

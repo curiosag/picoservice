@@ -28,6 +28,11 @@ public class Origin implements Serializable {
         return new Origin(sender, new ComputationPath(0L), id, -1L);
     }
 
+    public static Origin origin(Function<?> sender, Long exid) {
+        Long id = sender.address.id;
+        return new Origin(sender, new ComputationPath(exid), id, -1L);
+    }
+
     public static Origin origin(Function<?> sender, ComputationPath computationPath, long prevFunctionCallId, long lastFunctionCallId) {
         return new Origin(sender, computationPath, prevFunctionCallId, lastFunctionCallId);
     }

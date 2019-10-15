@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PartialFunctionApplicationState extends State {
+public class PartialFunctionApplicationState extends FunctionState {
     Map<String, Serializable> partialAppValues = new HashMap<>();
 
     public boolean partialApplicationValuesForwarded;

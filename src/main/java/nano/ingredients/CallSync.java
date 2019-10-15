@@ -69,17 +69,17 @@ public class CallSync<T extends Serializable> extends Function<T> {
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         throw new IllegalArgumentException();
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return !key.equals(Name.result);
+    protected boolean shouldPropagate(String key) {
+        return key.equals(Name.result);
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
         throw new IllegalStateException();
     }
 

@@ -11,7 +11,7 @@ public class BinOp<T extends Serializable, U extends Serializable, V extends Ser
     private final java.util.function.Function<Object, T> tConverter;
     private final java.util.function.Function<Object, U> uConverter;
 
-    public class BinOpState extends State {
+    public class BinOpState extends FunctionState {
 
         Object leftArg;
         Object rightArg;
@@ -22,13 +22,13 @@ public class BinOp<T extends Serializable, U extends Serializable, V extends Ser
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         return new BinOpState(origin);
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return key.equals(Name.leftArg) || key.equals(Name.rightArg);
+    protected boolean shouldPropagate(String key) {
+        return  (! key.equals(Name.leftArg) && ! key.equals(Name.rightArg));
     }
 
     public BinOp(BiFunction<T, U, V> op, java.util.function.Function<Object, T> tConverter, java.util.function.Function<Object, U> uConverter) {
@@ -39,7 +39,7 @@ public class BinOp<T extends Serializable, U extends Serializable, V extends Ser
 
     @Override
     @SuppressWarnings("unchecked") //TODO state class decoder
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         BinOpState state = (BinOpState) s;
 
         if (state.leftArg == null) {

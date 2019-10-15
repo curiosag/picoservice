@@ -24,12 +24,12 @@ public class Action extends Function {
     }
 
     @Override
-    public boolean belongsToMe(String key) {
-        return expectedParams.contains(key);
+    public boolean shouldPropagate(String key) {
+        return ! expectedParams.contains(key);
     }
 
     @Override
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         if (action == null)
         {
             throw new IllegalStateException();
@@ -54,8 +54,8 @@ public class Action extends Function {
     }
 
     @Override
-    protected State newState(Origin origin) {
-        return new State(origin);
+    protected FunctionState newState(Origin origin) {
+        return new FunctionState(origin);
     }
 
 

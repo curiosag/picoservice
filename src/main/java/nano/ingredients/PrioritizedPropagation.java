@@ -11,7 +11,7 @@ public class PrioritizedPropagation extends Function {
 
     private final List<String> priorityParams = new ArrayList<>();
 
-    class PrioritizedPropagationState extends State {
+    class PrioritizedPropagationState extends FunctionState {
         List<Message> otherParamsPending = new ArrayList<>();
         List<Message> priorityParamsProcessedDownstream = new ArrayList<>();
 
@@ -35,8 +35,8 @@ public class PrioritizedPropagation extends Function {
     }
 
     @Override
-    protected boolean belongsToMe(String key) {
-        return true;
+    protected boolean shouldPropagate(String key) {
+        return false;
     }
 
     public static PrioritizedPropagation prioritizedPropagation() {
@@ -46,7 +46,7 @@ public class PrioritizedPropagation extends Function {
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
     }
 
     @Override

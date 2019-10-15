@@ -5,10 +5,7 @@ import nano.ingredients.tuples.SerializableKeyValuePair;
 import nano.ingredients.tuples.SerializableTuple;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static nano.ingredients.Message.message;
@@ -16,15 +13,19 @@ import static nano.ingredients.Message.message;
 public abstract class Function<T extends Serializable> extends Actress {
 
     public Function<?> returnTo;
-    public String returnKey;
+    public String returnKey = Name.result;
     final List<ForwardingItem> onReturn = new ArrayList<>();
     private final List<ForwardingItem> onReceivedReturn = new ArrayList<>();
 
-    public final Map<ComputationPathLocation, State> executionStates = new HashMap<>();
+    public final Map<ComputationPathLocation, FunctionState> executionStates = new HashMap<>();
     private final Map<String, Serializable> consts = new HashMap<>();
 
     protected void removeState(Origin origin) {
         executionStates.remove(origin.computationPathLocation());
+    }
+
+    protected boolean isConst(String key){
+        return consts.keySet().contains(key);
     }
 
     void cleanup(Long runId) {
@@ -52,7 +53,7 @@ public abstract class Function<T extends Serializable> extends Actress {
         }
     }
 
-    protected abstract State newState(Origin origin);
+    protected abstract FunctionState newState(Origin origin);
 
 
     /*
@@ -67,8 +68,13 @@ public abstract class Function<T extends Serializable> extends Actress {
 
     private List<Function> kicks = new ArrayList<>();
 
-    State getState(Origin origin) {
-        State result = executionStates.get(origin.computationPathLocation());
+    /*
+    * getState(Origin origin)
+    *
+    * considers only computationPathLocation from origin
+    * */
+    FunctionState getState(Origin origin) {
+        FunctionState result = executionStates.get(origin.computationPathLocation());
         if (result == null) {
             result = newState(origin);
             executionStates.put(origin.computationPathLocation(), result);
@@ -146,17 +152,17 @@ public abstract class Function<T extends Serializable> extends Actress {
             return;
         }
 
-        State state = getState(m.origin);
+        FunctionState state = getState(m.origin);
         if (m.key.equals(Name.kickOff)) {
             return;// initializeComputation happens in getState() on new state
         }
 
-        if (!belongsToMe(m.key)) {
+        if (shouldPropagate(m.key)) {
             propagate(m);
             return;
         }
         if (m.key.equals(Name.result)) {
-            hdlForwarings(m.origin, onReceivedReturn);
+            hdlForwardings(m.origin, onReceivedReturn);
         }
 
         try {
@@ -171,9 +177,9 @@ public abstract class Function<T extends Serializable> extends Actress {
         return message(Name.error, new Err(this, m, e), m.origin.sender(this));
     }
 
-    protected abstract boolean belongsToMe(String key);
+    protected abstract boolean shouldPropagate(String key);
 
-    protected abstract void processInner(Message m, State state);
+    protected abstract void processInner(Message m, FunctionState state);
 
     public Function<T> constant(String key, Serializable value) {
         consts.put(key, value);
@@ -188,11 +194,11 @@ public abstract class Function<T extends Serializable> extends Actress {
     }
 
     protected void returnResult(T result, Origin origin) {
-        hdlForwarings(origin, onReturn);
+        hdlForwardings(origin, onReturn);
         returnTo.tell(message(returnKey, result, origin));
     }
 
-    void hdlForwarings(Origin origin, List<ForwardingItem> items) {
+    void hdlForwardings(Origin origin, List<ForwardingItem> items) {
         items.forEach(v -> {
             SerializableKeyValuePair kv = v.keyValuePair();
             v.target().tell(message(kv.key(), kv.value(), origin));
@@ -209,6 +215,15 @@ public abstract class Function<T extends Serializable> extends Actress {
                 return false;
         }
         return true;
+    }
+
+    public static boolean in(String value, String ... values)
+    {
+        if (values == null)
+        {
+            throw new IllegalStateException();
+        }
+        return Arrays.asList(values).contains(value);
     }
 
     static boolean isTrue(Boolean decision) {

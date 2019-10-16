@@ -26,7 +26,8 @@ A picoservice is:
 >
 >- Useless (except in comination with others)
 
-
+### thanks & credits
+[Jörg W Mittag](https://stackoverflow.com/users/2988/j%c3%b6rg-w-mittag) for straightening out [my view on conditional expressions](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) and pointing out the historical relationship between the actor model and Smalltalk.
 
 TODO: &&, ||, split/join
 

@@ -6,14 +6,12 @@ import java.util.Objects;
 public class Address implements Serializable {
     private static final long serialVersionUID = 0L;
 
-    public Long id;
-
-    public String value;
-
+    public String id;
+    public Long value;
     public String label = "";
 
-    public Address(String value, Long id) {
-        this.value = value + "-" + id;
+    public Address(Long value, String id) {
+        this.value = value;
         this.id = id;
     }
 
@@ -26,16 +24,16 @@ public class Address implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Address address = (Address) o;
-        return Objects.equals(value, address.value);
+        return Objects.equals(id, address.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(value);
+        return Objects.hash(id);
     }
 
     @Override
     public String toString() {
-        return String.format("{%d %s(%s)}", id, value, label);
+        return String.format("{%s %s}", id, label);
     }
 }

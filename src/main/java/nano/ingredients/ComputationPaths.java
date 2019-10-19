@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static java.lang.Math.abs;
-
 public class ComputationPaths {
     // TODO Map<executionId, paths within that execution>
     private List<ComputationPath> paths = new ArrayList<>();
@@ -25,13 +23,13 @@ public class ComputationPaths {
     List<ComputationPath> getMatching(ComputationPath pathNew) {
         return paths.stream()
                 .filter(stored -> stored.executionId == pathNew.executionId)
-                .filter(stored -> stored.getSum() >= pathNew.getSum())
+                .filter(stored -> stored.getCheckSum().length() >= pathNew.getCheckSum().length())
                 .filter(stored -> isMatching(pathNew.items(), stored.items()))
                 .collect(Collectors.toList());
 
     }
 
-    boolean isMatching(List<Long> pathNew, List<Long> pathStored) {
+    boolean isMatching(List<ComputationNode> pathNew, List<ComputationNode> pathStored) {
         /*
          * precondition: ! new.isEmpty()
          *
@@ -55,9 +53,9 @@ public class ComputationPaths {
         }
         
         for (int i = pathNew.size() - 1; i >= 0; i--) {
-            Long n = pathNew.get(i);
-            Long s = pathStored.get(i);
-            if ((n < 0 && s > 0) || abs(n) != abs(s)) {
+            ComputationNode n = pathNew.get(i);
+            ComputationNode s = pathStored.get(i);
+            if (!n.id.equals(s.id) || n.callReturned && ! s.callReturned) {
                 return false;
             }
         }

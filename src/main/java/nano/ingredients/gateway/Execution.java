@@ -29,7 +29,7 @@ public class Execution<T extends Serializable> implements Future<T> {
         this.f = f;
         this.onFinished = onFinished;
         Function caller = new Action();
-        origin = Origin.origin(caller, new ComputationPath(maxExecutionId.addAndGet(1)), -1L, 0L);
+        origin = Origin.origin(caller, new ComputationPath(maxExecutionId.addAndGet(1)), "", "0");
     }
 
     public Execution<T> param(String key, T value) {

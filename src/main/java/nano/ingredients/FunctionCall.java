@@ -16,6 +16,17 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
         this.function = f;
     }
 
+    protected FunctionCall(Function<T> f, Address address) {
+        super(address);
+        this.function = f;
+    }
+
+    public static <T extends Serializable> FunctionCall<T> functionCall(Function<T> body, Address address) {
+        FunctionCall<T> result = new FunctionCall<>(body, address);
+        attachActor(result);
+        return result;
+    }
+
     public static <T extends Serializable> FunctionCall<T> functionCall(Function<T> body) {
         FunctionCall<T> result = new FunctionCall<>(body);
         attachActor(result);
@@ -52,8 +63,8 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
 
             origin = origin.popCall();
 
-            if (!this.address.id.equals(origin.getComputationPath().getLastPopped())) {
-                String fmt = "Function call %s attempted to pop itself, but found on stack %d";
+            if (!this.address.id.equals(origin.getComputationPath().getLastPopped().id)) {
+                String fmt = "Function call %s attempted to pop itself, but found on stack %s";
                 throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.getComputationPath().getLastPopped()));
             }
 

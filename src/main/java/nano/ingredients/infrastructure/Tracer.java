@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.Boolean.FALSE;
 
@@ -51,7 +52,7 @@ public class Tracer extends Actress implements Closeable {
     }
 
     public Tracer(boolean active) {
-        super(new Address(Adresses.trace, 0L));
+        super(new Address(Adresses.trace, "0"));
         setTrace(active);
     }
 
@@ -76,7 +77,7 @@ public class Tracer extends Actress implements Closeable {
     }
 
     private String node(Actress f) {
-        return f.address.label.length() > 0 ? f.address.label : f.address.toString();
+        return f.getClass().getSimpleName() + (f.address.label.length() > 0 ? f.address.label : f.address.toString());
     }
 
     private String payload(Message m) {
@@ -121,12 +122,12 @@ public class Tracer extends Actress implements Closeable {
 
         ComputationPath bough = m.traced().origin.getComputationPath();
 
-        List<Long> stackSender = bough.getStack().getItems();
+        List<String> stackSender = bough.getStack().getItems().stream().map( i -> i.id).collect(Collectors.toList());
         if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
             stackSender.add(m.traced().origin.getSender().address.id);
         }
 
-        List<Long> stackReceiver = bough.getStack().getItems();
+        List<String> stackReceiver = bough.getStack().getItems().stream().map( i -> i.id).collect(Collectors.toList());
         if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)) {
             stackReceiver.add(m.receiver().address.id);
         }

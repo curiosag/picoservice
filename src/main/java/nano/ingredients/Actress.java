@@ -67,7 +67,7 @@ public abstract class Actress implements Serializable {
     }
 
     Address createAddress() {
-        return new Address(this.getClass().getSimpleName(), Ensemble.nextId());
+        return new Address(-1L, Ensemble.nextId());
     }
 
     public void label(String sticker) {
@@ -76,7 +76,7 @@ public abstract class Actress implements Serializable {
 
     private void debug(Message m, Origin o, String rel) {
         if (!(m instanceof TraceMessage))
-            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationPath().toString(), o.getExecutionId(), o.getComputationPath().size(), this.address.toString(), o.getSender().address.toString(), m.toString()));
+            debug(String.format("%s (%d/%d)%s " + rel + " %s %s", m.origin.getComputationPath().toString(), o.getExecutionId(), o.getComputationPath().size(), this.getClass().getSimpleName() + this.address.toString(), o.getSender().getClass().getSimpleName() + o.getSender().address.toString(), m.toString()));
     }
 
     public abstract void process(Message message);

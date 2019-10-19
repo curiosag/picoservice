@@ -30,7 +30,7 @@ public class CallSync<T extends Serializable> extends Function<T> {
 
     public T call() {
         resultMessage = null;
-        Origin origin = Origin.origin(this, new ComputationPath(executions++), -1L, 0L);
+        Origin origin = Origin.origin(this, new ComputationPath(executions++), "", "0");
         if (params.size() == 0) {
             f.tell(message(Name.kickOff, null, origin));
         } else {

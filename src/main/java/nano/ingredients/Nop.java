@@ -8,13 +8,13 @@ public class Nop extends Function<Serializable> {
 
     private static Nop createNop() {
         Nop result = new Nop();
-        result.address.value = "nop";
+        result.address.value = -1L;
         result.address.label = "~~~~~~~~";
         return result;
     }
     @Override
     Address createAddress() {
-        return new Address(this.getClass().getSimpleName(), -1L); //can't have an assigned id, it would sabotage recoveries in test
+        return new Address(-1L, "nop"); //can't have an assigned id, it would sabotage recoveries in test
     }
 
     @Override

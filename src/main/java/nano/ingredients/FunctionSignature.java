@@ -39,6 +39,12 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
         body.returnTo(this, Name.result);
     }
 
+    protected FunctionSignature(Function<T> body, Address address) {
+        super(address);
+        this.body = body;
+        body.returnTo(this, Name.result);
+    }
+
     public static <T extends Serializable> FunctionSignature<T> functionSignature(Function<T> body) {
         FunctionSignature<T> result = new FunctionSignature<>(body);
         attachActor(result);

@@ -18,6 +18,7 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
     private final FunctionSignature<T> inner;
 
     private PartialFunctionApplication(FunctionSignature<T> inner, List<String> partialAppParams) {
+        super(new Address(-1L ,"P" + inner.address.id));
         this.inner = inner;
         this.partialAppParams.addAll(partialAppParams);
         inner.returnTo(this, Name.result);

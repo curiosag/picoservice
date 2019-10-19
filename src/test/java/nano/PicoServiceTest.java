@@ -147,7 +147,7 @@ public class PicoServiceTest {
         resultListener.param(Name.error);
         functionCallApply.returnTo(resultListener, Name.result);
 
-        Origin origin = Origin.origin(resultListener);
+        Origin origin = Origin.origin(resultListener, 0L);
         functionCallApply.tell(message(Name.func, functionSignatureDiv, origin));
 
         result.set(null);
@@ -155,6 +155,7 @@ public class PicoServiceTest {
         await(() -> result.get() != null);
         assertEquals(_4, result.get().getValue());
 
+        origin = Origin.origin(resultListener, 1L);
         result.set(null);
         functionCallApply.tell(message(Name.func, functionSignatureDiv, origin));
         functionCallApply.tell(message(Name.a, _0, origin));
@@ -316,7 +317,6 @@ public class PicoServiceTest {
                 check(inc(1))
          */
 
-        Ensemble.instance().setRunProperties(DEBUG, TRACE);
         Int result = Int(0);
         Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
         resultListener.param(Name.result);
@@ -474,7 +474,7 @@ public class PicoServiceTest {
 
         qsortCall.returnTo(resultListener, Name.result);
 
-        Origin origin = origin(nop, new ComputationPath(executions++), -1L, 0L);
+        Origin origin = origin(nop, new ComputationPath(executions++), "", "0");
         resultListener.tell(message(Name.list, input, origin));
 
         await(() -> expected.size() > 0 ? result.size() == expected.size() : lastInt.value > 0);
@@ -518,7 +518,7 @@ public class PicoServiceTest {
         return new ArrayList<>(asList(i));
     }
 
-
+    private int filterExecutions = 0;
     private void checkFilter(ArrayList<Integer> expected, ArrayList<Integer> input, Function<ArrayList<Integer>> filterCall, FunctionSignature<Boolean> predicate) {
         System.out.println("Checking filter for list of size " + input.size());
         ArrayList<Integer> result = new ArrayList<>();
@@ -531,7 +531,8 @@ public class PicoServiceTest {
         resultListener.propagate(Name.predicate, Name.predicate, filterCall);
         filterCall.returnTo(resultListener, Name.result);
 
-        Origin origin = Origin.origin(nop);
+
+        Origin origin = new Origin(nop, new ComputationPath(++filterExecutions), "","") ;
         resultListener.tell(message(Name.list, input, origin));
         resultListener.tell(message(Name.predicate, predicate, origin));
 
@@ -777,6 +778,7 @@ public class PicoServiceTest {
             check(add(3, 4)) // ... parallel
 
          */
+        Ensemble.instance().setRunProperties(DEBUG);
 
         Map<String, Integer> results = new HashMap<>();
 
@@ -889,6 +891,7 @@ public class PicoServiceTest {
         innerCaller.tell(message(Name.a, _2, origin));
 
         await(() -> result.value == 16);
+
     }
 
 
@@ -915,16 +918,17 @@ public class PicoServiceTest {
         Function<Boolean> gt = BinOps.gt().returnTo(_if, Name.condition);
         Function subT = BinOps.sub().returnTo(_if, Name.onTrue);
         Function subF = BinOps.sub().returnTo(_if, Name.onFalse);
+        subT.label("subT");
+        subF.label("subF");
 
         _if.returnTo(resultMonitor, Name.result);
+        _if.propagate(Name.b, Name.leftArg, subF);
+        _if.propagate(Name.a, Name.rightArg, subF);
 
         _if.propagate(Name.a, Name.leftArg, gt);
-        _if.propagate(Name.b, Name.rightArg, gt);
         _if.propagate(Name.a, Name.leftArg, subT);
-        // propagation in this case can, but must not go through if
-        resultMonitor.propagate(Name.b, Name.rightArg, subT);
-        resultMonitor.propagate(Name.b, Name.leftArg, subF);
-        resultMonitor.propagate(Name.a, Name.rightArg, subF);
+        _if.propagate(Name.b, Name.rightArg, gt);
+        _if.propagate(Name.b, Name.rightArg, subT);
 
         resultMonitor.propagate(Name.a, Name.a, _if);
         resultMonitor.propagate(Name.b, Name.b, _if);
@@ -1208,7 +1212,7 @@ public class PicoServiceTest {
 
 
     private Origin originForExecutionId(Action a, Long executionId) {
-        return origin(a, new ComputationPath(executionId), -1L, 0L);
+        return origin(a, new ComputationPath(executionId), "", "0");
     }
 
     private List<Integer> sorted(List<Integer> list) {
@@ -1262,7 +1266,7 @@ public class PicoServiceTest {
         ArrayList<Integer> input = randomList(200);
         List<Integer> result = new ArrayList<>();
 
-        Origin origin = origin(nop, new ComputationPath(executions++), -1L, 0L);
+        Origin origin = origin(nop, new ComputationPath(executions++), "", "0");
         setUpResultListener(functionCall(getQuicksortSignature()), result)
                 .tell(message(Name.list, input, origin));
 
@@ -1315,7 +1319,7 @@ public class PicoServiceTest {
         System.out.println("terminating before resume");
         Ensemble.terminate();
         Ensemble.reset();
-        Ensemble.instance().setRunProperties(PERSIST, DEBUG);
+        Ensemble.instance().setRunProperties(PERSIST);
         await(1000);
         System.out.println("resuming");
 

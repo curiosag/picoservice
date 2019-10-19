@@ -15,32 +15,32 @@ public class ComputationPathsTest {
 
     @Test
     public void isMatching() {
-        assertTrue(p.isMatching(list(1), list(1)));
-        assertTrue(p.isMatching(list(1), list(1, 2)));
+        assertTrue(p.isMatching(computationNodes(1), computationNodes(1)));
+        assertTrue(p.isMatching(computationNodes(1), computationNodes(1, 2)));
 
-        assertFalse(p.isMatching(list(1, 2), list(1)));
-        assertFalse(p.isMatching(list(1, 2), list(2)));
+        assertFalse(p.isMatching(computationNodes(1, 2), computationNodes(1)));
+        assertFalse(p.isMatching(computationNodes(1, 2), computationNodes(2)));
 
-        assertTrue(p.isMatching(list(-1), list(-1)));
-        assertTrue(p.isMatching(list(1), list(-1)));
-        assertTrue(p.isMatching(list(1, -2), list(-1, -2)));
-        assertTrue(p.isMatching(list(1, 2), list(1, -2)));
-        assertFalse(p.isMatching(list(-1), list(1)));
-        assertFalse(p.isMatching(list(-1, -2), list(1, -2)));
+        assertTrue(p.isMatching(computationNodes(-1), computationNodes(-1)));
+        assertTrue(p.isMatching(computationNodes(1), computationNodes(-1)));
+        assertTrue(p.isMatching(computationNodes(1, -2), computationNodes(-1, -2)));
+        assertTrue(p.isMatching(computationNodes(1, 2), computationNodes(1, -2)));
+        assertFalse(p.isMatching(computationNodes(-1), computationNodes(1)));
+        assertFalse(p.isMatching(computationNodes(-1, -2), computationNodes(1, -2)));
     }
 
 
     @Test(expected = IllegalArgumentException.class)
     public void matchShringking_inputCantBeEmpty1() {
-        assertTrue(p.isMatching(list(), list(1)));
+        assertTrue(p.isMatching(computationNodes(), computationNodes(1)));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void matchShringking_inputCantBeEmpty2() {
-        assertTrue(p.isMatching(list(1), list()));
+        assertTrue(p.isMatching(computationNodes(1), computationNodes()));
     }
 
-    private List<Long> list(Integer... iii) {
-        return Arrays.stream(iii).map(Long::valueOf).collect(Collectors.toList());
+    private List<ComputationNode> computationNodes(Integer... iii) {
+        return Arrays.stream(iii).map(i -> new ComputationNode(String.valueOf(Math.abs(i)), i < 0)).collect(Collectors.toList());
     }
 }

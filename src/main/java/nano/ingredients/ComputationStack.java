@@ -5,11 +5,11 @@ import java.util.stream.Collectors;
 
 public class ComputationStack {
 
-    private final List<Long> stack;
+    private final List<ComputationNode> stack;
 
     private static Map<Integer, String> points = new HashMap<>();
 
-    public ArrayList<Long> getItems(){
+    public ArrayList<ComputationNode> getItems(){
         return new ArrayList<>(stack);
     }
 
@@ -17,12 +17,12 @@ public class ComputationStack {
         return stack.size();
     }
 
-    private Long get(int i) {
+    private ComputationNode get(int i) {
         return stack.get(i);
     }
 
     String stackPoints() {
-        int size = Math.toIntExact(stack.stream().filter(i -> i > 0).count());
+        int size = Math.toIntExact(stack.stream().filter(i -> ! i.callReturned).count());
         String result = points.get(size);
         if (result == null) {
             result = String.format("%3d %s", size, String.join("", Collections.nCopies(size, "*")));
@@ -31,12 +31,8 @@ public class ComputationStack {
         return result;
     }
 
-    ComputationStack(ArrayList<Long> items) {
-        stack = items;
-    }
-
-    public ComputationStack(ArrayList<Long> bough, int topIndex) {
-        stack = new ArrayList<>(bough.subList(0, topIndex + 1));
+    public ComputationStack(ArrayList<ComputationNode> path, int topIndex) {
+        stack = new ArrayList<>(path.subList(0, topIndex + 1));
     }
 
     @Override

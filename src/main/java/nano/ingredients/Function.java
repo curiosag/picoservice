@@ -20,6 +20,14 @@ public abstract class Function<T extends Serializable> extends Actress {
     public final Map<ComputationPathLocation, FunctionState> executionStates = new HashMap<>();
     private final Map<String, Serializable> consts = new HashMap<>();
 
+    public Function(Address address) {
+        super(address);
+    }
+
+    public Function() {
+        super();
+    }
+
     protected void removeState(Origin origin) {
         executionStates.remove(origin.computationPathLocation());
     }

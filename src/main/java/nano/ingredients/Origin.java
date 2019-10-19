@@ -10,12 +10,12 @@ public class Origin implements Serializable {
     private static final long serialVersionUID = 0L;
 
     transient Function<?> sender; // not serialized, rehydrated by asking for Function for senderId
-    public final long senderId;
+    public final String senderId;
     private final ComputationPath computationPath;
-    final long prevFunctionCallId;
-    final long lastFunctionCallId;
+    final String prevFunctionCallId;
+    final String lastFunctionCallId;
 
-    Origin(Function<?> sender, ComputationPath computationPath, long lastFunctionCallId, long prevFunctionCallId) {
+    public Origin(Function<?> sender, ComputationPath computationPath, String lastFunctionCallId, String prevFunctionCallId) {
         this.senderId = sender.address.id;
         this.sender = sender;
         this.computationPath = computationPath;
@@ -24,16 +24,16 @@ public class Origin implements Serializable {
     }
 
     public static Origin origin(Function<?> sender) {
-        Long id = sender.address.id;
-        return new Origin(sender, new ComputationPath(0L), id, -1L);
+        String id = sender.address.id;
+        return new Origin(sender, new ComputationPath(0L), id, "");
     }
 
     public static Origin origin(Function<?> sender, Long exid) {
-        Long id = sender.address.id;
-        return new Origin(sender, new ComputationPath(exid), id, -1L);
+        String id = sender.address.id;
+        return new Origin(sender, new ComputationPath(exid), id, "");
     }
 
-    public static Origin origin(Function<?> sender, ComputationPath computationPath, long prevFunctionCallId, long lastFunctionCallId) {
+    public static Origin origin(Function<?> sender, ComputationPath computationPath, String prevFunctionCallId, String lastFunctionCallId) {
         return new Origin(sender, computationPath, prevFunctionCallId, lastFunctionCallId);
     }
 
@@ -68,8 +68,8 @@ public class Origin implements Serializable {
     }
 
     Origin popCall() {
-        ComputationPath bough = computationPath.pop();
-        return new Origin(getSender(), bough, bough.getLastPopped(), lastFunctionCallId);
+        ComputationPath path = computationPath.pop();
+        return new Origin(getSender(), path, path.getLastPopped().id, lastFunctionCallId);
     }
 
     ComputationOriginBranch pushCall(FunctionCall functionCall) {

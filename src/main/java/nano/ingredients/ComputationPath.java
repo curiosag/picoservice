@@ -27,10 +27,10 @@ public class ComputationPath implements Serializable {
      * */
 
     final long executionId;
-    private final ArrayList<Long> functionCalls;
-    private final Long lastPopped;
+    private final ArrayList<ComputationNode> functionCalls;
+    private final ComputationNode lastPopped;
     private final int topIndex;
-    private final Long sum;
+    private final String checkSum;
 
     // only the positive elements of path, stack.size() == topIndex + 1;
 
@@ -47,26 +47,26 @@ public class ComputationPath implements Serializable {
         topIndex = branchOffFrom.topIndex;
         functionCalls = branchOffFrom.getStack().getItems();
         lastPopped = null;
-        sum = branchOffFrom.sum;
+        checkSum = branchOffFrom.checkSum;
     }
 
-    private static final ArrayList<Long> empty = new ArrayList<>();
+    private static final ArrayList<ComputationNode> empty = new ArrayList<>();
 
     public ComputationPath(long executionId) {
         this.executionId = executionId;
         functionCalls = empty;
         lastPopped = null;
         topIndex = -1;
-        sum = 0L;
+        checkSum = String.valueOf(executionId);
     }
-    private ComputationPath(ComputationPath current, Long toPush) {
+    private ComputationPath(ComputationPath current, ComputationNode toPush) {
         functionCalls = new ArrayList<>(current.functionCalls);
         this.executionId = current.executionId;
-        Guards.isTrue(functionCalls.isEmpty() || functionCalls.get(functionCalls.size() - 1) >= 0);
+        Guards.isTrue(functionCalls.isEmpty() || ! functionCalls.get(functionCalls.size() - 1).callReturned);
         functionCalls.add(toPush);
         topIndex = current.topIndex + 1;
         lastPopped = current.lastPopped;
-        sum = current.sum + toPush;
+        checkSum = current.checkSum + toPush;
     }
 
     private ComputationPath(ComputationPath current, boolean pop) {
@@ -77,25 +77,25 @@ public class ComputationPath implements Serializable {
         functionCalls = new ArrayList<>(current.functionCalls);
         lastPopped = functionCalls.get(current.topIndex);
         functionCalls.remove(current.topIndex);
-        functionCalls.add(current.topIndex, lastPopped * -1);
+        functionCalls.add(current.topIndex, lastPopped.withCallReturned());
         topIndex = current.topIndex - 1;
-        sum = current.sum + lastPopped;
+        checkSum = current.checkSum + lastPopped;
     }
 
-    public Long getSum() {
-        return sum;
+    public String getCheckSum() {
+        return checkSum;
     }
 
-    Long getLastPopped() {
+    ComputationNode getLastPopped() {
         return lastPopped;
     }
 
-    ComputationBranch push(Long functionId) {
+    ComputationBranch push(String functionId) {
         if (nothingPoppedYet()) {
-            return ComputationBranch.of(new ComputationPath(this, functionId), Optional.empty());
+            return ComputationBranch.of(new ComputationPath(this, new ComputationNode(functionId)), Optional.empty());
         } else {
             // TODO could be a bit less of, eh, ...
-            ComputationPath branchedOff = new ComputationPath(new ComputationPath(this), functionId);
+            ComputationPath branchedOff = new ComputationPath(new ComputationPath(this), new ComputationNode(functionId));
             return ComputationBranch.of(branchedOff, Optional.of(this));
         }
     }
@@ -113,7 +113,7 @@ public class ComputationPath implements Serializable {
     public String toString() {
         return functionCalls.stream()
                 .map(String::valueOf)
-                .collect(Collectors.joining("/"));
+                .collect(Collectors.joining("."));
     }
 
     @Override
@@ -139,7 +139,7 @@ public class ComputationPath implements Serializable {
         return functionCalls.size();
     }
 
-    public List<Long> items() {
+    public List<ComputationNode> items() {
         return functionCalls;
     }
 }

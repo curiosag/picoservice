@@ -45,10 +45,10 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
         } else
             switch (m.key) {
                 case Name.createFunctionCall: {
-                    Long signatureId = (Long) m.getValue();
+                    String signatureId = (String) m.getValue();
                     Function actual = (Function) Ensemble.resolve(signatureId);
 
-                    state.functionCall = functionCall(actual);
+                    state.functionCall = functionCall(actual, new Address(-1L, m.origin.getComputationPath().executionId + "C" + m.origin.getComputationPath().toString()));
                     state.functionCall.label(actual.address.label.toLowerCase());
                     state.functionCall.returnTo(this, Name.result);
 

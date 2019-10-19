@@ -21,8 +21,8 @@ public class Ensemble {
     public final List<Actress> ensemble = new ArrayList<>();
 
     private final Set<RunProperty> runProperties = new HashSet<>();
-    private final Map<String, Actress> addressed = new HashMap<>();
-    private final Map<Long, Actress> actressById = new HashMap<Long, Actress>();
+    private final Map<Long, Actress> addressed = new HashMap<>();
+    private final Map<String, Actress> actressById = new HashMap<String, Actress>();
 
     private static final long reservedIds = 99;
     private static AtomicLong maxId = new AtomicLong(reservedIds); // tracer, callCreator
@@ -69,7 +69,7 @@ public class Ensemble {
         return resolve(address.value);
     }
 
-    static Actress resolve(String address) {
+    static Actress resolve(Long address) {
         if (address.equals(Adresses.trace)) {
             return tracer;
         }
@@ -79,7 +79,7 @@ public class Ensemble {
         return result;
     }
 
-    static Actress resolve(Long id) {
+    static Actress resolve(String id) {
         if (id.equals(tracer.address.id)) {
             return tracer;
         }
@@ -93,8 +93,8 @@ public class Ensemble {
         instance().resetInstance();
     }
 
-    static Long nextId() {
-        return maxId.addAndGet(1);
+    static String nextId() {
+        return String.valueOf(maxId.addAndGet(1));
     }
 
     public static void attachActor(Actress a) {
@@ -105,7 +105,7 @@ public class Ensemble {
         enlist(a);
         a.setRunProperties(runProperties);
 
-        String id = a.address.id.toString();
+        String id = a.address.id;
         a.setAref(actorSystem.actorOf(Akktor.props(a), id));
 
         return a;

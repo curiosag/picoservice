@@ -15,29 +15,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static java.lang.Boolean.FALSE;
-
 public class Tracer extends Actress implements Closeable {
 
     private boolean active;
     private BufferedWriter writer;
 
-    private final ComputationPaths paths = new ComputationPaths();
-    private final ComputationPaths replayedPaths = new ComputationPaths();
-
     @Override
     protected Tracer resolveTracer() {
         return this;
     }
-
-    public ComputationPaths getComputationPaths() {
-        return paths;
-    }
-
-    public ComputationPaths getReplayedComputationPaths() {
-        return replayedPaths;
-    }
-
 
     public void setTrace(boolean active) {
         if (writer != null) {
@@ -154,31 +140,10 @@ public class Tracer extends Actress implements Closeable {
 
     @Override
     public void process(Message message) {
-        if (message.key.equals(Name.computationBranch)) {
-            paths.add((ComputationPath) message.getValue());
-            return;
-        }
-
         if (!(message instanceof TraceMessage)) {
             throw new IllegalStateException();
         }
         write((TraceMessage) message);
-    }
-
-    @Override
-    public void receiveRecover(Message m) {
-        maybePath(m).ifPresent(p -> {
-            if (paths.add(p)) {
-                replayedPaths.add(p);
-            }
-        });
-    }
-
-    @Override
-    public boolean shouldPersist(Message m) {
-        return maybePath(m)
-                .map(b -> !paths.contains(b))
-                .orElse(FALSE);
     }
 
     private Optional<ComputationPath> maybePath(Message m) {

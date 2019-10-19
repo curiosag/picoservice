@@ -2,6 +2,7 @@ package nano.ingredients.akka;
 
 import akka.actor.Props;
 import akka.persistence.AbstractPersistentActor;
+import akka.persistence.RecoveryCompleted;
 import akka.persistence.SnapshotOffer;
 import nano.ingredients.*;
 import nano.ingredients.tuples.SerializableTuple;
@@ -15,6 +16,8 @@ public class Akktor extends AbstractPersistentActor {
 
     private Actress related;
     private akka.event.EventStream eventStream;
+
+    private final ComputationPaths paths = new ComputationPaths();
 
     private Map<SerializableTuple<Long, Long>, ComputationPath> maxStack = new HashMap<>();
 
@@ -52,6 +55,12 @@ public class Akktor extends AbstractPersistentActor {
                             }
                             related.receive(m);
                         }
+
+                ).match(RecoveryCompleted.class,
+                        m -> {
+
+                        }
+
                 ).build();
     }
 

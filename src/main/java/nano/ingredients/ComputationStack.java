@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 public class ComputationStack {
 
+    private final Long executionId;
     private final List<ComputationNode> stack;
 
     private static Map<Integer, String> points = new HashMap<>();
@@ -31,7 +32,8 @@ public class ComputationStack {
         return result;
     }
 
-    public ComputationStack(ArrayList<ComputationNode> path, int topIndex) {
+    public ComputationStack(Long executionId, ArrayList<ComputationNode> path, int topIndex) {
+        this.executionId = executionId;
         stack = new ArrayList<>(path.subList(0, topIndex + 1));
     }
 
@@ -60,12 +62,12 @@ public class ComputationStack {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ComputationStack that = (ComputationStack) o;
-        return stack.equals(that.stack);
+        return executionId.equals(that.executionId) && stack.equals(that.stack);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(stack);
+        return Objects.hash(executionId, stack);
     }
 
     public boolean isEmpty() {

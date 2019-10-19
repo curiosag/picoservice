@@ -28,7 +28,7 @@ public class ComputationPaths {
 
     }
 
-    boolean isMatching(List<ComputationNode> pathNew, List<ComputationNode> pathStored) {
+    public boolean isMatching(List<ComputationNode> pathNew, List<ComputationNode> pathStored) {
         /*
          * precondition: ! new.isEmpty()
          *

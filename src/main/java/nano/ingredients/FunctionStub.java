@@ -8,13 +8,15 @@ import static nano.ingredients.Message.message;
 public class FunctionStub<T extends Serializable> extends Function<T> {
 
     final String keyFunctionParameter;
+    final Integer levelInstanceId; // they need to be distinguishable on  a call level
 
-    private FunctionStub(String keyFunctionParameter) {
+    private FunctionStub(String keyFunctionParameter, Integer levelInstanceId) {
         this.keyFunctionParameter = keyFunctionParameter;
+        this.levelInstanceId = levelInstanceId;
     }
 
-    public static <T extends Serializable> FunctionStub<T> of(String keyFuncStubbed) {
-        FunctionStub<T> result = new FunctionStub<>(keyFuncStubbed);
+    public static <T extends Serializable> FunctionStub<T> of(String keyFuncStubbed, Integer levelInstanceId) {
+        FunctionStub<T> result = new FunctionStub<>(keyFuncStubbed, levelInstanceId);
         result.label("stub:" + keyFuncStubbed);
         Ensemble.attachActor(result);
         return result;
@@ -48,7 +50,7 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
                     String signatureId = (String) m.getValue();
                     Function actual = (Function) Ensemble.resolve(signatureId);
 
-                    state.functionCall = functionCall(actual, new Address(-1L, m.origin.getComputationPath().executionId + "C" + m.origin.getComputationPath().toString()));
+                    state.functionCall = functionCall(actual, new Address(-1L, "L" + "_" + levelInstanceId+ m.origin.getComputationPath().toString()));
                     state.functionCall.label(actual.address.label.toLowerCase());
                     state.functionCall.returnTo(this, Name.result);
 

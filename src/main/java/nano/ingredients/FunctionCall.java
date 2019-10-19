@@ -3,7 +3,6 @@ package nano.ingredients;
 import nano.ingredients.tuples.ComputationOriginBranch;
 
 import java.io.Serializable;
-import java.util.List;
 
 import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Message.message;
@@ -78,7 +77,6 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
             if (!isConst(message)) // const already comes with proper stack
             {
                 ComputationOriginBranch maybeOriginBranchedOffFrom = origin.pushCall(this);
-                notifyBranching(maybeOriginBranchedOffFrom, origin);
                 origin = maybeOriginBranchedOffFrom.getOrigin();
                 getState(origin);
             }
@@ -86,17 +84,6 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
         }
 
     }
-
-    private void notifyBranching(ComputationOriginBranch maybeOriginBranchedOffFrom, Origin origin) {
-        if (maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().isPresent()) {
-            getTracer().tell(branchMessage(maybeOriginBranchedOffFrom.getBoughBranchedOffFrom().get(), origin));
-        }
-    }
-
-    private Message branchMessage(ComputationPath b, Origin origin) {
-        return new Message(Name.computationBranch, b, origin);
-    }
-
 
     private boolean isConst(Message message) {
         return message.origin.getSender().equals(this);
@@ -106,25 +93,9 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
     @Override
     public void receiveRecover(Message m) {
         trace(m);
-        receive(m.setReplay(isReplay(m)));
+        receive(m);
     }
 
-    private boolean isReplay(Message m) {
-        ComputationPaths ps = getTracer().getReplayedComputationPaths();
-        ComputationPath p = m.origin.getComputationPath();
-
-        if (ps.isEmpty()) {
-            return false;
-        }
-        ComputationPath expectedAfterFunctionCall;
-        if (!m.key.equals(Name.result)) {
-            expectedAfterFunctionCall = p.pop();
-        } else { // we're piling up stack frames
-            expectedAfterFunctionCall = p.push(this.address.id).getExecutionPath();
-        }
-        List<ComputationPath> matches = ps.getMatching(expectedAfterFunctionCall);
-        return !matches.isEmpty();
-    }
 
     @Override
     public boolean shouldPersist(Message m) {

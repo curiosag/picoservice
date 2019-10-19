@@ -77,9 +77,9 @@ public class PicoServiceTest {
 
         FunctionSignature<Integer> functionSignatureDouble = functionSignature(add).paramList(Name.a, Name.func);
                 ;
-        FunctionStub<Integer> stubFuncLeft = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFuncLeft = FunctionStub.of(Name.func, 0);
         stubFuncLeft.returnTo(add, Name.leftArg);
-        FunctionStub<Integer> stubFuncRight = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFuncRight = FunctionStub.of(Name.func, 1);
         stubFuncRight.returnTo(add, Name.rightArg);
 
 
@@ -128,7 +128,7 @@ public class PicoServiceTest {
         functionSignatureDiv.label("DIV");
 
         //function apply(func, a) = func(a)
-        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func, 0);
         stubFunc.label("funcStub");
 
         FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
@@ -185,7 +185,7 @@ public class PicoServiceTest {
         functionSignatureMul.label("MUL");
 
         //function apply(func, a) = func(a)
-        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func, 0);
         stubFunc.label("funcStub");
 
         FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
@@ -201,7 +201,7 @@ public class PicoServiceTest {
         resultListener.param(Name.result);
         functionCallApply.returnTo(resultListener, Name.result);
 
-        Origin origin = Origin.origin(resultListener);
+        Origin origin = Origin.origin(resultListener, 0L);
 
         result.setValue(0);
         functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
@@ -209,6 +209,7 @@ public class PicoServiceTest {
         await(() -> result.value != 0);
         assertEquals(Integer.valueOf(6), result.value);
 
+        origin = Origin.origin(resultListener, 1L);
         result.setValue(0);
         functionCallApply.tell(message(Name.func, functionSignatureMul, origin));
         functionCallApply.tell(message(Name.a, _1, origin));
@@ -236,7 +237,7 @@ public class PicoServiceTest {
         functionSignatureMul.label("MUL");
 
         //function apply(func, a) = func(a)
-        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func, 0);
         stubFunc.constant(Name.a, _2);
         stubFunc.label("stubFunc");
 
@@ -279,11 +280,11 @@ public class PicoServiceTest {
         functionSignatureMul.label("MUL");
 
         //function apply(func) = func(func(2))
-        FunctionStub<Integer> stubFuncInner = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFuncInner = FunctionStub.of(Name.func, 0);
         stubFuncInner.constant(Name.a, _2);
         stubFuncInner.label("stubFuncInner");
 
-        FunctionStub<Integer> stubFuncOuter = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFuncOuter = FunctionStub.of(Name.func, 1);
         stubFuncOuter.label("stubFuncOuter");
         stubFuncInner.returnTo(stubFuncOuter, Name.a);
 
@@ -373,7 +374,7 @@ public class PicoServiceTest {
 
         // by way of using the apply function
         //function apply(func, a) = func(a)
-        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+        FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func, 0);
         stubFunc.label("stubFunc");
 
         // it is intended that the partialy applied function is created before passing it to apply
@@ -1366,7 +1367,7 @@ public class PicoServiceTest {
 
             // by way of using the apply function
             //function apply(func, a) = func(a)
-            FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func);
+            FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func, 0);
             stubFunc.label("stubFunc");
 
             // it is intended that the partialy applied function is created before passing it to apply

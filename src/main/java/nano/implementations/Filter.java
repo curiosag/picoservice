@@ -77,7 +77,7 @@ public class Filter {
             }
         */
 
-        FunctionStub<Boolean> predicateStub = FunctionStub.of(Name.predicate);
+        FunctionStub<Boolean> predicateStub = FunctionStub.of(Name.predicate, 0);
         predicateStub.returnTo(innerIff, Name.condition);
 
         Function<ArrayList<Integer>> cons = cons().returnTo(innerIff, Name.onTrue);

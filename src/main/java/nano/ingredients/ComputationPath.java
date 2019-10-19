@@ -36,7 +36,7 @@ public class ComputationPath implements Serializable {
     private transient ComputationStack stackView;
     public ComputationStack getStack() {
         if (stackView == null) {
-            stackView = new ComputationStack(functionCalls, topIndex);
+            stackView = new ComputationStack(executionId, functionCalls, topIndex);
         }
         return stackView;
     }
@@ -103,7 +103,7 @@ public class ComputationPath implements Serializable {
 
     @Override
     public String toString() {
-        return functionCalls.stream()
+        return executionId + "_" + functionCalls.stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining("."));
     }

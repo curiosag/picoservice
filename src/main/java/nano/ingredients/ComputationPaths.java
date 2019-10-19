@@ -23,7 +23,6 @@ public class ComputationPaths {
     List<ComputationPath> getMatching(ComputationPath pathNew) {
         return paths.stream()
                 .filter(stored -> stored.executionId == pathNew.executionId)
-                .filter(stored -> stored.getCheckSum().length() >= pathNew.getCheckSum().length())
                 .filter(stored -> isMatching(pathNew.items(), stored.items()))
                 .collect(Collectors.toList());
 

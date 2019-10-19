@@ -46,7 +46,7 @@ public class Akktor extends AbstractPersistentActor {
         return receiveBuilder()
                 .match(Message.class,
                         m -> {
-                            if (related.shouldPersist(m) && Ensemble.instance().hasRunProperty(PERSIST)) {
+                            if (m.key.equals(Name.stackFrame) && Ensemble.instance().hasRunProperty(PERSIST)) {
                                 System.out.println(String.format("%s ppers %s (%d<-%d) %s:%s", m.origin.getComputationPath().toString(), m.id, related.address.id, m.origin.senderId, m.key, m.getValue().toString()));
                                 persist(m, (Message i) -> eventStream.publish(i));
                             }

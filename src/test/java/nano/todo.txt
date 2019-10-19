@@ -1,8 +1,3 @@
-Temporary Application Id:-47X4A554ZJY33EB
-
-whatsapp +919444749335
-
-dezember burma, feb nilambe
 
 
 Closures und Namensraum für Werte? Lambdas funktionieren so, daß richtig benannte werte bis zu lambda L durchgereicht werden,
@@ -10,14 +5,9 @@ L muß dann das als formalen parameter haben
 
 mapping formale/aktuelle parameter
 
-Lambdas als Werte in partial function application??
 
 Mit der push/pop partial application params Logik müssen die messages in der Reihenfolge eintreffen,
 in der sie abgesendet wurden.
 
 TODOs
-- partially applied values rein kriegen vor den anderen? -> geht nicht, auf die Art, müßte synchronisiert sein.
-
-
-- consts und states -> const propagation erzeugt anderen state als andere messages
-- function calls/signature mit mehreren params und consts
+String ids derived from runId+computationpath globally, mapping to numeric id for debugging/tracing purposes

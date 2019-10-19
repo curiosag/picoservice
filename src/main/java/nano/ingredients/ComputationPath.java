@@ -30,7 +30,6 @@ public class ComputationPath implements Serializable {
     private final ArrayList<ComputationNode> functionCalls;
     private final ComputationNode lastPopped;
     private final int topIndex;
-    private final String checkSum;
 
     // only the positive elements of path, stack.size() == topIndex + 1;
 
@@ -47,7 +46,6 @@ public class ComputationPath implements Serializable {
         topIndex = branchOffFrom.topIndex;
         functionCalls = branchOffFrom.getStack().getItems();
         lastPopped = null;
-        checkSum = branchOffFrom.checkSum;
     }
 
     private static final ArrayList<ComputationNode> empty = new ArrayList<>();
@@ -57,7 +55,6 @@ public class ComputationPath implements Serializable {
         functionCalls = empty;
         lastPopped = null;
         topIndex = -1;
-        checkSum = String.valueOf(executionId);
     }
     private ComputationPath(ComputationPath current, ComputationNode toPush) {
         functionCalls = new ArrayList<>(current.functionCalls);
@@ -66,7 +63,6 @@ public class ComputationPath implements Serializable {
         functionCalls.add(toPush);
         topIndex = current.topIndex + 1;
         lastPopped = current.lastPopped;
-        checkSum = current.checkSum + toPush;
     }
 
     private ComputationPath(ComputationPath current, boolean pop) {
@@ -79,12 +75,8 @@ public class ComputationPath implements Serializable {
         functionCalls.remove(current.topIndex);
         functionCalls.add(current.topIndex, lastPopped.withCallReturned());
         topIndex = current.topIndex - 1;
-        checkSum = current.checkSum + lastPopped;
     }
 
-    public String getCheckSum() {
-        return checkSum;
-    }
 
     ComputationNode getLastPopped() {
         return lastPopped;

@@ -1,7 +1,11 @@
 package nano.ingredients;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.DeadLetter;
+import akka.actor.Props;
 import nano.ingredients.akka.Akktor;
+import nano.ingredients.infrastructure.DeadLetterActor;
 import nano.ingredients.infrastructure.Tracer;
 import nano.misc.Adresses;
 
@@ -11,12 +15,12 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static nano.ingredients.AsyncStuff.await;
-import static nano.ingredients.RunMode.TERMINATING;
+import static nano.ingredients.RunProperty.TERMINATE;
 import static nano.ingredients.RunProperty.TRACE;
 
 public class Ensemble {
 
-    private transient ActorSystem actorSystem = ActorSystem.create("picoservice");
+    private static transient ActorSystem actorSystem = ActorSystem.create("picoservice");
 
     public final List<Actress> ensemble = new ArrayList<>();
 
@@ -28,6 +32,7 @@ public class Ensemble {
     private static AtomicLong maxId = new AtomicLong(reservedIds); // tracer, callCreator
 
     public static Tracer tracer;
+    private static ActorRef deadLetterActor = actorSystem.actorOf(Props.create(DeadLetterActor.class));
     private static Ensemble instance;
 
     public Ensemble() {
@@ -39,6 +44,7 @@ public class Ensemble {
             instance = new Ensemble();
             tracer = new Tracer(false);
             instance.wireActress(tracer);
+            instance.actorSystem.eventStream().subscribe(deadLetterActor, DeadLetter.class);
             registerTracer();
         }
         return instance;
@@ -107,7 +113,6 @@ public class Ensemble {
 
         String id = a.address.id;
         a.setAref(actorSystem.actorOf(Akktor.props(a), id));
-
         return a;
     }
 
@@ -117,7 +122,25 @@ public class Ensemble {
     }
 
     public void showEnsemble() {
-        ensemble.forEach(c -> System.out.println(c.address.id + " " + c.address.toString()));
+        ensemble.forEach(c -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Ensemble member ");
+            sb.append(c.address.toString());
+            sb.append(" ");
+            sb.append(c.aref.toString());
+            sb.append(" ");
+            if (c instanceof Function) {
+                Function ret = ((Function) c).returnTo;
+                if (ret != null) {
+                    sb.append(" ret: ");
+                    if (ret.address != null)
+                        sb.append(ret.address.toString());
+                    if (ret.aref != null)
+                        sb.append(ret.aref.toString());
+                }
+            }
+            System.out.println(sb.toString());
+        });
     }
 
     public static void terminate() {
@@ -146,7 +169,8 @@ public class Ensemble {
 
     private void setTerminating() {
         try {
-            ensemble.forEach(a -> suppressNpe(() -> a.setRunMode(TERMINATING)));
+            runProperties.add(TERMINATE);
+            ensemble.forEach(a -> suppressNpe(() -> a.setRunMode(TERMINATE)));
         } catch (ConcurrentModificationException e) {
             setTerminating(); // at some point they don't produce any more actors
         }
@@ -163,9 +187,10 @@ public class Ensemble {
     /**
      * this resetInstance is only here to be used for running unittests
      * spares to restart an actor system every time, but is crappy otherwise
-     * */
+     */
     private void resetInstance() {
         try {
+            runProperties.add(TERMINATE);
             maxId.set(reservedIds);
             runProperties.clear();
             actressById.clear();

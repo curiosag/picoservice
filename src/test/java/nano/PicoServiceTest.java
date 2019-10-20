@@ -76,7 +76,7 @@ public class PicoServiceTest {
         Function<Integer> add = add();
 
         FunctionSignature<Integer> functionSignatureDouble = functionSignature(add).paramList(Name.a, Name.func);
-                ;
+        ;
         FunctionStub<Integer> stubFuncLeft = FunctionStub.of(Name.func, 0);
         stubFuncLeft.returnTo(add, Name.leftArg);
         FunctionStub<Integer> stubFuncRight = FunctionStub.of(Name.func, 1);
@@ -520,6 +520,7 @@ public class PicoServiceTest {
     }
 
     private int filterExecutions = 0;
+
     private void checkFilter(ArrayList<Integer> expected, ArrayList<Integer> input, Function<ArrayList<Integer>> filterCall, FunctionSignature<Boolean> predicate) {
         System.out.println("Checking filter for list of size " + input.size());
         ArrayList<Integer> result = new ArrayList<>();
@@ -533,7 +534,7 @@ public class PicoServiceTest {
         filterCall.returnTo(resultListener, Name.result);
 
 
-        Origin origin = new Origin(nop, new ComputationPath(++filterExecutions), "","") ;
+        Origin origin = new Origin(nop, new ComputationPath(++filterExecutions), "", "");
         resultListener.tell(message(Name.list, input, origin));
         resultListener.tell(message(Name.predicate, predicate, origin));
 
@@ -1095,6 +1096,48 @@ public class PicoServiceTest {
         testParallelRecursion(sumCall);
     }
 
+    @Test
+    public void testRecoveryRecursion() {
+        Ensemble.instance().setRunProperties(PERSIST, SLOW, DEBUG);
+        Int result = Int(0);
+
+        Action resultMonitor = setupMachinery(result);
+        Function<Integer> sumCall;
+
+        Origin origin = originForExecutionId(resultMonitor, (long) ++runId);
+        resultMonitor.tell(message(Name.a, 2, origin));
+
+        await(3000);
+        System.out.println("terminating before resume");
+        Ensemble.terminate();
+        Ensemble.reset();
+        await(5000);
+
+        if (result.value > 0) {
+            throw new IllegalStateException("computation completed before terminate/resume");
+        }
+        System.out.println("resuming");
+
+        Ensemble.instance().setRunProperties(PERSIST, DEBUG);
+
+        setupMachinery(result);
+
+        await(() -> result.value > 0);
+        System.out.println("sum: " + result.value);
+        Integer expected = 3;
+        assertEquals(expected, result.value);
+    }
+
+    private Action setupMachinery(Int result) {
+        Action resultMonitor = action((Consumer<Message> & Serializable) i -> {
+            result.setValue((int) i.getValue());
+        }).param(Name.result);
+        Function<Integer> sumCall = getRecursiveSumCall();
+        resultMonitor.propagate(Name.a, Name.a, sumCall);
+        sumCall.returnTo(resultMonitor, Name.result);
+        return resultMonitor;
+    }
+
     private Function<Integer> getRecursiveSumCall() {
 
                /* function sum(a) = if (a = 0 )
@@ -1110,10 +1153,12 @@ public class PicoServiceTest {
         Function<Boolean> eq = BinOps.eq().constant(Name.rightArg, _0);
         Function<Integer> sub = BinOps.sub().constant(Name.rightArg, _1);
         Function<Integer> add = add();
-        Function<Integer> sumSignature = functionSignature(_if);
-        Function<Integer> sumReCall = functionCall(sumSignature);
-        Function<Integer> sumCall = functionCall(sumSignature);
-
+        FunctionSignature<Integer> sumSignature = functionSignature(_if);
+        FunctionCall<Integer> sumReCall = functionCall(sumSignature);
+        FunctionCall<Integer> sumCall = functionCall(sumSignature);
+        sumSignature.label("sumSign");
+        sumReCall.label("sumReCall");
+        sumCall.label("sumCall");
         sumSignature.propagate(Name.a, Name.a, _if);
         _if.propagate(Name.a, Name.leftArg, eq);
         _if.propagateOnFalse(Name.a, Name.leftArg, add);
@@ -1204,7 +1249,7 @@ public class PicoServiceTest {
     @Test
     public void recursiveSumInJava() {
         Long start = System.nanoTime();
-        Integer max = 7000;
+        Integer max = 5000;
         Integer sum = sum(max);
         long elapsed = (System.nanoTime() - start) / 1000000;
 
@@ -1222,47 +1267,10 @@ public class PicoServiceTest {
         return result;
     }
 
-    @Ignore
-    @Test
-    public void testRecoveryRecursion() {
-        Ensemble.instance().setRunProperties(PERSIST);
-        Int result = Int(0);
-        Action resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
-        Function<Integer> sumCall = getRecursiveSumCall();
-        resultMonitor.propagate(Name.a, Name.a, sumCall);
-        sumCall.returnTo(resultMonitor, Name.result);
-
-        Origin run = originForExecutionId(resultMonitor, (long) ++runId);
-        resultMonitor.tell(message(Name.a, 10, run));
-
-
-        await(175);
-        System.out.println("terminating before resume");
-        Ensemble.terminate();
-        Ensemble.reset();
-        Ensemble.instance().setRunProperties(PERSIST);
-        await(5000);
-        System.out.println("resuming");
-
-        result.setValue(0);
-        resultMonitor = action((Consumer<Message> & Serializable) i -> result.setValue((int) i.getValue()));
-        sumCall = getRecursiveSumCall();
-        resultMonitor.propagate(Name.a, Name.a, sumCall);
-        sumCall.returnTo(resultMonitor, Name.result);
-
-
-        await(() -> result.value > 0);
-        System.out.println("recovered sum was: " + result.value);
-        Integer expected = 11 * 5;
-        assertEquals(expected, result.value);
-    }
-
     @Test
     public void testRecoveryQuicksort() {
-        if (1 == 1) {
-            throw new IllegalStateException();
-        }
-        Ensemble.instance().setRunProperties(PERSIST);
+
+        Ensemble.instance().setRunProperties(PERSIST, SLOW);
 
         ArrayList<Integer> input = randomList(200);
         List<Integer> result = new ArrayList<>();
@@ -1285,51 +1293,6 @@ public class PicoServiceTest {
         await(() -> result.size() == input.size());
         assertEquals(sorted(input), result);
         System.out.println(result);/**/
-    }
-
-    @Test
-    public void testRecoveryPartialApplicationOnLambda() {
-        /*
-                function inc = a -> a + 1
-                function apply(func, a) = func(a)
-
-                check(apply(inc, 0))
-                check(apply(inc, 1))
-         */
-
-        if (1 == 1) {
-            throw new IllegalStateException();
-        }
-        Int result = Int(0);
-        Action resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
-        resultListener.param(Name.result);
-        Origin origin = Origin.origin(resultListener);
-
-        PartialAppOnLambda partialAppOnLambda = new PartialAppOnLambda(resultListener).create();
-        FunctionCall<Integer> functionCallApply = partialAppOnLambda.getFunctionCallApply();
-
-        resultListener.tell(message(Name.b, _1, origin));
-        functionCallApply.tell(message(Name.func, partialAppOnLambda.getPartialAdd(), origin));
-        functionCallApply.tell(message(Name.a, _3, origin));
-
-        result.setValue(0);
-        await(() -> result.value != 0);
-        assertEquals(Integer.valueOf(4), result.value);
-
-        await(10000);
-        System.out.println("terminating before resume");
-        Ensemble.terminate();
-        Ensemble.reset();
-        Ensemble.instance().setRunProperties(PERSIST);
-        await(1000);
-        System.out.println("resuming");
-
-        result.setValue(0);
-        resultListener = action((Consumer<Message> & Serializable) i -> result.setValue((Integer) i.getValue()));
-        resultListener.param(Name.result);
-        new PartialAppOnLambda(resultListener).create();
-        await(() -> result.value != 0);
-        assertEquals(Integer.valueOf(4), result.value);
     }
 
     private Action setUpResultListener(Function<ArrayList<Integer>> qsortCall, List<Integer> result) {

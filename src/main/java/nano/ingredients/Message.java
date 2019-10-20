@@ -6,24 +6,24 @@ import java.util.Arrays;
 
 public class Message implements Serializable {
     private static final long serialVersionUID = 0L;
+    private static Long maxMessageId = 0L;
+
     public final String id;
     private final Serializable value;
     public final String key;
     public final Origin origin;
     public Acknowledge ack = Acknowledge.N;
-    private transient boolean isReplay;
 
+    private transient boolean recovered;
 
-    public boolean isReplay() {
-        return isReplay;
+    public boolean isRecovered() {
+        return recovered;
     }
 
-    public Message setReplay(boolean replay) {
-        isReplay = replay;
+    public Message setRecovered(boolean recovered) {
+        this.recovered = recovered;
         return this;
     }
-
-    private static Long maxMessageId = 0L;
 
     protected Message(String key, Serializable value, Origin origin) {
         this.origin = origin;
@@ -38,7 +38,7 @@ public class Message implements Serializable {
 
     public Message origin(Origin o)
     {
-        return message(key, getValue(), o);
+        return message(key, getValue(), o).setRecovered(recovered);
     }
 
     public Message ack(Acknowledge a){

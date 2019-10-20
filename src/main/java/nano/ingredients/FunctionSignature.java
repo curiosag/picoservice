@@ -3,10 +3,7 @@ package nano.ingredients;
 import nano.ingredients.tuples.SerializableTuple;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Origin.origin;
@@ -24,12 +21,12 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
      *
      * */
 
-    public FunctionSignature<T> paramList(String ... params) {
+    public FunctionSignature<T> paramList(String... params) {
         paramList.addAll(Arrays.asList(params));
         return this;
     }
 
-    public FunctionSignature<T> letKeys(String ... letKeys) {
+    public FunctionSignature<T> letKeys(String... letKeys) {
         this.letKeys.addAll(Arrays.asList(letKeys));
         return this;
     }
@@ -64,9 +61,9 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
             super.process(m);
             return;
         }
-        if (m.origin.sender == this && ! isConst(m.key)) {
+        if (m.origin.sender.equals(this) && !isConst(m.key)) {
             if (m.key.equals(Name.stackFrame)) {
-                state.paramValues.forEach((k, v) -> super.process(new Message(k, v, m.origin)));
+                ((HashMap<String, Serializable>) m.getValue()).forEach((k, v) -> super.process(new Message(k, v, m.origin)));
                 return;
             } else {
                 super.process(m);
@@ -74,7 +71,7 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
             return;
         }
 
-        if(! m.hasKey(returnKey)) {
+        if (!m.hasKey(returnKey)) {
             state.addParamValue(m.key, m.getValue());
             if (state.paramValuesComplete()) {
                 tell(new Message(Name.stackFrame, state.paramValues, m.origin.sender(this)));
@@ -99,8 +96,7 @@ public class FunctionSignature<T extends Serializable> extends Function<T> {
 
     @Override
     void propagate(String keyReceived, String keyToPropagate, Function targetFunc, Map<String, List<SerializableTuple<String, Function<?>>>> propagations) {
-        if (! paramList.contains(keyReceived))
-        {
+        if (!paramList.contains(keyReceived)) {
             paramList.add(keyReceived);
         }
         super.propagate(keyReceived, keyToPropagate, targetFunc, propagations);

@@ -3,17 +3,18 @@ package nano.ingredients;
 import akka.actor.ActorRef;
 import nano.ingredients.infrastructure.TraceMessage;
 import nano.ingredients.infrastructure.Tracer;
+import nano.ingredients.tuples.ReplayData;
 import nano.misc.Adresses;
 import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import static nano.ingredients.Ensemble.getStackTrace;
 import static nano.ingredients.Ensemble.resolve;
-import static nano.ingredients.RunMode.RUN;
 import static nano.ingredients.RunProperty.*;
 import static nano.ingredients.infrastructure.TraceMessage.traced;
 
@@ -23,13 +24,24 @@ public abstract class Actress implements Serializable {
     ActorRef aref;
     private Set<RunProperty> runProperties = new HashSet<>();
 
-    RunMode runMode = RUN;
-
     private boolean stop = false;
 
     private boolean stopped = false;
 
     private transient Tracer tracer;
+
+    private ReplayData replayData;
+
+    public void setReplayData(ReplayData replayData) {
+        this.replayData = replayData;
+    }
+
+    protected ReplayData getReplayData() {
+        if (replayData == null) {
+            throw new IllegalStateException();
+        }
+        return replayData;
+    }
 
     protected ActorRef aRef() {
         return aref;
@@ -46,8 +58,8 @@ public abstract class Actress implements Serializable {
     public final Address address;
 
 
-    void setRunMode(RunMode runMode) {
-        this.runMode = runMode;
+    void setRunMode(RunProperty runMode) {
+        this.runProperties.add(runMode);
     }
 
     public void stop() {
@@ -76,15 +88,17 @@ public abstract class Actress implements Serializable {
 
     private void debug(Message m, Origin o, String rel) {
         if (!(m instanceof TraceMessage))
-            debug(String.format("%s (%d)%s " + rel + " %s %s", m.origin.getComputationPath().toString(), o.getComputationPath().size(), this.getClass().getSimpleName() + this.address.toString(), o.getSender().getClass().getSimpleName() + o.getSender().address.toString(), m.toString()));
+            debug(String.format("%s (%d)%s " + rel + " %s %s", m.origin.getComputationPath().getStack().toString(), o.getComputationPath().getStack().size(), this.getClass().getSimpleName() + this.address.toString(), o.getSender().getClass().getSimpleName() + o.getSender().address.toString(), m.toString()));
     }
 
     public abstract void process(Message message);
 
     public void tell(Message m) {
-        if (! m.isReplay()) {
-            aRef().tell(m, m.origin.getSender().aref);
-        }
+        aRef().tell(m, m.origin.getSender().aref);
+    }
+
+    private String getReturnKey() {
+        return ((Function) this).returnKey;
     }
 
     public void receive(Message m) {
@@ -92,6 +106,12 @@ public abstract class Actress implements Serializable {
             debug(m, m.origin, "!!");
             if (hasRunProperty(SHOW_STACKS)) {
                 System.out.println(m.origin.getComputationPath().getStack().stackPoints());
+            }
+            if (!m.isRecovered() && (m.key.equals(Name.stackFrame) || m.key.equals(getReturnKey()))) {
+                Map<String, Message> repl = getReplayData().getRecovered().get(m.origin.getComputationPath().getStack());
+                if (repl != null && repl.get(m.key) != null) {
+                    return;
+                }
             }
             if (m.key.equals(Name.ack)) {
                 onAck((Message) m.getValue());
@@ -144,7 +164,8 @@ public abstract class Actress implements Serializable {
 
     void debug(String s) {
         if (hasRunProperty(DEBUG)) {
-            logger.debug(s);
+            //logger.debug(s);
+            System.out.println(s);
         }
     }
 
@@ -163,7 +184,7 @@ public abstract class Actress implements Serializable {
     public void receiveRecover(Message m) {
     }
 
-    public boolean shouldPersist(Message m){
+    public boolean shouldPersist(Message m) {
         return false;
     }
 
@@ -172,12 +193,10 @@ public abstract class Actress implements Serializable {
     }
 
     public Tracer getTracer() {
-        if (this instanceof Tracer)
-        {
+        if (this instanceof Tracer) {
             throw new IllegalStateException();
         }
-        if (tracer == null)
-        {
+        if (tracer == null) {
             tracer = resolveTracer();
         }
         return tracer;

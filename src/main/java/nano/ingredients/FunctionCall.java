@@ -9,7 +9,7 @@ import static nano.ingredients.Message.message;
 
 public class FunctionCall<T extends Serializable> extends Function<T> {
 
-    private final Function<T> function;
+    public final Function<T> function;
 
     protected FunctionCall(Function<T> f) {
         this.function = f;
@@ -82,7 +82,6 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
             }
             function.tell(message.origin(origin));
         }
-
     }
 
     private boolean isConst(Message message) {

@@ -23,6 +23,12 @@ public class Origin implements Serializable {
         this.lastFunctionCallId = lastFunctionCallId;
     }
 
+    public Origin clearSenderRef(){
+        Origin result = new Origin(sender, computationPath, lastFunctionCallId, prevFunctionCallId);
+        result.sender = null;
+        return result;
+    }
+
     public static Origin origin(Function<?> sender) {
         String id = sender.address.id;
         return new Origin(sender, new ComputationPath(0L), id, "");

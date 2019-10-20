@@ -19,7 +19,4 @@ public class ComputationOriginBranch extends Tuple<Origin, Optional<ComputationP
         return left;
     }
 
-    public Optional<ComputationPath> getBoughBranchedOffFrom(){
-        return right;
-    }
 }

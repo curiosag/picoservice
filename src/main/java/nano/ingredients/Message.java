@@ -14,14 +14,14 @@ public class Message implements Serializable {
     public final Origin origin;
     public Acknowledge ack = Acknowledge.N;
 
-    private transient boolean recovered;
+    private transient MessageProcessingDirective processingDirective = MessageProcessingDirective.PROCESS;
 
-    public boolean isRecovered() {
-        return recovered;
+    public MessageProcessingDirective getProcessingDirective() {
+        return processingDirective;
     }
 
-    public Message setRecovered(boolean recovered) {
-        this.recovered = recovered;
+    public Message setProcessingDirective(MessageProcessingDirective processingDirective) {
+        this.processingDirective = processingDirective;
         return this;
     }
 
@@ -38,7 +38,7 @@ public class Message implements Serializable {
 
     public Message origin(Origin o)
     {
-        return message(key, getValue(), o).setRecovered(recovered);
+        return message(key, getValue(), o).setProcessingDirective(processingDirective);
     }
 
     public Message ack(Acknowledge a){

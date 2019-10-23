@@ -7,7 +7,7 @@ import static nano.ingredients.Message.message;
 
 public class FunctionStub<T extends Serializable> extends Function<T> {
 
-    final String keyFunctionParameter;
+    public final String keyFunctionParameter;
     final Integer levelInstanceId; // they need to be distinguishable on  a call level
 
     private FunctionStub(String keyFunctionParameter, Integer levelInstanceId) {
@@ -50,7 +50,7 @@ public class FunctionStub<T extends Serializable> extends Function<T> {
                     String signatureId = (String) m.getValue();
                     Function actual = (Function) Ensemble.resolve(signatureId);
 
-                    state.functionCall = functionCall(actual, new Address(-1L, "L" + "_" + levelInstanceId+ m.origin.getComputationPath().toString()));
+                    state.functionCall = functionCall(actual, new Address(-1L, "L" + "_" + levelInstanceId + m.origin.getComputationPath().toString()));
                     state.functionCall.label(actual.address.label.toLowerCase());
                     state.functionCall.returnTo(this, Name.result);
 

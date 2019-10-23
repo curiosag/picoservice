@@ -3,7 +3,7 @@ package nano.ingredients;
 import akka.actor.ActorRef;
 import nano.ingredients.infrastructure.TraceMessage;
 import nano.ingredients.infrastructure.Tracer;
-import nano.ingredients.tuples.ReplayData;
+import nano.ingredients.tuples.Replay;
 import nano.misc.Adresses;
 import org.apache.log4j.Logger;
 
@@ -15,6 +15,8 @@ import java.util.Set;
 
 import static nano.ingredients.Ensemble.getStackTrace;
 import static nano.ingredients.Ensemble.resolve;
+import static nano.ingredients.MessageProcessingDirective.REPLAY;
+import static nano.ingredients.MessageProcessingDirective.REPLAY_IGNORE;
 import static nano.ingredients.RunProperty.*;
 import static nano.ingredients.infrastructure.TraceMessage.traced;
 
@@ -30,17 +32,29 @@ public abstract class Actress implements Serializable {
 
     private transient Tracer tracer;
 
-    private ReplayData replayData;
+    private Map<Replay, Map<String, Message>> messagesRecovered;
+    private int numberMessagesRecovered;
+    private int numberMessagesReplayed;
 
-    public void setReplayData(ReplayData replayData) {
-        this.replayData = replayData;
+    public boolean replayComplete() {
+        return numberMessagesReplayed >= numberMessagesRecovered;
     }
 
-    protected ReplayData getReplayData() {
-        if (replayData == null) {
+    public boolean recoveryComplete() {
+        return messagesRecovered != null;
+    }
+
+    public void setMessagesRecovered(Map<Replay, Map<String, Message>> recovered) {
+        this.messagesRecovered = recovered;
+        numberMessagesRecovered = recovered.values().stream().map(Map::size).reduce(0, (i, j) -> i + j);
+        numberMessagesReplayed = 0;
+    }
+
+    protected Map<Replay, Map<String, Message>> getMessagesRecovered() {
+        if (messagesRecovered == null) {
             throw new IllegalStateException();
         }
-        return replayData;
+        return messagesRecovered;
     }
 
     protected ActorRef aRef() {
@@ -97,19 +111,16 @@ public abstract class Actress implements Serializable {
         aRef().tell(m, m.origin.getSender().aref);
     }
 
-    private String getReturnKey() {
-        return ((Function) this).returnKey;
-    }
-
     public void receive(Message m) {
         try {
             debug(m, m.origin, "!!");
             if (hasRunProperty(SHOW_STACKS)) {
                 System.out.println(m.origin.getComputationPath().getStack().stackPoints());
             }
-            if (!m.isRecovered() && (m.key.equals(Name.stackFrame) || m.key.equals(getReturnKey()))) {
-                Map<String, Message> repl = getReplayData().getRecovered().get(m.origin.getComputationPath().getStack());
-                if (repl != null && repl.get(m.key) != null) {
+            if (!m.getProcessingDirective().equals(REPLAY)) {
+                Replay matcher = new Replay(m.origin.senderId, m.origin.getComputationPath().getStack());
+                Map<String, Message> recovered = getMessagesRecovered().get(matcher);
+                if (recovered != null && recovered.get(m.key) != null) {
                     return;
                 }
             }
@@ -126,6 +137,11 @@ public abstract class Actress implements Serializable {
             Ensemble.instance().abort(e, this);
         }
         stopped = stop;
+        MessageProcessingDirective directive = m.getProcessingDirective();
+        if (directive.equals(REPLAY) || directive.equals(REPLAY_IGNORE))
+        {
+            numberMessagesReplayed ++;
+        }
     }
 
     String getExceptionMessage(Message m, Exception e) {

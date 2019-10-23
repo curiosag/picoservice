@@ -5,7 +5,7 @@ import akka.persistence.AbstractPersistentActor;
 import akka.persistence.RecoveryCompleted;
 import akka.persistence.SnapshotOffer;
 import nano.ingredients.*;
-import nano.ingredients.tuples.ReplayData;
+import nano.ingredients.tuples.Replay;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,9 +24,9 @@ public class Akktor extends AbstractPersistentActor {
 
     private akka.event.EventStream eventStream;
 
-    private final Map<ComputationStack, Map<String, Message>> framesRecovered = new HashMap<>();
-    private final Map<ComputationStack, List<Message>> framesToReplay = new HashMap<>();
-    private final List<Message> nonFramesToReplay = new ArrayList<>();
+    private final Map<Replay, Map<String, Message>> messageMapRecovered = new HashMap<>();
+    private List<Message> messagesRecovered = new ArrayList<>();
+    private final Map<ComputationStack, Message> framesToReplay = new HashMap<>();
 
     private Akktor(Actress related) {
         this.related = related;
@@ -36,34 +36,21 @@ public class Akktor extends AbstractPersistentActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .match(MessageReplayTrigger.class, m -> replayMessages(m.messageFilter))
                 .match(Message.class,
                         m -> {
                             if (!m.key.equals(getReturnKey()) && Ensemble.instance().hasRunProperty(TERMINATE)) {
                                 return;
                             }
                             if (runModePersist()) {
-                                if (Ensemble.instance().hasRunProperty(SLOW) && related instanceof FunctionSignature && m.key.equals("result") && m.getValue().equals(1)) {
-//                                    try {
-//                                        Thread.sleep(5000);
-//                                    } catch (InterruptedException e) {
-//                                        //
-//                                    }
-                                }
-                                // function calls need to be set up with proper state
-                                // stack frames need to be stored to detect and prevent re-computation later on
-                                if (related instanceof FunctionCall ||
-                                        (related instanceof FunctionSignature && ((FunctionSignature) related).paramList.contains(m.key)) ||
-                                        m.key.equals(Name.stackFrame) || m.key.equals(getReturnKey())) {
-                                    persist(m, (Message i) -> eventStream.publish(i));
-
-                                    if (Ensemble.instance().hasRunProperty(SLOW)) {
-                                        try {
-                                            Thread.sleep(300);
-                                        } catch (InterruptedException e) {
-                                            //
-                                        }
+                                if (m.hasAnyKey(Name.stackFrame, Name.result) && Ensemble.instance().hasRunProperty(SLOW)) {
+                                    try {
+                                        Thread.sleep(300);
+                                    } catch (InterruptedException e) {
+                                        //
                                     }
                                 }
+                                persist(m, (Message i) -> eventStream.publish(i));
                             }
                             related.receive(m);
                         }
@@ -74,55 +61,51 @@ public class Akktor extends AbstractPersistentActor {
     @Override
     public Receive createReceiveRecover() {
         return receiveBuilder()
-                .match(Message.class, m -> {
-                    m.setRecovered(true);
-                    hdlMessageRecovery(m);
-                }).match(RecoveryCompleted.class,
-                        m -> {
-                            // first set replay data
-                            related.setReplayData(new ReplayData(framesRecovered, framesToReplay));
-                            // then start replay
-                            nonFramesToReplay.forEach(r -> {
-                                System.out.println("recovering" + r.toString());
-                                related.receive(r);
-                            });
-                            framesToReplay.forEach((k, v) -> v.forEach(r -> {
-                                System.out.println("recovering" + r.toString());
-                                related.receive(r);
-                            }));
-                        }
+                .match(Message.class, this::hdlRecovery)
+                .match(RecoveryCompleted.class, m -> related.setMessagesRecovered(messageMapRecovered)
                 ).match(SnapshotOffer.class, ss -> {
                     throw new IllegalStateException();
                 })
                 .build();
     }
 
-    private void hdlMessageRecovery(Message m) {
-        Message message = m.origin(m.origin.clearSenderRef());
-        ComputationStack stack = message.origin.getComputationPath().getStack();
-        if (related instanceof FunctionSignature && message.hasAnyKey(getReturnKey(), Name.stackFrame)) {
-            hdlSignatureRecovery(message, stack);
-        }
-        if ((related instanceof FunctionSignature || related instanceof FunctionCall) &&
-                !message.key.equals(Name.stackFrame) && message.origin.getSender() != related) {
-            nonFramesToReplay.add(message);
-        }
+    private void replayMessages(java.util.function.BiFunction<Actress, Message, Boolean> messageFilter) {
+        messagesRecovered.stream()
+                .filter(m -> messageFilter.apply(related, m))
+                .forEach(r -> {
+                    if (isntStackFrameAtAll(r) || canReplayStackFrame(r)) {
+                        related.receive(r);
+                    }
+                });
     }
 
-    private void hdlSignatureRecovery(Message m, ComputationStack stack) {
-        Map<String, Message> reco = framesRecovered.computeIfAbsent(stack, k -> new HashMap<>());
-        if (reco.get(m.key) != null) {
+    private boolean isntStackFrameAtAll(Message r) {
+        return !r.hasKey(Name.stackFrame);
+    }
+
+    private boolean canReplayStackFrame(Message r) {
+        return framesToReplay.get(r.origin.getComputationPath().getStack()) != null;
+    }
+
+    private void hdlRecovery(Message message) {
+        Message m = message.origin(message.origin.clearSenderRef());
+        m.setProcessingDirective(MessageProcessingDirective.REPLAY);
+
+        ComputationStack stack = message.origin.getComputationPath().getStack();
+
+        messagesRecovered.add(m);
+
+        Map<String, Message> keyMessageMap = messageMapRecovered.computeIfAbsent(new Replay(m.origin.senderId, stack), k -> new HashMap<>());
+        if (keyMessageMap.get(m.key) != null) {
             throw new IllegalStateException("Already encountered key " + m.key);
         }
-        reco.put(m.key, m);
+        keyMessageMap.put(m.key, m);
 
-        List<Message> repl = framesToReplay.computeIfAbsent(stack, k -> new ArrayList<>());
-        if (m.key.equals(getReturnKey())) {
-            repl.clear();
-        }
-
-        if (!repl.contains(m)) {
-            repl.add(m);
+        if (related instanceof FunctionSignature && m.hasAnyKey(Name.stackFrame)) {
+            if (framesToReplay.get(stack) != null) {
+                throw new IllegalStateException();
+            }
+            framesToReplay.put(stack, m);
         }
     }
 

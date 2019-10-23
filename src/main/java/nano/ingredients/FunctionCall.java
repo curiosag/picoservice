@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Message.message;
+import static nano.ingredients.MessageProcessingDirective.REPLAY;
 
 public class FunctionCall<T extends Serializable> extends Function<T> {
 
@@ -60,13 +61,14 @@ public class FunctionCall<T extends Serializable> extends Function<T> {
                 hdlForwardings(origin, onReturn);
             }
 
-            origin = origin.popCall();
+            if (!message.getProcessingDirective().equals(REPLAY)) {
+                origin = origin.popCall();
 
-            if (!this.address.id.equals(origin.getComputationPath().getLastPopped().id)) {
-                String fmt = "Function call %s attempted to pop itself, but found on stack %s";
-                throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.getComputationPath().getLastPopped()));
+                if (!this.address.id.equals(origin.getComputationPath().getLastPopped().id)) {
+                    String fmt = "Function call %s attempted to pop itself, but found on stack %s";
+                    throw new IllegalStateException(String.format(fmt, this.address.toString(), origin.getComputationPath().getLastPopped()));
+                }
             }
-
             if (message.hasKey(Name.result)) {
                 returnTo.tell(message(returnKey, (T) message.getValue(), origin));
             } else {

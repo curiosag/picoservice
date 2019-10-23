@@ -12,13 +12,13 @@ import static nano.ingredients.guards.Guards.notEmpty;
 
 public class PartialFunctionApplication<T extends Serializable> extends Function<T> {
 
-    final List<String> partialAppParams = new ArrayList<>();
+    public final List<String> partialAppParams = new ArrayList<>();
     // Map<ExecutionId, stack of preset values of partial function applications>
     public final Map<ComputationPathLocation, Map<String, Serializable>> partialAppValues = new ConcurrentHashMap<>();
     private final FunctionSignature<T> inner;
 
     private PartialFunctionApplication(FunctionSignature<T> inner, List<String> partialAppParams) {
-        super(new Address(-1L ,"P" + inner.address.id));
+        super(new Address(-1L, "P" + "_" + inner.address.id));
         this.inner = inner;
         this.partialAppParams.addAll(partialAppParams);
         inner.returnTo(this, Name.result);
@@ -141,7 +141,8 @@ public class PartialFunctionApplication<T extends Serializable> extends Function
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());
 
-        Guards.notEmpty(matches);
+        if (matches.isEmpty())
+            Guards.notEmpty(matches);
         return notEmpty(matches.get(matches.size() - 1).getValue());
     }
 

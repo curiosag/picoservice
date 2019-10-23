@@ -1098,14 +1098,20 @@ public class PicoServiceTest {
 
     @Test
     public void testRecoveryRecursion() {
+        Integer max = 6;
+        if (max % 2 != 0)
+        {
+            throw new IllegalStateException();
+        }
+
         Ensemble.instance().setRunProperties(PERSIST, SLOW, DEBUG);
         Int result = Int(0);
 
-        Action resultMonitor = setupMachinery(result);
-        Function<Integer> sumCall;
+        Action resultMonitor = setupRecursiveSumCalculation(result);
+        Ensemble.instance().showEnsemble();
 
         Origin origin = originForExecutionId(resultMonitor, (long) ++runId);
-        resultMonitor.tell(message(Name.a, 2, origin));
+        resultMonitor.tell(message(Name.a, max, origin));
 
         await(3000);
         System.out.println("terminating before resume");
@@ -1120,15 +1126,16 @@ public class PicoServiceTest {
 
         Ensemble.instance().setRunProperties(PERSIST, DEBUG);
 
-        setupMachinery(result);
+        setupRecursiveSumCalculation(result);
+        Ensemble.instance().showEnsemble();
 
         await(() -> result.value > 0);
         System.out.println("sum: " + result.value);
-        Integer expected = 3;
+        Integer expected = (max + 1) * (max / 2);
         assertEquals(expected, result.value);
     }
 
-    private Action setupMachinery(Int result) {
+    private Action setupRecursiveSumCalculation(Int result) {
         Action resultMonitor = action((Consumer<Message> & Serializable) i -> {
             result.setValue((int) i.getValue());
         }).param(Name.result);
@@ -1270,25 +1277,29 @@ public class PicoServiceTest {
     @Test
     public void testRecoveryQuicksort() {
 
-        Ensemble.instance().setRunProperties(PERSIST, SLOW);
+        Ensemble.instance().setRunProperties(DEBUG, PERSIST, SLOW);
 
-        ArrayList<Integer> input = randomList(200);
+        ArrayList<Integer> input = list(3, 1, 2);
         List<Integer> result = new ArrayList<>();
 
         Origin origin = origin(nop, new ComputationPath(executions++), "", "0");
-        setUpResultListener(functionCall(getQuicksortSignature()), result)
-                .tell(message(Name.list, input, origin));
+        Action gateway = setUpResultListener(functionCall(getQuicksortSignature()), result);
+        Ensemble.instance().showEnsemble();
+
+        gateway.tell(message(Name.list, input, origin));
 
         await(3000);
         System.out.println("terminating before resume");
         Ensemble.terminate();
         Ensemble.reset();
-        Ensemble.instance().setRunProperties(PERSIST, SHOW_STACKS);
+        Ensemble.instance().setRunProperties(DEBUG, PERSIST);
         await(3000);
         System.out.println("resuming");
 
         // only recreate actors. they should replay all messages until now and resume the computation
         setUpResultListener(functionCall(getQuicksortSignature()), result);
+        Ensemble.instance().showEnsemble();
+        Ensemble.instance().onSetUpComplete();
 
         await(() -> result.size() == input.size());
         assertEquals(sorted(input), result);
@@ -1304,49 +1315,4 @@ public class PicoServiceTest {
         return resultListener;
     }
 
-    private class PartialAppOnLambda {
-        private Action resultListener;
-        private PartialFunctionApplication<Integer> partialAdd;
-        private FunctionCall<Integer> functionCallApply;
-
-        PartialAppOnLambda(Action resultListener) {
-            this.resultListener = resultListener;
-        }
-
-        PartialFunctionApplication<Integer> getPartialAdd() {
-            return partialAdd;
-        }
-
-        FunctionCall<Integer> getFunctionCallApply() {
-            return functionCallApply;
-        }
-
-        PartialAppOnLambda create() {
-            BinOp<Integer, Integer, Integer> add = add();
-            partialAdd = partialApplication(add, list(Name.b));
-            partialAdd.label("ADD(_,X)");
-            partialAdd.propagate(Name.a, Name.leftArg, add);
-            partialAdd.propagate(Name.b, Name.rightArg, add);
-
-            // by way of using the apply function
-            //function apply(func, a) = func(a)
-            FunctionStub<Integer> stubFunc = FunctionStub.of(Name.func, 0);
-            stubFunc.label("stubFunc");
-
-            // it is intended that the partialy applied function is created before passing it to apply
-            // applying values and removing them again has to happen at the same function call level
-            FunctionSignature<Integer> functionSignatureApply = functionSignature(stubFunc);
-            functionSignatureApply.propagate(Name.a, Name.a, stubFunc);
-            functionSignatureApply.propagate(Name.func, Name.func, stubFunc);
-
-            // check(apply(mul, a))
-            functionCallApply = functionCall(functionSignatureApply);
-            functionCallApply.label("functionCallApply");
-            functionCallApply.returnTo(resultListener, Name.result);
-
-            resultListener.propagate(Name.b, Name.b, partialAdd);
-            resultListener.onReceivedReturnSend(Name.removePartialAppValues, null, partialAdd);
-            return this;
-        }
-    }
 }

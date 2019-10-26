@@ -1,12 +1,15 @@
 package nano.ingredients;
 
 
-public class UnOp<T, V> extends Function<V> {
+import java.io.Serializable;
+
+public class UnOp<T extends Serializable, V extends Serializable> extends Function<V> {
+    private static final long serialVersionUID = 0L;
 
     private final java.util.function.Function<T, V> op;
-    private final java.util.function.Function<Object, T> converter;
+    private java.util.function.Function<Object, T> converter;
 
-    public class UnOpState extends State {
+    public class UnOpState extends FunctionState {
         Object arg;
 
         UnOpState(Origin origin) {
@@ -15,13 +18,13 @@ public class UnOp<T, V> extends Function<V> {
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         return new UnOpState(origin);
     }
 
     @Override
-    protected boolean isParameter(String key) {
-        return key.equals(Name.arg);
+    protected boolean shouldPropagate(String key) {
+        return ! key.equals(Name.arg);
     }
 
     public UnOp(java.util.function.Function<T, V> op, java.util.function.Function<Object, T> converter) {
@@ -31,7 +34,7 @@ public class UnOp<T, V> extends Function<V> {
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         UnOpState state = (UnOpState) s;
 
         if (state.arg == null) {

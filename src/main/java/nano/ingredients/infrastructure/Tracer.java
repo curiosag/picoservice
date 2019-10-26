@@ -1,4 +1,4 @@
-package nano.ingredients.trace;
+package nano.ingredients.infrastructure;
 
 import nano.ingredients.*;
 import nano.misc.Adresses;
@@ -11,21 +11,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-public class Trace extends Actress implements Closeable {
+public class Tracer extends Actress implements Closeable {
 
     private boolean active;
     private BufferedWriter writer;
-    private List<TraceMessage> messages = new ArrayList<>();
 
     @Override
-    protected Actress resolveTracer() {
+    protected Tracer resolveTracer() {
         return this;
     }
 
-    @Override
     public void setTrace(boolean active) {
         if (writer != null) {
             close();
@@ -38,8 +37,8 @@ public class Trace extends Actress implements Closeable {
         }
     }
 
-    public Trace(boolean active) {
-        super(new Address(Adresses.trace, 0));
+    public Tracer(boolean active) {
+        super(new Address(Adresses.trace, "0"));
         setTrace(active);
     }
 
@@ -64,20 +63,20 @@ public class Trace extends Actress implements Closeable {
     }
 
     private String node(Actress f) {
-        return f.address.label.length() > 0 ? f.address.label : f.address.toString();
+        return f.getClass().getSimpleName() + (f.address.label.length() > 0 ? f.address.label : f.address.toString());
     }
 
     private String payload(Message m) {
         String value;
-        if (m.value == null) {
+        if (m.getValue() == null) {
             value = "NULL";
-        } else if (m.value instanceof Actress) {
-            value = node((Actress) m.value);
+        } else if (m.getValue() instanceof Actress) {
+            value = node((Actress) m.getValue());
         } else {
-            value = (m.value).toString();
+            value = (m.getValue()).toString();
         }
 
-        return '"' + String.format("<%d>(%d/%d)%s:", m.origin.seqNr, m.origin.executionId, m.origin.callStack.size(), m.key) + value
+        return '"' + String.format("(%d/%d)%s:", m.origin.getExecutionId(), m.origin.getComputationPath().size(), m.key) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
@@ -88,14 +87,13 @@ public class Trace extends Actress implements Closeable {
             return;
         }
 
-        String labelSender = node(m.traced().origin.sender);
+        String labelSender = node(m.traced().origin.getSender());
         String labelReceiver = node(m.receiver());
 
-        CallStack stackSender = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
-        CallStack stackReceiver = new CallStack(m.traced().origin.functionCallTreeNode().getCallStack());
 
-        /*  call level matching: idea is to set each occurance of a function call, no matter if it sends or
-         *  receives messages to the same call level (call stack), so that the graph becomes connected
+        /*  call level matching: idea is to set each occurence of a function call in trace messages
+         *  to the same call level (call stack), no matter if it sends or receives messages.
+         *  This way the graph becomes connected.
          *
          *       anything (but function signature and function call sending consts to itself)
          *
@@ -107,16 +105,20 @@ public class Trace extends Actress implements Closeable {
          *       function call
          *
          * */
+
+        ComputationPath bough = m.traced().origin.getComputationPath();
+
+        List<String> stackSender = bough.getStack().getItems().stream().map( i -> i.id).collect(Collectors.toList());
         if (fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(m)) {
-            stackSender = stackSender.push(m.traced().origin.sender.address.id);
+            stackSender.add(m.traced().origin.getSender().address.id);
         }
 
-        if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m))
-        {
-            stackReceiver = stackReceiver.push(m.receiver().address.id);
+        List<String> stackReceiver = bough.getStack().getItems().stream().map( i -> i.id).collect(Collectors.toList());
+        if (fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(m)) {
+            stackReceiver.add(m.receiver().address.id);
         }
 
-        long exId = m.origin.functionCallTreeNode().getExecutionId();
+        long exId = m.origin.computationPathLocation().getExecutionId();
 
         writeLn(String.format("%s -> %s [label=%s];",
                 renderNode(labelSender, exId + "//" + stackSender),
@@ -125,11 +127,11 @@ public class Trace extends Actress implements Closeable {
     }
 
     private boolean fromAnywhereToFunctionCallExceptSignatureAndSelfCalls(TraceMessage m) {
-        return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.sender.equals(m.receiver())) && !(m.traced().origin.sender instanceof FunctionSignature);
+        return (m.receiver() instanceof FunctionCall) && !(m.traced().origin.getSender().equals(m.receiver())) && !(m.traced().origin.getSender() instanceof FunctionSignature);
     }
 
     private boolean fromFunctionCallToAnywhereExceptSignatureAndSelfCalls(TraceMessage m) {
-        return (m.traced().origin.sender instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.sender)) && !(m.receiver() instanceof FunctionSignature);
+        return (m.traced().origin.getSender() instanceof FunctionCall) && !(m.receiver().equals(m.traced().origin.getSender())) && !(m.receiver() instanceof FunctionSignature);
     }
 
     private String renderNode(String label, String stack) {
@@ -142,6 +144,13 @@ public class Trace extends Actress implements Closeable {
             throw new IllegalStateException();
         }
         write((TraceMessage) message);
+    }
+
+    private Optional<ComputationPath> maybePath(Message m) {
+        if (m.getValue() instanceof ComputationPath) {
+            return Optional.of((ComputationPath) m.getValue());
+        }
+        return Optional.empty();
     }
 
     private BufferedWriter createWriter() {

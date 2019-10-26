@@ -1,5 +1,7 @@
 package nano.ingredients.guards;
 
+import nano.ingredients.ComputationPath;
+
 import java.util.Collection;
 import java.util.Map;
 
@@ -42,5 +44,9 @@ public class Guards {
         if (!v) {
             throw new IllegalStateException();
         }
+    }
+
+    public static void isEmpty(ComputationPath computationPath) {
+        isTrue(computationPath.isEmpty());
     }
 }

@@ -1,16 +1,17 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.attachActor;
 
-public class If<T> extends Function<T> {
+public class If<T extends Serializable> extends Function<T> {
 
 
     private static final List<String> parameters = Arrays. asList(Name.condition, Name.onFalse, Name.onTrue);
 
-    class StateIf extends State {
+    class StateIf extends FunctionState {
         Object onTrue;
         Object onFalse;
         Boolean decision;
@@ -30,31 +31,31 @@ public class If<T> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
-        return parameters.contains(key);
+    protected boolean shouldPropagate(String key) {
+        return ! parameters.contains(key);
     }
 
     public static If<Integer> createIf() {
         If<Integer> result = new If<>();
-        wire(result);
+        attachActor(result);
         return result;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         If.StateIf state = (If.StateIf) s;
 
         if (m.hasKey(Name.condition)) {
-            state.decision = (Boolean) m.value;
+            state.decision = (Boolean) m.getValue();
         }
 
         if (m.hasKey(Name.onTrue)) {
-            state.onTrue = m.value;
+            state.onTrue = m.getValue();
         }
 
         if (m.hasKey(Name.onFalse)) {
-            state.onFalse = m.value;
+            state.onFalse = m.getValue();
         }
 
         if (isTrue(state.decision) && computed(state.onTrue)) {

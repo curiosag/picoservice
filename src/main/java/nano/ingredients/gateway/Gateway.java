@@ -3,12 +3,13 @@ package nano.ingredients.gateway;
 import nano.ingredients.*;
 import nano.ingredients.Origin;
 
+import java.io.Serializable;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
-public class Gateway<T> extends Function<T> {
+public class Gateway<T extends Serializable> extends Function<T> {
 
     private Queue<Execution<T>> executions = new ConcurrentLinkedQueue<>();
 
@@ -34,29 +35,29 @@ public class Gateway<T> extends Function<T> {
     @Override
     public void tell(Message message) {
         Optional<Execution<T>> ex = executions.stream()
-                .filter(e -> e.origin.executionId.equals(message.origin.executionId))
+                .filter(e -> e.origin.getExecutionId() == message.origin.getExecutionId())
                 .findAny();
         if (! ex.isPresent())
         {
             throw new IllegalStateException();
         }
 
-        ex.get().setResult((T) message.value);
+        ex.get().setResult((T) message.getValue());
         executions.remove(ex.get());
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean shouldPropagate(String key) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
         throw new IllegalStateException();
     }
 

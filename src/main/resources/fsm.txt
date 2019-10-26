@@ -1,0 +1,64 @@
+Requesting A                -> A is in state QUEUED
+Discover A's dependency B   -> B is in state QUEUED
+B's processing started      -> B is in state PROCESSING
+A's processing started      -> A is in state PROCESSING
+B's processing finished     -> B is in state DONE
+A's processing finished     -> A is in state DONE
+
+
+a  ... applicationName
+A  ... Application related to applicationName a
+Ra ... Request: "given a, give me A"
+Da ... Discover application A for applicationName a
+
+Ra's FSM (fsmRa) is created when the request event comes in, DA's FSM (fsmDa) is initialized when an Ra issues an Discover event to DA to get A for a.
+
+Ra                               -> fsmRa is in state QUEUED
+Da                               -> fsmDa is in state QUEUED
+DA's processing started          -> fsmDa is in state PROCESSING
+Ra's processing started          -> fsmRa is in state PROCESSING
+DA's processing finished         -> fsmDa is in state DONE
+Ra's processing finished         -> fsmRa is in state DONE
+
+
+Trying to map those statements to a possible state diagram I arrive at this one with states (INITIAL, QUEUED, PROCESSING, DONE)
+Also it occurs that there is one actor each for fsmRa (fsmRaActor) and fsmD (fsmDaActor)
+The question is, to which what are the transitions of the state machines, which events are they reacting to?
+
+The code snippets give away processApplication, requestAccepted, completed. Here it seems, there is a problem with
+requestAccepted and completed, because they're not events but states. So I'll invent something else instead
+
+    ----->                  ... state transition
+    =====>                  ... timeline event/akka message e
+     e(a)                       with payload a
+
+        G                   ... gateway passing in application name a to get application A for a
+    fsmXyActor.receive(a)   ... actor receiving message with value a, assuming queuing leverages fsmRaActor's inBox
+
+
+                 fsmRa
+
+               INITIAL     G       fsmRaActor  fsmRaActor
+                   |       .             .           .
+                   |       . requesting  .           .
+                   |       . =========>  .           .
+                   V       .             .           .
+                QUEUED     .             .           .
+                   |       .             .           .
+                   |       .             .           .
+                   |       .             .           .
+                   V       .             .           .
+               PROCESSING  .             .           .
+                   |       .             .           .
+                   |       .             .           .
+                   |       .             .           .
+                   V       .             .           .
+                  DONE     .             .           .
+                           .             .           .
+
+And now it looks like there's a problem. We can not have one global state machine per actor, it could not process
+parralell "requesting" messages
+
+
+
+

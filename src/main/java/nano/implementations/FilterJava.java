@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class FilterJava extends FunctionSignature<List<Integer>> {
+public class FilterJava extends FunctionSignature<ArrayList<Integer>> {
 
-    private static List<Integer> oogleInt(List<Integer> i) {
+    private static ArrayList<Integer> oogleInt(ArrayList<Integer> i) {
         return i;
     }
 
@@ -25,7 +25,7 @@ public class FilterJava extends FunctionSignature<List<Integer>> {
         super.process(m);
 
         if (m.key.equals(Name.list)) {
-            List<Integer> list = (List<Integer>) m.value;
+            List<Integer> list = (List<Integer>) m.getValue();
             if (app == null) {
                 firstList = list;
             } else {
@@ -35,7 +35,7 @@ public class FilterJava extends FunctionSignature<List<Integer>> {
         }
         if (m.key.equals(Name.predicate)) {
 
-            app = (PartialFunctionApplication) m.value;
+            app = (PartialFunctionApplication) m.getValue();
             if (firstList != null) {
                 execFilter(m, firstList);
                 firstList = null;
@@ -58,7 +58,7 @@ public class FilterJava extends FunctionSignature<List<Integer>> {
         if (op == null || list == null) {
             throw new IllegalStateException();
         }
-        List<Integer> result = new ArrayList<>();
+        ArrayList<Integer> result = new ArrayList<>();
         for (Integer i : list) {
             if (i == null ) {
                 throw new IllegalStateException();

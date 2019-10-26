@@ -1,28 +1,26 @@
 package nano.implementations;
 
+import nano.implementations.nativeImpl.ListBinOps;
 import nano.ingredients.*;
-import nano.ingredients.nativeImpl.ListBinOps;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.ArrayList;
 
-import static java.util.Arrays.asList;
 import static nano.implementations.Filter.filterSignature;
-import static nano.ingredients.PrioritizedPropagation.conditionalPropagation;
+import static nano.implementations.nativeImpl.BinOps.gteq;
+import static nano.implementations.nativeImpl.BinOps.lt;
+import static nano.implementations.nativeImpl.ListBinOps.concat;
+import static nano.implementations.nativeImpl.ListBinOps.cons;
+import static nano.implementations.nativeImpl.UnOps.head;
+import static nano.implementations.nativeImpl.UnOps.tail;
 import static nano.ingredients.FunctionCall.functionCall;
 import static nano.ingredients.FunctionSignature.functionSignature;
 import static nano.ingredients.Iff.iffList;
 import static nano.ingredients.PartialFunctionApplication.partialApplication;
-import static nano.ingredients.nativeImpl.BinOps.gteq;
-import static nano.ingredients.nativeImpl.BinOps.lt;
-import static nano.ingredients.nativeImpl.ListBinOps.concat;
-import static nano.ingredients.nativeImpl.ListBinOps.cons;
-import static nano.ingredients.nativeImpl.UnOps.head;
-import static nano.ingredients.nativeImpl.UnOps.tail;
+import static nano.ingredients.PrioritizedPropagation.prioritizedPropagation;
 
 public class Quicksort {
 
-    public static FunctionSignature<List<Integer>> getQuicksortSignature() {
+    public static FunctionSignature<ArrayList<Integer>> getQuicksortSignature() {
 
     /*
 
@@ -43,8 +41,9 @@ public class Quicksort {
             if (list == [])
                 []
      */
-        Iff<List<Integer>> iff = iffList();
-        FunctionSignature<List<Integer>> qsortSignature = functionSignature(iff);
+
+        Iff<ArrayList<Integer>> iff = iffList();
+        FunctionSignature<ArrayList<Integer>> qsortSignature = functionSignature(iff);
         qsortSignature.propagate(Name.list, Name.list, iff);
         iff.constant(Name.onTrue, emptyList());
         Function<Boolean> listEq = ListBinOps.eq().returnTo(iff, Name.condition).constant(Name.rightArg, emptyList());
@@ -54,38 +53,38 @@ public class Quicksort {
         //      let head = head(list);
         //      let tail = tail(list);
         Function<Integer> head = head().returnTo(iff, Name.head);
-        Function<List<Integer>> tail = tail().returnTo(iff, Name.tail);
+        Function<ArrayList<Integer>> tail = tail().returnTo(iff, Name.tail);
         iff.propagateOnFalse(Name.list, Name.arg, head);
         iff.propagateOnFalse(Name.list, Name.arg, tail);
 
         // quicksort(filter(tail, i -> lt(i, head))) + head :: quicksort(filter(tail, i -> gteq(i, head))))
         // +
-        Function<List<Integer>> concat = concat().returnTo(iff, Name.onFalse);
+        Function<ArrayList<Integer>> concat = concat().returnTo(iff, Name.onFalse);
         // ::
-        Function<List<Integer>> cons = cons().returnTo(concat, Name.rightArg);
+        Function<ArrayList<Integer>> cons = cons().returnTo(concat, Name.rightArg);
         iff.propagateOnFalse(Name.head, Name.leftArg, cons);
         // 2 times quicksort(filter(...))
-        Function<List<Integer>> qsortReCallLeft = functionCall(qsortSignature).returnTo(concat, Name.leftArg);
-        Function<List<Integer>> qsortReCallRight = functionCall(qsortSignature).returnTo(cons, Name.rightArg);
+        Function<ArrayList<Integer>> qsortReCallLeft = functionCall(qsortSignature).returnTo(concat, Name.leftArg);
+        Function<ArrayList<Integer>> qsortReCallRight = functionCall(qsortSignature).returnTo(cons, Name.rightArg);
 
-        Implementation<List<Integer>> implLeft = filterSignature();
-        Implementation<List<Integer>> implRight = filterSignature();
-        FunctionSignature<List<Integer>> filterSignatureLeft = implLeft.get();
-        FunctionSignature<List<Integer>> filterSignatureRight = implRight.get();
+        Implementation<ArrayList<Integer>> implLeft = filterSignature();
+        Implementation<ArrayList<Integer>> implRight = filterSignature();
+        FunctionSignature<ArrayList<Integer>> filterSignatureLeft = implLeft.get();
+        FunctionSignature<ArrayList<Integer>> filterSignatureRight = implRight.get();
 
         // function lt(a, b) = a < b;
         // filter(tail, i -> lt(i, head))
         BinOp<Integer, Integer, Boolean> lt = lt();
-        Function<Boolean> ltPredicate = partialApplication(lt, Name.rightArg)
+        PartialFunctionApplication<Boolean> ltPredicate = partialApplication(lt, Name.rightArg)
                 .propagate(Name.arg, Name.leftArg, lt)
                 .propagate(Name.rightArg, Name.rightArg, lt);
 
-        Function<List<Integer>> filterCallLeft =
+        Function<ArrayList<Integer>> filterCallLeft =
                 functionCall(filterSignatureLeft)
                         .constant(Name.predicate, ltPredicate)
                         .returnTo(qsortReCallLeft, Name.list);
 
-        Function propagateLeftOnCondition = conditionalPropagation()
+        Function propagateLeftOnCondition = prioritizedPropagation()
                 .addPriorityParam(Name.rightArg)
                 .propagate(Name.rightArg, Name.rightArg, ltPredicate)
                 .propagate(Name.list, Name.list, filterCallLeft);
@@ -96,16 +95,16 @@ public class Quicksort {
         // function gteq(a, b) = a >= b;
         // filter(filter(tail, i -> gteq(i, head))
         Function<Boolean> gteq = gteq();
-        Function<Boolean> gtEqPredicate = partialApplication(gteq, Name.rightArg)
+        PartialFunctionApplication<Boolean> gtEqPredicate = partialApplication(gteq, Name.rightArg)
                 .propagate(Name.arg, Name.leftArg, gteq)
                 .propagate(Name.rightArg, Name.rightArg, gteq);
 
-        Function<List<Integer>> filterCallRight =
+        Function<ArrayList<Integer>> filterCallRight =
                 functionCall(filterSignatureRight)
                         .constant(Name.predicate, gtEqPredicate)
                         .returnTo(qsortReCallRight, Name.list);
 
-        Function propagateRightOnCondition = conditionalPropagation()
+        Function propagateRightOnCondition = prioritizedPropagation()
                 .addPriorityParam(Name.rightArg)
                 .propagate(Name.rightArg, Name.rightArg, gtEqPredicate)
                 .propagate(Name.list, Name.list, filterCallRight);
@@ -134,11 +133,7 @@ public class Quicksort {
         return qsortSignature;
     }
 
-    private static List<String> list(String... p) {
-        return asList(p);
-    }
-
-    private static List<Integer> emptyList() {
-        return Collections.emptyList();
+    private static ArrayList<Integer> emptyList() {
+        return new ArrayList<>();
     }
 }

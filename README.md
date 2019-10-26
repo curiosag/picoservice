@@ -4,13 +4,11 @@ An execution model for some functional language constructs based on message pass
 Harks back to Hewitt's papers but unlike smalltalk puts functions center stage rather than objects. The idea is to create
 something remotely similar to e.g. Spring integration, just with bearable syntax.
 
-##pico?
+## pico?
 
 Now that there are services, micro- and even nanoservices there wasn't much of a choice.
 
-As of the promotors of [such stuff](https://www.serverlessops.io/blog/rise-of-the-nanoservice) a picoservice is
-
-A nanoservice is:
+As of the promotors of [such stuff](https://www.serverlessops.io/blog/rise-of-the-nanoservice) a nanoservice is
 
 >- Deployable
 >  
@@ -24,11 +22,12 @@ A picoservice is:
 
 >- Deployable
 > 
->- Reusable
+>- Reusable (sometimes)
 >
 >- Useless (except in comination with others)
 
-
+### thanks & credits
+[Jörg W Mittag](https://stackoverflow.com/users/2988/j%c3%b6rg-w-mittag) for straightening out [my view on conditional expressions](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) and pointing out the historical relationship between the actor model and Smalltalk.
 
 TODO: &&, ||, split/join
 

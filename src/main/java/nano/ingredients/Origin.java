@@ -1,63 +1,102 @@
 package nano.ingredients;
 
+import nano.ingredients.tuples.ComputationBranch;
+import nano.ingredients.tuples.ComputationOriginBranch;
+
+import java.io.Serializable;
 import java.util.Objects;
 
-public class Origin {
-    public final Function<?> sender;
-    public final Long executionId;
-    public final Long seqNr;
-    public final CallStack callStack;
+public class Origin implements Serializable {
+    private static final long serialVersionUID = 0L;
 
-    Origin(Function<?> sender, Long executionId, Long seqNr, CallStack callStack) {
+    transient Function<?> sender; // not serialized, rehydrated by asking for Function for senderId
+    public final String senderId;
+    private final ComputationPath computationPath;
+    final String prevFunctionCallId;
+    final String lastFunctionCallId;
+
+    public Origin(Function<?> sender, ComputationPath computationPath, String lastFunctionCallId, String prevFunctionCallId) {
+        this.senderId = sender.address.id;
         this.sender = sender;
-        this.executionId = executionId;
-        this.seqNr = seqNr;
-        this.callStack = callStack;
+        this.computationPath = computationPath;
+        this.prevFunctionCallId = prevFunctionCallId;
+        this.lastFunctionCallId = lastFunctionCallId;
+    }
+
+    public Origin clearSenderRef(){
+        Origin result = new Origin(sender, computationPath, lastFunctionCallId, prevFunctionCallId);
+        result.sender = null;
+        return result;
     }
 
     public static Origin origin(Function<?> sender) {
-        return new Origin(sender, 0L, 0L, new CallStack());
+        String id = sender.address.id;
+        return new Origin(sender, new ComputationPath(0L), id, "");
     }
 
-    public static Origin origin(Function<?> sender, Long executionId, Long seqNr, CallStack callStack) {
-        return new Origin(sender, executionId, seqNr, callStack);
+    public static Origin origin(Function<?> sender, Long exid) {
+        String id = sender.address.id;
+        return new Origin(sender, new ComputationPath(exid), id, "");
+    }
+
+    public static Origin origin(Function<?> sender, ComputationPath computationPath, String prevFunctionCallId, String lastFunctionCallId) {
+        return new Origin(sender, computationPath, prevFunctionCallId, lastFunctionCallId);
     }
 
     Origin sender(Function<?> sender) {
-        return origin(sender, executionId, seqNr + 1L, callStack);
+        return origin(sender, computationPath, prevFunctionCallId, lastFunctionCallId);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Origin)) {
+            throw new IllegalStateException();
+        }
         Origin origin = (Origin) o;
-        return Objects.equals(sender, origin.sender) &&
-                Objects.equals(executionId, origin.executionId) &&
-                Objects.equals(callStack, origin.callStack);
+        return senderId == origin.senderId && // sender isn't necessarily in the call stack, can be something which is not a FunctionCall
+                getExecutionId() == origin.getExecutionId() &&
+                computationPathLocation().getCallStack().equals(origin.computationPathLocation().getCallStack());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(sender, executionId, callStack);
+        return Objects.hash(getSender(), getExecutionId(), computationPath);
     }
 
-    private FunctionCallTreeLocation functionCallTreeLocation;
+    private ComputationPathLocation computationPathLocation;
 
-    public FunctionCallTreeLocation functionCallTreeNode() {
-        if (functionCallTreeLocation == null) {
-            functionCallTreeLocation = new FunctionCallTreeLocation(this);
+    public ComputationPathLocation computationPathLocation() {
+        if (computationPathLocation == null) {
+            computationPathLocation = new ComputationPathLocation(this);
         }
-        return functionCallTreeLocation;
+        return computationPathLocation;
     }
 
     Origin popCall() {
-        CallStack stack = callStack.pop();
-        return new Origin(sender, executionId, seqNr, stack);
+        ComputationPath path = computationPath.pop();
+        return new Origin(getSender(), path, path.getLastPopped().id, lastFunctionCallId);
     }
 
-    Origin pushCall(FunctionCall functionCall) {
-        CallStack stack = callStack.push(functionCall.address.id);
-        return new Origin(sender, executionId, seqNr, stack);
+    ComputationOriginBranch pushCall(FunctionCall functionCall) {
+        ComputationBranch maybeBranch = computationPath.push(functionCall.address.id);
+
+        Origin o = new Origin(getSender(), maybeBranch.getExecutionPath(), functionCall.address.id, lastFunctionCallId);
+        return ComputationOriginBranch.of(o, maybeBranch.getPathBranchedOffFrom());
+    }
+
+    public Function<?> getSender() {
+        if (sender == null) {
+            sender = (Function<?>) Ensemble.resolve(senderId);
+        }
+        return sender;
+    }
+
+    public ComputationPath getComputationPath() {
+        return computationPath;
+    }
+
+    public long getExecutionId() {
+        return getComputationPath().executionId;
     }
 }

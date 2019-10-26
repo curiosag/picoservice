@@ -2,31 +2,38 @@ package nano.ingredients;
 
 import nano.ingredients.guards.Guards;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.guards.Guards.notEmpty;
 
-public class PartialFunctionApplication<T> extends FunctionSignature<T> {
+public class PartialFunctionApplication<T extends Serializable> extends Function<T> {
 
-    final List<String> partialAppParams = new ArrayList<>();
+    public final List<String> partialAppParams = new ArrayList<>();
     // Map<ExecutionId, stack of preset values of partial function applications>
-    public final Map<FunctionCallTreeLocation, Map<String, Object>> partialAppValues = new ConcurrentHashMap<>();
+    public final Map<ComputationPathLocation, Map<String, Serializable>> partialAppValues = new ConcurrentHashMap<>();
+    private final FunctionSignature<T> inner;
 
-    protected PartialFunctionApplication(Function<T> body, List<String> partialAppParams) {
-        super(body);
+    private PartialFunctionApplication(FunctionSignature<T> inner, List<String> partialAppParams) {
+        super(new Address(-1L, "P" + "_" + inner.address.id));
+        this.inner = inner;
         this.partialAppParams.addAll(partialAppParams);
+        inner.returnTo(this, Name.result);
     }
 
-    public static <T> PartialFunctionApplication<T> partialApplication(Function<T> body, String key) {
+    public static <T extends Serializable> PartialFunctionApplication<T> partialApplication(Function<T> body, String key) {
         return partialApplication(body, Collections.singletonList(key));
     }
 
-    public static <T> PartialFunctionApplication<T> partialApplication(Function<T> body, List<String> keys) {
-        PartialFunctionApplication<T> result = new PartialFunctionApplication<>(body, keys);
-        wire(result);
+    public static <T extends Serializable> PartialFunctionApplication<T> partialApplication(Function<T> body, List<String> keys) {
+        FunctionSignature<T> signature = new FunctionSignature<>(body);
+        attachActor(signature);
+
+        PartialFunctionApplication<T> result = new PartialFunctionApplication<>(signature, keys);
+        attachActor(result);
         return result;
     }
 
@@ -40,49 +47,128 @@ public class PartialFunctionApplication<T> extends FunctionSignature<T> {
     }
 
     @Override
+    protected FunctionState newState(Origin origin) {
+        return new PartialFunctionApplicationState(origin);
+    }
+
+    @Override
+    protected boolean shouldPropagate(String key) {
+        return false;
+    }
+
+    @Override
+    protected void processInner(Message m, FunctionState state) {
+    }
+
+    @Override
+    public void process(Message m) {
+        trace(m);
+
+        if (m.key.equals(Name.removePartialAppValues)) {
+            removePartialAppValues(m.origin);
+            return;
+        }
+
+        if (m.key.equals(Name.result)) {
+            removeState(m.origin);
+            returnTo.tell(m.origin(m.origin.sender(this)));
+            return;
+        }
+
+        if (forwardingPartialAppParamValues(m)) {
+            inner.tell(m.origin(m.origin.sender(this)));//TODO...
+            return;
+        }
+
+        PartialFunctionApplicationState state = (PartialFunctionApplicationState) getState(m.origin);
+        Map<String, Serializable> partialAppValuesForCall = partialAppValues.get(m.origin.computationPathLocation());
+        if (partialAppValuesForCall != null) {
+            partialAppValuesForCall.forEach((k, v) -> state.partialAppValues.put(k, v));
+        } else {
+
+            //TODO what to do with a function that only takes a partial that has all variables set?
+            //TODO partials depend on the order of messages, partial values must not come last
+            if (isPartialAppParam(m)) {
+                Map<String, Serializable> partials = state.partialAppValues;
+
+                if (partials.get(m.key) != null) {
+                    throw new IllegalStateException();
+                }
+
+                partials.put(m.key, m.getValue());
+                if (partials.size() == partialAppParams.size()) {
+                    partialAppValues.put(m.origin.computationPathLocation(), partials);
+                    forwardPartialAppParamValues(state);
+                }
+                return;
+            }
+        }
+        if (!isDownstreamMessage(m)) {
+            throw new IllegalStateException();
+        }
+
+        if (!state.partialApplicationValuesForwarded) {
+            forwardPartialAppParamValues(state);
+        }
+        inner.tell(m);
+    }
+
+    private boolean isDownstreamMessage(Message m) {
+        return (m.origin.getSender() instanceof FunctionCall);
+    }
+
+    private boolean forwardingPartialAppParamValues(Message m) {
+        return m.origin.getSender().equals(this) && isPartialAppParam(m);
+    }
+
     protected boolean isPartialAppParam(Message m) {
         return partialAppParams.contains(m.key);
     }
 
-    protected void setPartialAppParamValue(Message m) {
-        if (isPartialAppParam(m)) {
-            Map<String, Object> partials = partialAppValues.computeIfAbsent(m.origin.functionCallTreeNode(), k -> new HashMap<>());
-            debug(m, m.origin, String.format(" << addPartialAppParamValue (%d) << ", partials.size()));
-            partials.put(m.key, m.value);
-        }
-    }
-
-    @Override
-    protected void forwardPartialAppParamValues(FunctionSignatureState s) {
+    protected void forwardPartialAppParamValues(PartialFunctionApplicationState s) {
         Guards.isFalse(s.partialApplicationValuesForwarded);
 
-        Map<String, Object> values = getPartialAppValues(s.origin);
-        Origin o = s.origin.sender(this);
-
-        values.forEach((key, value) -> super.process(Message.message(key, value, o)));
-        // TODO: it is possible to make the forwarding of partially applied values not dependent on the order of messages
-        // i.e. that the partially applied values have to be supplied completely before any other parameters
+        Map<String, Serializable> values = getPartialAppValues(s.origin);
+        values.forEach((key, value) -> tell(Message.message(key, value, s.origin.sender(this))));
         s.setPartialApplicationValuesForwarded(true);
-
     }
 
-    public Map<String, Object> getPartialAppValues(Origin o) {
-
-        List<Map.Entry<FunctionCallTreeLocation, Map<String, Object>>> matches = partialAppValues.entrySet().stream()
-                .filter(e -> o.functionCallTreeNode().getExecutionId().equals(e.getKey().getExecutionId()))
-                .filter(e -> o.functionCallTreeNode().getCallStack().startsWith(e.getKey().getCallStack()))
+    public Map<String, Serializable> getPartialAppValues(Origin o) {
+        // hopefully the longest call stack contains the most recent partial app values
+        List<Map.Entry<ComputationPathLocation, Map<String, Serializable>>> matches = partialAppValues.entrySet().stream()
+                .filter(e -> o.computationPathLocation().getExecutionId().equals(e.getKey().getExecutionId()))
+                .filter(e -> o.computationPathLocation().getCallStack().startsWith(e.getKey().getCallStack()))
                 .sorted(Comparator.comparing(i -> i.getKey().getCallStack().size()))
                 .collect(Collectors.toList());
 
-        Guards.notEmpty(matches);
-
+        if (matches.isEmpty())
+            Guards.notEmpty(matches);
         return notEmpty(matches.get(matches.size() - 1).getValue());
     }
 
-    @Override
     public void removePartialAppValues(Origin o) {
-        partialAppValues.remove(o.functionCallTreeNode());
+        partialAppValues.remove(o.computationPathLocation());
     }
 
+    @Override
+    public Function<T> returnTo(Function<?> f, String returnKey) {
+        inner.returnTo(this, returnKey);
+        return super.returnTo(f, returnKey);
+    }
 
+    @Override
+    void propagate(Message m) {
+        inner.propagate(m);
+    }
+
+    @Override
+    public void label(String sticker) {
+        inner.label(sticker);
+    }
+
+    @Override
+    public PartialFunctionApplication<T> propagate(String keyReceived, String keyToPropagate, Function target) {
+        inner.propagate(keyReceived, keyToPropagate, target);
+        return this;
+    }
 }

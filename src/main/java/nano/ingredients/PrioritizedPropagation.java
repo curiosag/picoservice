@@ -5,13 +5,13 @@ import nano.ingredients.guards.Guards;
 import java.util.ArrayList;
 import java.util.List;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.attachActor;
 
 public class PrioritizedPropagation extends Function {
 
     private final List<String> priorityParams = new ArrayList<>();
 
-    class PrioritizedPropagationState extends State {
+    class PrioritizedPropagationState extends FunctionState {
         List<Message> otherParamsPending = new ArrayList<>();
         List<Message> priorityParamsProcessedDownstream = new ArrayList<>();
 
@@ -35,18 +35,18 @@ public class PrioritizedPropagation extends Function {
     }
 
     @Override
-    protected boolean isParameter(String key) {
-        return true;
+    protected boolean shouldPropagate(String key) {
+        return false;
     }
 
-    public static PrioritizedPropagation conditionalPropagation() {
+    public static PrioritizedPropagation prioritizedPropagation() {
         PrioritizedPropagation result = new PrioritizedPropagation();
-        wire(result);
+        attachActor(result);
         return result;
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
     }
 
     @Override
@@ -76,13 +76,12 @@ public class PrioritizedPropagation extends Function {
         }
 
         PrioritizedPropagationState state = (PrioritizedPropagationState) getState(m.origin);
-
         if (state.allPriorityParamsProcessedDownstream()) {
             Guards.isFalse(priorityParams.contains(m.key));
             super.propagate(m);
         } else {
             if (priorityParams.contains(m.key)) {
-                super.propagate(m, Acknowledge.Y);
+                super.propagateAck(m);
             } else {
                 state.otherParamsPending.add(m);
             }

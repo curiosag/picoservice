@@ -1,30 +1,29 @@
 package nano.implementations;
 
 import nano.ingredients.*;
-import nano.ingredients.nativeImpl.ListBinOps;
+import nano.implementations.nativeImpl.ListBinOps;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.FunctionCall.functionCall;
 import static nano.ingredients.FunctionSignature.functionSignature;
 import static nano.ingredients.Iff.iffList;
-import static nano.ingredients.nativeImpl.ListBinOps.cons;
-import static nano.ingredients.nativeImpl.UnOps.head;
-import static nano.ingredients.nativeImpl.UnOps.tail;
+import static nano.implementations.nativeImpl.ListBinOps.cons;
+import static nano.implementations.nativeImpl.UnOps.head;
+import static nano.implementations.nativeImpl.UnOps.tail;
 
 public class Filter {
 
-    public static Implementation<List<Integer>> filterSignatureJava() {
+    public static Implementation<ArrayList<Integer>> filterSignatureJava() {
         FilterJava filter = new FilterJava();
-        wire(filter);
-        return new Implementation<>(filter, Arrays.asList());
+        attachActor(filter);
+        return new Implementation<>(filter, new ArrayList<>());
     }
 
 
-    public static Implementation<List<Integer>> filterSignature() {
+    public static Implementation<ArrayList<Integer>> filterSignature() {
 
         /*
         predicate: arg -> boolean
@@ -43,24 +42,24 @@ public class Filter {
         }
         */
 
-        List<Integer> empty = new ArrayList<>();
+        ArrayList<Integer> empty = new ArrayList<>();
 
-        Iff<List<Integer>> outerIff = iffList();
+        Iff<ArrayList<Integer>> outerIff = iffList();
         outerIff.constant(Name.onTrue, empty);
-        FunctionSignature<List<Integer>> filterSignature = functionSignature(outerIff);
+        FunctionSignature<ArrayList<Integer>> filterSignature = functionSignature(outerIff);
         filterSignature.propagate(Name.predicate, Name.predicate, outerIff);
         filterSignature.propagate(Name.list, Name.list, outerIff);
 
         Function<Boolean> listEq = ListBinOps.eq().returnTo(outerIff, Name.condition).constant(Name.rightArg, empty);
         outerIff.propagate(Name.list, Name.leftArg, listEq);
 
-        Iff<List<Integer>> innerIff = iffList();
+        Iff<ArrayList<Integer>> innerIff = iffList();
         outerIff.propagateOnFalse(Name.predicate, Name.predicate, innerIff);
 
         //let head = head(list);
         //let tail = tail(list);
         Function<Integer> head = head().returnTo(outerIff, Name.head);
-        Function<List<Integer>> tail = tail().returnTo(outerIff, Name.tail);
+        Function<ArrayList<Integer>> tail = tail().returnTo(outerIff, Name.tail);
 
         outerIff.propagateOnFalse(Name.list, Name.arg, head);
         outerIff.propagateOnFalse(Name.list, Name.arg, tail);
@@ -78,12 +77,12 @@ public class Filter {
             }
         */
 
-        FunctionStub<Boolean> predicateStub = FunctionStub.of(Name.predicate);
+        FunctionStub<Boolean> predicateStub = FunctionStub.of(Name.predicate, 0);
         predicateStub.returnTo(innerIff, Name.condition);
 
-        Function<List<Integer>> cons = cons().returnTo(innerIff, Name.onTrue);
-        Function<List<Integer>> filterReCallOnTrue = functionCall(filterSignature).returnTo(cons, Name.rightArg);
-        Function<List<Integer>> filterReCallOnFalse = functionCall(filterSignature).returnTo(innerIff, Name.onFalse);
+        Function<ArrayList<Integer>> cons = cons().returnTo(innerIff, Name.onTrue);
+        Function<ArrayList<Integer>> filterReCallOnTrue = functionCall(filterSignature).returnTo(cons, Name.rightArg);
+        Function<ArrayList<Integer>> filterReCallOnFalse = functionCall(filterSignature).returnTo(innerIff, Name.onFalse);
 
         filterReCallOnTrue.label("**filterReCallOnTrue");
         filterReCallOnFalse.label("**filterReCallOnFalse");

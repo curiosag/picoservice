@@ -20,17 +20,17 @@ public class Const extends Function<Integer> {
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean shouldPropagate(String key) {
         throw new IllegalStateException();
     }
 
     @Override
-    protected void processInner(Message message, State s) {
+    protected void processInner(Message message, FunctionState s) {
         throw new IllegalStateException();
     }
 }

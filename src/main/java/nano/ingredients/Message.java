@@ -1,54 +1,57 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class Message {
+
+public class Message implements Serializable {
+    private static final long serialVersionUID = 0L;
+    private static Long maxMessageId = 0L;
+
     public final String id;
-    public final Object value;
+    private final Serializable value;
     public final String key;
     public final Origin origin;
     public Acknowledge ack = Acknowledge.N;
 
-    protected Message(String key, Object value, Origin origin) {
+    protected Message(String key, Serializable value, Origin origin) {
         this.origin = origin;
         this.key = key;
         this.value = value;
-        this.id = origin.sender.getNextMessageId();
+        this.id = String.format("%04d", ++maxMessageId);
     }
 
-    public static Message message(String key, Object value, Origin origin) {
+    public static Message message(String key, Serializable value, Origin origin) {
         return new Message(key, value, origin);
     }
 
-    public Message origin(Origin o)
-    {
-        return message(key, value, o);
+    public Message origin(Origin o) {
+        return message(key, getValue(), o);
     }
 
-    public Message ack(Acknowledge a){
+    public Message ack(Acknowledge a) {
         ack = a;
         return this;
     }
 
-    public Message usingKey(String key)
-    {
-        return new Message(key, value, origin);
+    public boolean hasKey(String value) {
+        return key.equals(value);
     }
 
+    ;
 
-    public boolean hasKey(String value)
-    {
-        return key.equals(value);
-    };
-
-    public boolean hasAnyKey(String ... keys)
-    {
+    public boolean hasAnyKey(String... keys) {
         return Arrays.asList(keys).contains(key);
-    };
+    }
+
+    ;
 
     @Override
     public String toString() {
-        return " " + key + ":" + (value == null ? "NULL" : value.toString());
+        return " " + key + ":" + (getValue() == null ? "NULL" : getValue().toString());
     }
 
+    public Serializable getValue() {
+        return value;
+    }
 }

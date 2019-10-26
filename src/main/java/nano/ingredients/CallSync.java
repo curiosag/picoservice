@@ -1,11 +1,12 @@
 package nano.ingredients;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 import static nano.ingredients.Message.message;
 
-public class CallSync<T> extends Function<T> {
+public class CallSync<T extends Serializable> extends Function<T> {
 
     private final Function<T> f;
     private Message resultMessage;
@@ -18,7 +19,7 @@ public class CallSync<T> extends Function<T> {
         this.f = f;
     }
 
-    public static <T> CallSync<T> sync(Function<T> f) {
+    public static <T extends Serializable> CallSync<T> sync(Function<T> f) {
         return new CallSync<>(f);
     }
 
@@ -29,7 +30,7 @@ public class CallSync<T> extends Function<T> {
 
     public T call() {
         resultMessage = null;
-        Origin origin = Origin.origin(this, executions++, 0L, new CallStack());
+        Origin origin = Origin.origin(this, new ComputationPath(executions++), "", "0");
         if (params.size() == 0) {
             f.tell(message(Name.kickOff, null, origin));
         } else {
@@ -39,10 +40,10 @@ public class CallSync<T> extends Function<T> {
         while (true) {
             if (resultMessage != null) {
                 if (resultMessage.key.equals(Name.error)) {
-                    Err e = (Err) resultMessage.value;
+                    Err e = (Err) resultMessage.getValue();
                     throw new RuntimeException(e.exception);
                 } else {
-                    return (T) resultMessage.value;
+                    return (T) resultMessage.getValue();
                 }
             }
             waitSome();
@@ -61,24 +62,24 @@ public class CallSync<T> extends Function<T> {
 
     @Override
     synchronized public void tell(Message message) {
-        if (message.value == null || !message.hasKey(Name.result)) {
+        if (message.getValue() == null || !message.hasKey(Name.result)) {
             throw new IllegalStateException();
         }
         resultMessage = message;
     }
 
     @Override
-    protected State newState(Origin origin) {
+    protected FunctionState newState(Origin origin) {
         throw new IllegalArgumentException();
     }
 
     @Override
-    protected boolean isParameter(String key) {
-        return !key.equals(Name.result);
+    protected boolean shouldPropagate(String key) {
+        return key.equals(Name.result);
     }
 
     @Override
-    protected void processInner(Message m, State state) {
+    protected void processInner(Message m, FunctionState state) {
         throw new IllegalStateException();
     }
 

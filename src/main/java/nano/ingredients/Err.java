@@ -1,6 +1,10 @@
 package nano.ingredients;
 
-public class Err {
+import java.io.Serializable;
+
+public class Err  implements Serializable {
+    private static final long serialVersionUID = 0L;
+
     public final Function function;
     public final Message message;
     public final java.lang.Exception exception;

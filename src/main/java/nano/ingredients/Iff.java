@@ -1,22 +1,23 @@
 package nano.ingredients;
 
-import nano.ingredients.tuples.KeyValuePair;
+import nano.ingredients.tuples.SerializableKeyValuePair;
 import nano.ingredients.tuples.ForwardingItem;
-import nano.ingredients.tuples.Tuple;
+import nano.ingredients.tuples.SerializableTuple;
 
+import java.io.Serializable;
 import java.util.*;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Message.message;
 
-public class Iff<T> extends Function<T> {
+public class Iff<T extends Serializable> extends Function<T> {
 
     private static final List<String> params = Arrays.asList(Name.onTrue, Name.onFalse, Name.condition);
     private final List<ForwardingItem> onReturnOnTrueSend = new ArrayList<>();
     private final List<ForwardingItem> onReturnOnFalseSend = new ArrayList<>();
 
 
-    class StateIff extends State {
+    class StateIff extends FunctionState {
         // messages must not be propagated to branches before decision has been calculated
         List<Message> pendingForBranchPropagation = new ArrayList<>();
         Object onTrue;
@@ -28,18 +29,18 @@ public class Iff<T> extends Function<T> {
         }
     }
 
-    private Map<String, List<Tuple<String, Function<?>>>> propagationsOnTrue = new HashMap<>();
-    private Map<String, List<Tuple<String, Function<?>>>> propagationsOnFalse = new HashMap<>();
+    private Map<String, List<SerializableTuple<String, Function<?>>>> propagationsOnTrue = new HashMap<>();
+    private Map<String, List<SerializableTuple<String, Function<?>>>> propagationsOnFalse = new HashMap<>();
     private List<Function> kickOffOnTrue = new ArrayList<>();
     private List<Function> kickOffOnFalse = new ArrayList<>();
 
 
-    public void onReturnOnTrueSend(String key, Object value, Function<?> target){
-        onReturnOnTrueSend.add(ForwardingItem.of(KeyValuePair.of(key, value), target));
+    public void onReturnOnTrueSend(String key, Serializable value, Function<?> target){
+        onReturnOnTrueSend.add(ForwardingItem.of(SerializableKeyValuePair.of(key, value), target));
     }
 
-    public void onReturnOnFalseSend(String key, Object value, Function<?> target){
-        onReturnOnFalseSend.add(ForwardingItem.of(KeyValuePair.of(key, value), target));
+    public void onReturnOnFalseSend(String key, Serializable value, Function<?> target){
+        onReturnOnFalseSend.add(ForwardingItem.of(SerializableKeyValuePair.of(key, value), target));
     }
 
     public void propagateOnFalse(String keyReceived, String keyToPropagate, Function target) {
@@ -58,7 +59,7 @@ public class Iff<T> extends Function<T> {
         kickOffOnFalse.add(f);
     }
 
-    private Map<String, List<Tuple<String, Function<?>>>> getBranchPropagations(Boolean branch) {
+    private Map<String, List<SerializableTuple<String, Function<?>>>> getBranchPropagations(Boolean branch) {
         return branch ? propagationsOnTrue : propagationsOnFalse;
     }
 
@@ -72,29 +73,29 @@ public class Iff<T> extends Function<T> {
     }
 
     @Override
-    protected boolean isParameter(String key) {
+    protected boolean shouldPropagate(String key) {
         // a hack. make super.process only kickOf the decision part
         // nothing else, no propagation or anything
-        return true;
+        return false;
     }
 
     public static Iff<Integer> iff() {
         Iff<Integer> result = new Iff<>();
-        wire(result);
+        attachActor(result);
         return result;
     }
 
-    public static Iff<List<Integer>> iffList() {
-        Iff<List<Integer>> result = new Iff<>();
-        wire(result);
+    public static Iff<ArrayList<Integer>> iffList() {
+        Iff<ArrayList<Integer>> result = new Iff<>();
+        attachActor(result);
         return result;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         //TODO: there's a bad dependecy on the implemenation of If, they should be logically separated
-        // see also the use of Sif.isParameter
+        // see also the use of Sif.shouldPropagate
         StateIff state = (StateIff) s;
 
         if (hdlIncomingParams(m, state)) {
@@ -126,12 +127,12 @@ public class Iff<T> extends Function<T> {
         // still both onTrue and onFalse may get set
 
         if (m.hasKey(Name.onTrue)) {
-            state.onTrue = m.value;
+            state.onTrue = m.getValue();
         } else if (m.hasKey(Name.onFalse)) {
-            state.onFalse = m.value;
+            state.onFalse = m.getValue();
         }
         if (m.hasKey(Name.condition)) {
-            state.decision = (Boolean) m.value;
+            state.decision = (Boolean) m.getValue();
             kickOffBranch(state);
         }
         if (isTrue(state.decision) && computed(state.onTrue)) {

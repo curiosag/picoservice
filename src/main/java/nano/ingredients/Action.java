@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static nano.ingredients.Actresses.wire;
+import static nano.ingredients.Ensemble.attachActor;
 import static nano.ingredients.Nop.nop;
 
 public class Action extends Function {
@@ -20,15 +20,16 @@ public class Action extends Function {
 
     public Action() {
         super();
+        Ensemble.instance().enlist(this);
     }
 
     @Override
-    public boolean isParameter(String key) {
-        return expectedParams.contains(key);
+    public boolean shouldPropagate(String key) {
+        return ! expectedParams.contains(key);
     }
 
     @Override
-    protected void processInner(Message m, State s) {
+    protected void processInner(Message m, FunctionState s) {
         if (action == null)
         {
             throw new IllegalStateException();
@@ -40,7 +41,7 @@ public class Action extends Function {
     public static Action action(Consumer<Message> action) {
         Action result = new Action(action);
         result.returnTo(nop, Name.nop);
-        wire(result);
+        attachActor(result);
         return result;
     }
 
@@ -53,8 +54,8 @@ public class Action extends Function {
     }
 
     @Override
-    protected State newState(Origin origin) {
-        return new State(origin);
+    protected FunctionState newState(Origin origin) {
+        return new FunctionState(origin);
     }
 
 

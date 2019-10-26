@@ -14,17 +14,6 @@ public class Message implements Serializable {
     public final Origin origin;
     public Acknowledge ack = Acknowledge.N;
 
-    private transient MessageProcessingDirective processingDirective = MessageProcessingDirective.PROCESS;
-
-    public MessageProcessingDirective getProcessingDirective() {
-        return processingDirective;
-    }
-
-    public Message setProcessingDirective(MessageProcessingDirective processingDirective) {
-        this.processingDirective = processingDirective;
-        return this;
-    }
-
     protected Message(String key, Serializable value, Origin origin) {
         this.origin = origin;
         this.key = key;
@@ -36,25 +25,26 @@ public class Message implements Serializable {
         return new Message(key, value, origin);
     }
 
-    public Message origin(Origin o)
-    {
-        return message(key, getValue(), o).setProcessingDirective(processingDirective);
+    public Message origin(Origin o) {
+        return message(key, getValue(), o);
     }
 
-    public Message ack(Acknowledge a){
+    public Message ack(Acknowledge a) {
         ack = a;
         return this;
     }
 
-    public boolean hasKey(String value)
-    {
+    public boolean hasKey(String value) {
         return key.equals(value);
-    };
+    }
 
-    public boolean hasAnyKey(String ... keys)
-    {
+    ;
+
+    public boolean hasAnyKey(String... keys) {
         return Arrays.asList(keys).contains(key);
-    };
+    }
+
+    ;
 
     @Override
     public String toString() {

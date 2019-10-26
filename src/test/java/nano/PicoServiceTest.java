@@ -1099,8 +1099,7 @@ public class PicoServiceTest {
     @Test
     public void testRecoveryRecursion() {
         Integer max = 6;
-        if (max % 2 != 0)
-        {
+        if (max % 2 != 0) {
             throw new IllegalStateException();
         }
 
@@ -1113,7 +1112,7 @@ public class PicoServiceTest {
         Origin origin = originForExecutionId(resultMonitor, (long) ++runId);
         resultMonitor.tell(message(Name.a, max, origin));
 
-        await(3000);
+        await(4000);
         System.out.println("terminating before resume");
         Ensemble.terminate();
         Ensemble.reset();
@@ -1124,10 +1123,10 @@ public class PicoServiceTest {
         }
         System.out.println("resuming");
 
-        Ensemble.instance().setRunProperties(PERSIST, DEBUG);
-
-        setupRecursiveSumCalculation(result);
+        Ensemble.instance().setRunProperties(PERSIST, SLOW, DEBUG);
+        resultMonitor = setupRecursiveSumCalculation(result);
         Ensemble.instance().showEnsemble();
+        resultMonitor.tell(message(Name.a, max, origin));
 
         await(() -> result.value > 0);
         System.out.println("sum: " + result.value);
@@ -1279,7 +1278,7 @@ public class PicoServiceTest {
 
         Ensemble.instance().setRunProperties(DEBUG, PERSIST, SLOW);
 
-        ArrayList<Integer> input = list(3, 1, 2);
+        ArrayList<Integer> input = list(3, 1, 2, 7, 5, 4);
         List<Integer> result = new ArrayList<>();
 
         Origin origin = origin(nop, new ComputationPath(executions++), "", "0");
@@ -1288,7 +1287,7 @@ public class PicoServiceTest {
 
         gateway.tell(message(Name.list, input, origin));
 
-        await(3000);
+        await(10000);
         System.out.println("terminating before resume");
         Ensemble.terminate();
         Ensemble.reset();
@@ -1297,13 +1296,15 @@ public class PicoServiceTest {
         System.out.println("resuming");
 
         // only recreate actors. they should replay all messages until now and resume the computation
-        setUpResultListener(functionCall(getQuicksortSignature()), result);
+        gateway = setUpResultListener(functionCall(getQuicksortSignature()), result);
         Ensemble.instance().showEnsemble();
-        Ensemble.instance().onSetUpComplete();
+        Ensemble.instance().awaitRecoveryCompleted();
+        gateway.tell(message(Name.list, input, origin));
+
 
         await(() -> result.size() == input.size());
         assertEquals(sorted(input), result);
-        System.out.println(result);/**/
+        System.out.println(result);
     }
 
     private Action setUpResultListener(Function<ArrayList<Integer>> qsortCall, List<Integer> result) {

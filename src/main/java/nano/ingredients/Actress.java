@@ -3,7 +3,7 @@ package nano.ingredients;
 import akka.actor.ActorRef;
 import nano.ingredients.infrastructure.TraceMessage;
 import nano.ingredients.infrastructure.Tracer;
-import nano.ingredients.tuples.Replay;
+import nano.ingredients.tuples.StrackframeAndResult;
 import nano.misc.Adresses;
 import org.apache.log4j.Logger;
 
@@ -15,8 +15,6 @@ import java.util.Set;
 
 import static nano.ingredients.Ensemble.getStackTrace;
 import static nano.ingredients.Ensemble.resolve;
-import static nano.ingredients.MessageProcessingDirective.REPLAY;
-import static nano.ingredients.MessageProcessingDirective.REPLAY_IGNORE;
 import static nano.ingredients.RunProperty.*;
 import static nano.ingredients.infrastructure.TraceMessage.traced;
 
@@ -32,29 +30,21 @@ public abstract class Actress implements Serializable {
 
     private transient Tracer tracer;
 
-    private Map<Replay, Map<String, Message>> messagesRecovered;
-    private int numberMessagesRecovered;
-    private int numberMessagesReplayed;
-
-    public boolean replayComplete() {
-        return numberMessagesReplayed >= numberMessagesRecovered;
-    }
+    private Map<ComputationStack, StrackframeAndResult> resultsRecovered;
 
     public boolean recoveryComplete() {
-        return messagesRecovered != null;
+        return resultsRecovered != null;
     }
 
-    public void setMessagesRecovered(Map<Replay, Map<String, Message>> recovered) {
-        this.messagesRecovered = recovered;
-        numberMessagesRecovered = recovered.values().stream().map(Map::size).reduce(0, (i, j) -> i + j);
-        numberMessagesReplayed = 0;
+    public void setResultsRecovered(Map<ComputationStack, StrackframeAndResult> recovered) {
+        this.resultsRecovered = recovered;
     }
 
-    protected Map<Replay, Map<String, Message>> getMessagesRecovered() {
-        if (messagesRecovered == null) {
+    protected Map<ComputationStack, StrackframeAndResult> getResultsRecovered() {
+        if (resultsRecovered == null) {
             throw new IllegalStateException();
         }
-        return messagesRecovered;
+        return resultsRecovered;
     }
 
     protected ActorRef aRef() {
@@ -117,10 +107,10 @@ public abstract class Actress implements Serializable {
             if (hasRunProperty(SHOW_STACKS)) {
                 System.out.println(m.origin.getComputationPath().getStack().stackPoints());
             }
-            if (!m.getProcessingDirective().equals(REPLAY)) {
-                Replay matcher = new Replay(m.origin.senderId, m.origin.getComputationPath().getStack());
-                Map<String, Message> recovered = getMessagesRecovered().get(matcher);
-                if (recovered != null && recovered.get(m.key) != null) {
+            if ((this instanceof FunctionSignature) && m.hasKey(Name.stackFrame)) {
+                StrackframeAndResult recovered = resultsRecovered.get(m.origin.getComputationPath().getStack());
+                if (recovered != null) {
+                    this.tell(recovered.getResult());
                     return;
                 }
             }
@@ -137,11 +127,6 @@ public abstract class Actress implements Serializable {
             Ensemble.instance().abort(e, this);
         }
         stopped = stop;
-        MessageProcessingDirective directive = m.getProcessingDirective();
-        if (directive.equals(REPLAY) || directive.equals(REPLAY_IGNORE))
-        {
-            numberMessagesReplayed ++;
-        }
     }
 
     String getExceptionMessage(Message m, Exception e) {

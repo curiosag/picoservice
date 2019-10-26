@@ -5,12 +5,12 @@ import akka.persistence.AbstractPersistentActor;
 import akka.persistence.RecoveryCompleted;
 import akka.persistence.SnapshotOffer;
 import nano.ingredients.*;
-import nano.ingredients.tuples.Replay;
+import nano.ingredients.tuples.StrackframeAndResult;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static nano.ingredients.RunProperty.*;
 
@@ -24,9 +24,7 @@ public class Akktor extends AbstractPersistentActor {
 
     private akka.event.EventStream eventStream;
 
-    private final Map<Replay, Map<String, Message>> messageMapRecovered = new HashMap<>();
-    private List<Message> messagesRecovered = new ArrayList<>();
-    private final Map<ComputationStack, Message> framesToReplay = new HashMap<>();
+    private final Map<ComputationStack, StrackframeAndResult> resultsRecovered = new HashMap<>();
 
     private Akktor(Actress related) {
         this.related = related;
@@ -36,14 +34,13 @@ public class Akktor extends AbstractPersistentActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(MessageReplayTrigger.class, m -> replayMessages(m.messageFilter))
                 .match(Message.class,
                         m -> {
                             if (!m.key.equals(getReturnKey()) && Ensemble.instance().hasRunProperty(TERMINATE)) {
                                 return;
                             }
-                            if (runModePersist()) {
-                                if (m.hasAnyKey(Name.stackFrame, Name.result) && Ensemble.instance().hasRunProperty(SLOW)) {
+                            if (runModePersist() && m.hasAnyKey(Name.stackFrame, Name.result)) {
+                                if (Ensemble.instance().hasRunProperty(SLOW)) {
                                     try {
                                         Thread.sleep(300);
                                     } catch (InterruptedException e) {
@@ -62,57 +59,48 @@ public class Akktor extends AbstractPersistentActor {
     public Receive createReceiveRecover() {
         return receiveBuilder()
                 .match(Message.class, this::hdlRecovery)
-                .match(RecoveryCompleted.class, m -> related.setMessagesRecovered(messageMapRecovered)
+                .match(RecoveryCompleted.class, m -> {
+                            clearCallsRecoveredWithoutResults(resultsRecovered);
+                            related.setResultsRecovered(resultsRecovered);
+                        }
                 ).match(SnapshotOffer.class, ss -> {
                     throw new IllegalStateException();
                 })
                 .build();
     }
 
-    private void replayMessages(java.util.function.BiFunction<Actress, Message, Boolean> messageFilter) {
-        messagesRecovered.stream()
-                .filter(m -> messageFilter.apply(related, m))
-                .forEach(r -> {
-                    if (isntStackFrameAtAll(r) || canReplayStackFrame(r)) {
-                        related.receive(r);
-                    }
-                });
-    }
+    private void clearCallsRecoveredWithoutResults(Map<ComputationStack, StrackframeAndResult> resultsRecovered) {
+        List<ComputationStack> toDelete = resultsRecovered.entrySet().stream()
+                .filter(e -> e.getValue().getResult() == null)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
 
-    private boolean isntStackFrameAtAll(Message r) {
-        return !r.hasKey(Name.stackFrame);
-    }
-
-    private boolean canReplayStackFrame(Message r) {
-        return framesToReplay.get(r.origin.getComputationPath().getStack()) != null;
+        toDelete.forEach(resultsRecovered::remove);
     }
 
     private void hdlRecovery(Message message) {
-        Message m = message.origin(message.origin.clearSenderRef());
-        m.setProcessingDirective(MessageProcessingDirective.REPLAY);
+        if (related instanceof FunctionSignature) {
+            Message m = message.origin(message.origin.clearSenderRef());
+            ComputationStack stack = message.origin.getComputationPath().getStack();
 
-        ComputationStack stack = message.origin.getComputationPath().getStack();
-
-        messagesRecovered.add(m);
-
-        Map<String, Message> keyMessageMap = messageMapRecovered.computeIfAbsent(new Replay(m.origin.senderId, stack), k -> new HashMap<>());
-        if (keyMessageMap.get(m.key) != null) {
-            throw new IllegalStateException("Already encountered key " + m.key);
-        }
-        keyMessageMap.put(m.key, m);
-
-        if (related instanceof FunctionSignature && m.hasAnyKey(Name.stackFrame)) {
-            if (framesToReplay.get(stack) != null) {
-                throw new IllegalStateException();
+            StrackframeAndResult current = resultsRecovered.get(stack);
+            if (current == null) {
+                if (m.key.equals(Name.result)) {
+                    throw new IllegalStateException();
+                }
+                resultsRecovered.computeIfAbsent(stack, k -> new StrackframeAndResult(m, null));
+            } else {
+                if (m.key.equals(Name.stackFrame)) {
+                    throw new IllegalStateException();
+                }
+                resultsRecovered.put(stack, new StrackframeAndResult(current.getStackFrame(), m));
             }
-            framesToReplay.put(stack, m);
         }
     }
 
     private String getReturnKey() {
         return ((Function) related).returnKey;
     }
-
 
     private boolean runModePersist() {
         return Ensemble.instance().hasRunProperty(PERSIST);

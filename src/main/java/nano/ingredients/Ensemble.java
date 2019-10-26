@@ -13,7 +13,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import static nano.ingredients.AsyncStuff.await;
 import static nano.ingredients.Nop.nop;
@@ -119,7 +118,6 @@ public class Ensemble {
 
         String id = a.address.id;
         a.setAref(actorSystem.actorOf(Akktor.props(a), id));
-        System.out.println("wired actress " + a.address.toString());
         return a;
     }
 
@@ -238,44 +236,8 @@ public class Ensemble {
         }
     }
 
-    private static final java.util.function.BiFunction<Actress, Message, Boolean>
-            stubCreateCall = (a, m) -> m.hasAnyKey(((FunctionStub) a).keyFunctionParameter, Name.createFunctionCall);
-    private static final java.util.function.BiFunction<Actress, Message, Boolean>
-            partialParams = (a, m) -> ((PartialFunctionApplication) a).partialAppParams.contains(m.key);
-
-    public void onSetUpComplete() {
+    public void awaitRecoveryCompleted() {
         await(1000, () -> actressById.values().stream().allMatch(Actress::recoveryComplete));
-        replay(a -> a instanceof FunctionStub, stubCreateCall);
-        replay(a -> a instanceof PartialFunctionApplication, partialParams);
-        replay(a -> a instanceof FunctionStub, (a, m) -> !stubCreateCall.apply(a, m));
-        replay(a -> a instanceof PartialFunctionApplication, (a, m) -> !partialParams.apply(a, m));
-        replay(a -> a instanceof FunctionCall, (a, m) -> true);
-        replay(a -> !classIn(a, FunctionCall.class, FunctionStub.class, PartialFunctionApplication.class), (a, m) -> true);
     }
 
-    private void replay(java.util.function.Function<Actress, Boolean> actressFilter, java.util.function.BiFunction<Actress, Message, Boolean> messageFilter) {
-        triggerReplay(filterActresses(actressFilter), messageFilter);
-        await(2000);
-    }
-
-    private void awaitReplayComplete(List<Actress> actresses) {
-        await(1000, () -> actresses.stream().allMatch(Actress::replayComplete));
-    }
-
-    private List<Actress> triggerReplay(List<Actress> actresses, java.util.function.BiFunction<Actress, Message, Boolean> messageFilter) {
-        actresses.forEach(i -> i.aref.tell(new MessageReplayTrigger(messageFilter), nop.aref));
-        return actresses;
-    }
-
-    private List<Actress> filterActresses(java.util.function.Function<Actress, Boolean> filter) {
-        return actressById.values().stream().filter(filter::apply).collect(Collectors.toList());
-    }
-
-
-    private boolean classIn(Object o, Class... classes) {
-        for (Class c : classes)
-            if (o.getClass().equals(c))
-                return true;
-        return false;
-    }
 }

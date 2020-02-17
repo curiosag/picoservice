@@ -1,11 +1,10 @@
-package micro.nativeFunctions;
+package micro.atomicFunctions;
 
-import micro.FAtom;
 import micro.Value;
 
 import java.util.List;
 
-public class AddInt implements FAtom {
+public class AddInt implements Atom {
 
     @Override
     public Object execute(List<Value> parameters) {

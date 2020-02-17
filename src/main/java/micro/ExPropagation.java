@@ -2,14 +2,14 @@ package micro;
 
 import java.util.List;
 
-class ExPropagation {
+public class ExPropagation {
     private List<ExPropagation> havingSameTarget;
 
-    final FPropagation template;
+    public final FPropagation template;
     private final Ex current;
     private Ex target;
 
-    ExPropagation(Ex current, FPropagation template) {
+    public ExPropagation(Ex current, FPropagation template) {
         this.current = current;
         this.template = template;
     }
@@ -22,7 +22,7 @@ class ExPropagation {
         return target;
     }
 
-    void accept(Value v) {
+    public void accept(Value v) {
         if (target == null) {
             target = template.target.newExecution(current.env, current);
             havingSameTarget.forEach(t -> t.setTarget(target));

@@ -1,12 +1,11 @@
-package micro.nativeFunctions;
+package micro.atomicFunctions;
 
-import micro.FSideEffect;
 import micro.Value;
 import micro.Void;
 
 import java.util.List;
 
-public class Print implements FSideEffect {
+public class Print implements SideEffect {
 
     @Override
     public Object execute(List<Value> values) {

@@ -8,4 +8,8 @@ public interface Names {
     String b = "b";
     String c = "c";
     String exception = "exception";
+    String condition = "condition";
+    String onTrue = "onTrue";
+    String onFalse = "onFalse";
+    String ping = "ping";
 }

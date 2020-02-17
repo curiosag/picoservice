@@ -1,20 +1,21 @@
 package micro;
 
+import micro.atomicFunctions.Atom;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class F {
-
     private String label;
     String returnAs = Names.result;
-    private final FAtom atom;
+    private final Atom atom;
 
     private Map<String, List<FPropagation>> propagations = new TreeMap<>();
     private Map<F, List<FPropagation>> functionsToPropagations;
 
     List<String> formalParameters = new ArrayList<>();
 
-    public F(FAtom atom, String... formalParams) {
+    public F(Atom atom, String... formalParams) {
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
     }
@@ -28,7 +29,7 @@ public class F {
         return formalParameters.size();
     }
 
-    FAtom getAtom() {
+    Atom getAtom() {
         return atom;
     }
 
@@ -37,15 +38,19 @@ public class F {
         return this;
     }
 
-    void addPropagation(String nameExpected, String namePropagated, F to) {
-        assertNoAccessHappened();
-        getPropagations()
-                .computeIfAbsent(nameExpected, k -> new ArrayList<>())
-                .add(new FPropagation(nameExpected, namePropagated, to));
-    }
-
     void addPropagation(String name, F to) {
         addPropagation(name, name, to);
+    }
+
+    void addPropagation(String nameExpected, String namePropagated, F to) {
+        addPropagation(new FPropagation(nameExpected, namePropagated, to));
+    }
+
+    protected void addPropagation(FPropagation p){
+        assertNoAccessHappened();
+        getPropagations()
+                .computeIfAbsent(p.nameReceived, k -> new ArrayList<>())
+                .add(p);
     }
 
     private void assertNoAccessHappened() {
@@ -54,8 +59,8 @@ public class F {
         }
     }
 
-    Ex newExecution(Env env, Ex returnTo) {
-        return new Ex(env, this, returnTo);
+    public Ex newExecution(Env env, Ex returnTo) {
+        return new ExF(env, this, returnTo);
     }
 
     public String getLabel() {

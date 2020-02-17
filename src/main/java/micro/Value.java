@@ -33,7 +33,7 @@ public class Value implements Persistable {
 
     }
 
-    public static Value of(String name, Object value, Ex sender) {
+    public static Value of(String name, Object value, ExF sender) {
         return new Value(name, value, sender);
     }
 
@@ -43,5 +43,10 @@ public class Value implements Persistable {
                 "name='" + name + '\'' +
                 ", value=" + value +
                 '}';
+    }
+
+    public Value withSender(Ex sender)
+    {
+        return new Value(name, value, sender);
     }
 }

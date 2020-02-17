@@ -1,11 +1,10 @@
-package micro.nativeFunctions;
+package micro.atomicFunctions;
 
-import micro.FAtom;
 import micro.Value;
 
 import java.util.List;
 
-public class MulInt implements FAtom {
+public class SubInt implements Atom {
 
     @Override
     public Object execute(List<Value> parameters) {
@@ -19,7 +18,7 @@ public class MulInt implements FAtom {
                 throw new IllegalArgumentException();
             }
 
-        return  (Integer) parameters.get(0).get() * (Integer) parameters.get(1).get();
+        return (Integer) parameters.get(0).get() - (Integer) parameters.get(1).get();
     }
 
 }

@@ -1,6 +1,7 @@
-package micro;
+package micro.atomicFunctions;
 
-public interface FSideEffect extends FAtom {
+public interface SideEffect extends Atom {
+
     @Override
     default boolean isSideEffect() {
         return true;

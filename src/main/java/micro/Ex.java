@@ -1,98 +1,70 @@
 package micro;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class Ex {
+public abstract class Ex {
     final Env env;
-    private final F template;
-    private Ex returnTo;
+    final F template;
+    protected final Ex returnTo;
 
     private HashMap<String, List<ExPropagation>> propagations = new HashMap<>();
-    private List<Value> paramsReceived = new ArrayList<>();
 
-    Ex(Env env, F template, Ex returnTo) {
+    final List<Value> paramsReceived = new ArrayList<>();
+
+    public Ex(Env env, F template, Ex returnTo) {
         this.env = env;
-        this.template = template;
         this.returnTo = returnTo;
-        setupPropagations(template);
+        this.template = template;
+        createExPropagations(template);
     }
 
-    Ex() {
-        template = null;
-        env = null;
-    }
+    public abstract void accept(Value v);
 
-    private void setupPropagations(F template) {
-        template.getTargetFunctionsToPropagations().forEach((targetFunc, templateProps) -> {
-            List<ExPropagation> exProps = templateProps.stream()
-                    .map(t -> new ExPropagation(this, t))
-                    .collect(Collectors.toList());
+    protected abstract void propagate(Value v);
 
-            exProps.forEach(ex -> {
-                ex.setHavingSameTarget(exProps);
-                propagations.computeIfAbsent(ex.template.nameReceived, k -> new ArrayList<>()).add(ex);
-            });
-        });
-    }
-
-    public void accept(Value v) {
+    protected void registerReceived(Value v) {
         env.debug(template.getLabel() + " got " + v.toString() + " from " + v.getSender());
 
         if (template.formalParameters.contains(v.getName())) {
             paramsReceived.add(v);
         }
-
-        if (template.getAtom() != null && paramsReceived.size() == template.numParams()) {
-            if (template.getAtom().isSideEffect()) {
-                runSideEffect();
-            } else {
-                runFunction();
-            }
-        }
-
-        if (Names.result.equals(v.getName())) {
-            returnTo.accept(value(template.returnAs, v.get()));
-        }
-
-        propagate(v);
     }
 
-    private void propagate(Value v) {
-        getPropagations(v.getName()).ifPresent(propagations ->
-                propagations.forEach(p -> p.accept(value(p.template.nameToPropagate, v.get())))
-        );
+    void createExPropagations(F template) {
+        template.getTargetFunctionsToPropagations().forEach(
+                (targetFunc, templateProps) -> {
+
+                    List<ExPropagation> exProps = templateProps.stream()
+                            .map(t -> createPropagation(t))
+                            .collect(Collectors.toList());
+
+                    exProps.forEach(ex -> {
+                        ex.setHavingSameTarget(exProps);
+                        propagations.computeIfAbsent(ex.template.nameReceived, k -> new ArrayList<>()).add(ex);
+                    });
+
+                });
     }
 
-    private Optional<List<ExPropagation>> getPropagations(String paramName) {
-        return Optional.ofNullable(propagations.get(paramName));
+    protected ExPropagation createPropagation(FPropagation t) {
+        return new ExPropagation(this, t);
     }
 
-    private void runSideEffect() {
-        try {
-            template.getAtom().execute(paramsReceived);
-        } catch (Exception e) {
-            env.log(e.getMessage());
-        }
-    }
-
-    private void runFunction() {
-        try {
-            returnTo.accept(value(template.returnAs, template.getAtom().execute(paramsReceived)));
-        } catch (Exception e) {
-            returnTo.accept(value(Names.exception, e));
-        }
-    }
-
-    private Value value(String name, Object value) {
-        return new Value(name, value, this);
+    protected List<ExPropagation> getPropagations(String paramName) {
+        List<ExPropagation> result = propagations.get(paramName);
+        return result != null ? result : Collections.emptyList();
     }
 
     @Override
     public String toString() {
         return template.getLabel() != null ? template.getLabel() : "no name";
+    }
+
+    protected Value value(String name, Object value) {
+        return new Value(name, value, this);
     }
 }

@@ -1,6 +1,6 @@
 package micro;
 
-public class ExTop extends Ex {
+public class ExTop extends ExF {
 
     public static ExTop TOP = new ExTop();
 

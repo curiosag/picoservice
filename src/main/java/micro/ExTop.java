@@ -5,7 +5,8 @@ public class ExTop extends ExF {
     public static ExTop TOP = new ExTop();
 
     @Override
-    public void accept(Value v) {
+    public ExTop accept(Value v) {
+        return this;
     }
 
     @Override

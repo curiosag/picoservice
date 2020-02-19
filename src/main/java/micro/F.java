@@ -1,17 +1,19 @@
 package micro;
 
-import micro.atomicFunctions.Atom;
+import micro.atoms.Atom;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class F {
+import static micro.ExTop.TOP;
+
+public class F implements _F {
     private String label;
     String returnAs = Names.result;
     private final Atom atom;
 
     private Map<String, List<FPropagation>> propagations = new TreeMap<>();
-    private Map<F, List<FPropagation>> functionsToPropagations;
+    private Map<_F, List<FPropagation>> functionsToPropagations;
 
     List<String> formalParameters = new ArrayList<>();
 
@@ -38,11 +40,17 @@ public class F {
         return this;
     }
 
-    void addPropagation(String name, F to) {
+    @Override
+    public void addPropagation(String name, _F to) {
         addPropagation(name, name, to);
     }
 
-    void addPropagation(String nameExpected, String namePropagated, F to) {
+    public void ping(_F to) {
+        addPropagation(Names.ping, Names.ping, to);
+    }
+
+    @Override
+    public void addPropagation(String nameExpected, String namePropagated, _F to) {
         addPropagation(new FPropagation(nameExpected, namePropagated, to));
     }
 
@@ -59,15 +67,20 @@ public class F {
         }
     }
 
-    public Ex newExecution(Env env, Ex returnTo) {
+    @Override
+    public Ex createExecution(Env env, Ex returnTo) {
         return new ExF(env, this, returnTo);
+    }
+
+    public Ex createExecution(Env env){
+        return createExecution(env, TOP);
     }
 
     public String getLabel() {
         return label;
     }
 
-    public F setLabel(String label) {
+    public F label(String label) {
         this.label = label;
         return this;
     }
@@ -76,7 +89,7 @@ public class F {
         return propagations;
     }
 
-    Map<F, List<FPropagation>> getTargetFunctionsToPropagations() {
+    Map<_F, List<FPropagation>> getTargetFunctionsToPropagations() {
         if (functionsToPropagations == null) {
             functionsToPropagations = propagations.values().stream()
                     .flatMap(Collection::stream)
@@ -91,4 +104,11 @@ public class F {
         return  label != null ? label : "no name";
     }
 
+    public static F f(Atom atom, String... params) {
+        if(atom == null)
+        {
+            throw new IllegalArgumentException();
+        }
+        return new F(atom, params);
+    }
 }

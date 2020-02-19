@@ -1,14 +1,26 @@
 package micro;
 
 import micro.If.If;
-import micro.atomicFunctions.*;
+import micro.atoms.AddInt;
+import micro.atoms.Atom;
+import micro.atoms.Const;
+import micro.atoms.MulInt;
 import org.junit.Test;
 
 import java.util.function.Supplier;
 
 import static micro.ExTop.TOP;
+import static micro.F.f;
+import static micro.If.If.iff;
 import static micro.If.PropagationType.*;
 import static micro.Names.ping;
+import static micro.atoms.AddInt.addInt;
+import static micro.atoms.Eq.eq;
+import static micro.atoms.Gt.gt;
+import static micro.atoms.Nop.nop;
+import static micro.atoms.Print.print;
+import static micro.atoms.SubInt.subInt;
+import static micro.partialapp.FPartialApp.partial;
 
 public class MicroTest {
 
@@ -32,13 +44,13 @@ public class MicroTest {
 
     @Test
     public void testSimpleFunc() {
-        F main = f(new Print(), Names.result).setLabel("main");
-        F add = f(new AddInt(), Names.left, Names.right).setLabel("add");
+        F main = f(print(), Names.result).label("main");
+        F add = f(addInt(), Names.left, Names.right).label("add");
 
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
 
-        Ex ex = main.newExecution(env, TOP);
+        Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.a, 1, TOP));
         ex.accept(Value.of(Names.b, 2, TOP));
     }
@@ -77,9 +89,9 @@ trisum(a,b,c)   trimul(a,b,c)
     * */
 
     private F createTriOp(Supplier<Atom> getBinOp, String resultName, String label) {
-        F op1 = f(getBinOp.get(), Names.left, Names.right).setLabel(label + "_1");
-        F op2 = f(getBinOp.get(), Names.left, Names.right).setLabel(label + "_2");
-        F triOp = f(null, Names.a, Names.b, Names.c).setLabel(label + "_triop");
+        F op1 = f(getBinOp.get(), Names.left, Names.right).label(label + "_1");
+        F op2 = f(getBinOp.get(), Names.left, Names.right).label(label + "_2");
+        F triOp = f(nop, Names.a, Names.b, Names.c).label(label + "_triop");
 
         triOp.addPropagation(Names.a, op1);
         triOp.addPropagation(Names.b, op1);
@@ -97,9 +109,9 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testSimpleFuncs() {
-        F main = f(new Print(), Names.result).setLabel("main");
+        F main = f(print(), Names.result).label("main");
 
-        F add = f(new AddInt(), Names.left, Names.right).setLabel("add").returnAs(Names.result);
+        F add = f(addInt(), Names.left, Names.right).label("add").returnAs(Names.result);
         F triSum = createTriOp(AddInt::new, Names.left, "tsum").returnAs(Names.left);
         F triMul = createTriOp(MulInt::new, Names.right, "tmul").returnAs(Names.right);
 
@@ -115,7 +127,7 @@ trisum(a,b,c)   trimul(a,b,c)
         add.addPropagation(Names.b, triMul);
         add.addPropagation(Names.c, triMul);
 
-        Ex ex = main.newExecution(env, TOP);
+        Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.a, 1, TOP));
         ex.accept(Value.of(Names.c, 3, TOP));
         ex.accept(Value.of(Names.b, 2, TOP));
@@ -123,15 +135,15 @@ trisum(a,b,c)   trimul(a,b,c)
 
     /*
        function dec(a) = a - 1
-       print(dec(3));
+       print(dec(1));
     */
 
     @Test
     public void testConst() {
-        F main = f(new Print(), Names.result).setLabel("main");
-        F dec = f(null, Names.a).setLabel("dec");
-        F sub = f(new SubInt(), Names.left, Names.right).setLabel("sub");
-        F one = f(new Const(1)).returnAs(Names.right).setLabel("const:one");
+        F main = f(print(), Names.result).label("main");
+        F dec = f(nop, Names.a).label("dec");
+        F sub = f(subInt(), Names.left, Names.right).label("sub");
+        F one = f(new Const(1)).returnAs(Names.right).label("const:one");
 
         main.addPropagation(ping, dec);
         dec.addPropagation(ping, sub);
@@ -140,8 +152,30 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
 
-        Ex ex = main.newExecution(env, TOP);
+        Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(ping, null, TOP));
+        ex.accept(Value.of(Names.a, 1, TOP));
+    }
+
+    /*
+       function dec(a) =
+         let delta = 1
+         a - delta
+
+         print(dec(1));
+    */
+
+    @Test
+    public void testLetPartial() {
+        _F main = f(print(), Names.result).label("main");
+        _F dec = f(nop, Names.a).label("dec");
+        _F sub = partial(f(subInt(), Names.left, Names.right).label("sub"))
+                .withParam(Names.left).resolvedBy(Names.delta);
+
+        main.addPropagation(Names.a, dec);
+        dec.addPropagation(Names.a, Names.left, sub);
+
+        Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.a, 1, TOP));
     }
 
@@ -154,10 +188,10 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testIf() {
-        F main = f(new Print(), Names.result).setLabel("main");
-        F max = f(null, Names.left, Names.right).setLabel("max");
-        If iff = new If().setLabel("if");
-        F gt = f(new Gt(), Names.left, Names.right).returnAs(Names.condition).setLabel("gt");
+        F main = f(print(), Names.result).label("main");
+        F max = f(nop, Names.left, Names.right).label("max");
+        If iff = iff().label("if");
+        F gt = f(gt(), Names.left, Names.right).returnAs(Names.condition).label("gt");
 
         main.addPropagation(Names.left, max);
         main.addPropagation(Names.right, max);
@@ -170,52 +204,65 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(ON_TRUE, Names.left, Names.result, iff);
         iff.addPropagation(ON_FALSE, Names.right, Names.result, iff);
 
-        Ex ex = main.newExecution(env, TOP);
+        Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.left, 1, TOP));
         ex.accept(Value.of(Names.right, 2, TOP));
 
-        ex = main.newExecution(env, TOP);
+        ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.left, 2, TOP));
         ex.accept(Value.of(Names.right, 1, TOP));
     }
 
-    /* function geo(a) = if (a = 0)
+    /* function geo(a) =
+
+                         if (a = 0)
                            0
                          else
-                           a + sum(a - 1);
-       print(sum(3));
+                         {
+                           let next_a = a - 1
+                           a + geo(next_a);
+                         }
+       print(geo(3));
     */
 
     @Test
     public void testSimpleRecursion() {
-        F main = f(new Print(), Names.result).setLabel("main");
-        F geo = f(null, Names.a);
-        If iff = new If().setLabel("if");
-        F eq = f(new Eq(), Names.left, Names.right).setLabel("eq");
-        F add = f(new AddInt(), Names.left, Names.right).setLabel("add");
-        F sub = f(new SubInt(), Names.left, Names.right).setLabel("sub");
-        F c_zero_eq = cönst(0).setLabel("zero:eq").returnAs(Names.right);
-        F c_zero_onTrue = cönst(0).setLabel("zero:ontrue").returnAs(Names.result);
-        F c_one = cönst(1).setLabel("one").returnAs(Names.right);
-
-        main.addPropagation(ping, geo);
-        geo.addPropagation(ping, iff);
-        iff.addPropagation(TRANSIT, ping, eq);
-        iff.addPropagation(ON_TRUE, ping, c_zero_eq);
-
-        eq.addPropagation(ping, c_zero_eq);
+        F main = f(print(), Names.result).label("main");
+        F geo = f(nop, Names.a).label("geo");
+        If iff = iff().label("if");
 
         main.addPropagation(Names.a, geo);
         geo.addPropagation(Names.a, iff);
 
+        // condition
+        F eq = f(eq(), Names.left, Names.right).returnAs(Names.condition).label("eq");
+
+        iff.addPropagation(CONDITION, Names.a, Names.left, eq);
+        eq.addPropagation(Names.left, ping, CONST(0).returnAs(Names.right).label("zero:eq"));
+        // onTrue
+        iff.addPropagation(ON_TRUE, Names.a, ping, CONST(0).label("zero:ontrue"));
+        // onFalse
+        F block_else = f(nop).label("block_else");
+        iff.addPropagation(ON_FALSE, Names.a, block_else);
+        // let next_a = a - 1
+        String next_a = "next_a";
+        F sub = f(subInt(), Names.left, Names.right).returnAs(next_a).label("sub");
+        block_else.addPropagation(Names.a, Names.left, sub);
+        sub.addPropagation(Names.left, ping, CONST(1).returnAs(Names.right).label("one"));
+        // a + geo(next_a);
+        F add = f(addInt(), Names.left, Names.right).label("add");
+        F geoReCall = new FCall(geo).returnAs(Names.right).label("geoCallR");
+
+        block_else.addPropagation(Names.a, Names.left, add);
+        block_else.addPropagation(next_a, add);
+        add.addPropagation(next_a, Names.a, geoReCall);
+
+        main.createExecution(env).accept(Value.of(Names.a, 100, TOP));
+
     }
 
-    private F cönst(Object i) {
+    private F CONST(Object i) {
         return f(new Const(i), ping);
-    }
-
-    private F f(Atom atom, String... params) {
-        return new F(atom, params);
     }
 
 }

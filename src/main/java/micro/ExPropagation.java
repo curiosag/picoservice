@@ -24,7 +24,7 @@ public class ExPropagation {
 
     public void accept(Value v) {
         if (target == null) {
-            target = template.target.newExecution(current.env, current);
+            target = template.target.createExecution(current.env, current);
             havingSameTarget.forEach(t -> t.setTarget(target));
         }
         target.accept(v);

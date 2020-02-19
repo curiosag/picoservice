@@ -1,4 +1,4 @@
-package micro.atomicFunctions;
+package micro.atoms;
 
 public interface SideEffect extends Atom {
 

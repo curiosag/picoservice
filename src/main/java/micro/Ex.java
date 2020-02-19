@@ -1,19 +1,16 @@
 package micro;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class Ex {
+    private final int level = CallLevel.level;
     final Env env;
     final F template;
     protected final Ex returnTo;
 
-    private HashMap<String, List<ExPropagation>> propagations = new HashMap<>();
-
-    final List<Value> paramsReceived = new ArrayList<>();
+    private final HashMap<String, List<ExPropagation>> propagations = new HashMap<>();
+    final Map<String, Value> paramsReceived = new HashMap<>();
 
     public Ex(Env env, F template, Ex returnTo) {
         this.env = env;
@@ -22,24 +19,23 @@ public abstract class Ex {
         createExPropagations(template);
     }
 
-    public abstract void accept(Value v);
+    public abstract Ex accept(Value v);
 
     protected abstract void propagate(Value v);
 
     protected void registerReceived(Value v) {
-        env.debug(template.getLabel() + " got " + v.toString() + " from " + v.getSender());
-
+        env.debug(v.getSender() + " -> " + this + " " + v.toString());
         if (template.formalParameters.contains(v.getName())) {
-            paramsReceived.add(v);
+            paramsReceived.put(v.getName(), v);
         }
     }
 
-    void createExPropagations(F template) {
+    private void createExPropagations(F template) {
         template.getTargetFunctionsToPropagations().forEach(
                 (targetFunc, templateProps) -> {
 
                     List<ExPropagation> exProps = templateProps.stream()
-                            .map(t -> createPropagation(t))
+                            .map(this::createPropagation)
                             .collect(Collectors.toList());
 
                     exProps.forEach(ex -> {
@@ -61,7 +57,7 @@ public abstract class Ex {
 
     @Override
     public String toString() {
-        return template.getLabel() != null ? template.getLabel() : "no name";
+        return "(" + level + ") " + template.getLabel();
     }
 
     protected Value value(String name, Object value) {

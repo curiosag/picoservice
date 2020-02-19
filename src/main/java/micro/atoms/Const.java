@@ -1,8 +1,8 @@
-package micro.atomicFunctions;
+package micro.atoms;
 
 import micro.Value;
 
-import java.util.List;
+import java.util.Map;
 
 public class Const implements Atom {
 
@@ -13,7 +13,7 @@ public class Const implements Atom {
     }
 
     @Override
-    public Object execute(List<Value> values) {
+    public Object execute(Map<String, Value> values) {
         return value;
     }
 

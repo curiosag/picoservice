@@ -1,6 +1,8 @@
 package micro;
 
 public class Value implements Persistable {
+    public static Value PING = new Value(Names.ping, null, null);
+
     private final Ex sender;
     private final String name;
     private final Object value;

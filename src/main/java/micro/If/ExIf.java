@@ -22,7 +22,7 @@ public class ExIf extends Ex {
     }
 
     @Override
-    public void accept(Value v) {
+    public ExIf accept(Value v) {
         registerReceived(v);
 
         switch (v.getName()) {
@@ -32,60 +32,49 @@ public class ExIf extends Ex {
                 }
 
                 this.condition = (Boolean) v.get();
-                processPendingPropagation();
+                processPendingPropagations();
                 break;
 
             case Names.result:
                 returnTo.accept(v.withSender(this));
                 break;
 
+            case Names.exception:
+                returnTo.accept(v.withSender(this));
+                break;
+
             default:
                 propagate(v);
         }
+        return this;
     }
 
-    private class Pending {
-        final Value value;
-        final ExIfPropagation propagation;
-
-        Pending(Value value, ExIfPropagation propagation) {
-            this.value = value;
-            this.propagation = propagation;
-        }
-    }
-
-    private List<Pending> pending = new ArrayList<>();
+    private List<PendingPropagation> pendingPropagations = new ArrayList<>();
 
     @Override
     protected void propagate(Value v) {
         getPropagations(v.getName()).forEach(o -> {
             if (!(o instanceof ExIfPropagation)) {
-                throw new IllegalArgumentException();
+                throw new IllegalStateException();
             }
             ExIfPropagation p = (ExIfPropagation) o;
-            pending.add(new Pending(v, p));
+            pendingPropagations.add(new PendingPropagation(v, p));
         });
 
-        processPendingPropagation();
+        processPendingPropagations();
     }
 
-    private void processPendingPropagation() {
-        List<Pending> done = new ArrayList<>();
-        // subsequent propagations may modify pending concurrently
-        List<Pending> iteratePending = new ArrayList<>(pending);
-
-        iteratePending.forEach(p -> {
-            if (processPendingPropagation(p)) {
-                done.add(p);
+    private void processPendingPropagations() {
+         new ArrayList<>(pendingPropagations).forEach(p -> {
+            if (processPendingPropagations(p)) {
+                pendingPropagations.remove(p);
             }
         });
-
-        pending.removeAll(done);
     }
 
-    private boolean processPendingPropagation(Pending pending) {
-        ExIfPropagation p = pending.propagation;
-        Value v = value(p.template.nameToPropagate, pending.value.get());
+    private boolean processPendingPropagations(PendingPropagation pendingPropagation) {
+        ExIfPropagation p = pendingPropagation.propagation;
+        Value v = value(p.template.nameToPropagate, pendingPropagation.value.get());
 
         switch (p.propagationType) {
             case CONDITION:

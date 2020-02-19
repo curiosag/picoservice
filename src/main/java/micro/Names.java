@@ -12,4 +12,5 @@ public interface Names {
     String onTrue = "onTrue";
     String onFalse = "onFalse";
     String ping = "ping";
+    String delta = "delta";
 }

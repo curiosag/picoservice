@@ -1,13 +1,14 @@
-package micro.atomicFunctions;
+package micro.atoms;
 
 import micro.Value;
 
-import java.util.List;
+import java.util.Map;
 
 public interface Atom {
-    Object execute(List<Value> actualParameters);
 
     default boolean isSideEffect(){
         return false;
     };
+
+    Object execute(Map<String, Value> parameters);
 }

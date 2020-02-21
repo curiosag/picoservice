@@ -27,7 +27,7 @@ public class ExPropagation {
             target = template.target.createExecution(current.env, current);
             havingSameTarget.forEach(t -> t.setTarget(target));
         }
-        target.accept(v);
+        target.process(v);
     }
 
     void setHavingSameTarget(List<ExPropagation> havingSameTarget) {

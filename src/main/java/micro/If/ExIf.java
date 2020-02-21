@@ -22,7 +22,7 @@ public class ExIf extends Ex {
     }
 
     @Override
-    public ExIf accept(Value v) {
+    public void process(Value v) {
         registerReceived(v);
 
         switch (v.getName()) {
@@ -46,7 +46,6 @@ public class ExIf extends Ex {
             default:
                 propagate(v);
         }
-        return this;
     }
 
     private List<PendingPropagation> pendingPropagations = new ArrayList<>();

@@ -51,8 +51,8 @@ public class MicroTest {
         main.addPropagation(Names.b, Names.right, add);
 
         Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.a, 1, TOP));
-        ex.accept(Value.of(Names.b, 2, TOP));
+        ex.process(Value.of(Names.a, 1, TOP));
+        ex.process(Value.of(Names.b, 2, TOP));
     }
 
     /*
@@ -128,9 +128,9 @@ trisum(a,b,c)   trimul(a,b,c)
         add.addPropagation(Names.c, triMul);
 
         Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.a, 1, TOP));
-        ex.accept(Value.of(Names.c, 3, TOP));
-        ex.accept(Value.of(Names.b, 2, TOP));
+        ex.process(Value.of(Names.a, 1, TOP));
+        ex.process(Value.of(Names.c, 3, TOP));
+        ex.process(Value.of(Names.b, 2, TOP));
     }
 
     /*
@@ -153,8 +153,8 @@ trisum(a,b,c)   trimul(a,b,c)
         dec.addPropagation(Names.a, Names.left, sub);
 
         Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(ping, null, TOP));
-        ex.accept(Value.of(Names.a, 1, TOP));
+        ex.process(Value.of(ping, null, TOP));
+        ex.process(Value.of(Names.a, 1, TOP));
     }
 
     /*
@@ -176,7 +176,7 @@ trisum(a,b,c)   trimul(a,b,c)
         dec.addPropagation(Names.a, Names.left, sub);
 
         Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.a, 1, TOP));
+        ex.process(Value.of(Names.a, 1, TOP));
     }
 
     /* function max(left,right) = if (left > right)
@@ -205,12 +205,12 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(ON_FALSE, Names.right, Names.result, iff);
 
         Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.left, 1, TOP));
-        ex.accept(Value.of(Names.right, 2, TOP));
+        ex.process(Value.of(Names.left, 1, TOP));
+        ex.process(Value.of(Names.right, 2, TOP));
 
         ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.left, 2, TOP));
-        ex.accept(Value.of(Names.right, 1, TOP));
+        ex.process(Value.of(Names.left, 2, TOP));
+        ex.process(Value.of(Names.right, 1, TOP));
     }
 
     /* function geo(a) =
@@ -257,7 +257,7 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
 
-        main.createExecution(env).accept(Value.of(Names.a, 100, TOP));
+        main.createExecution(env).process(Value.of(Names.a, 100, TOP));
 
     }
 

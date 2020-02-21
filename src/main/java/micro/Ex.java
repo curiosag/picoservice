@@ -19,7 +19,12 @@ public abstract class Ex {
         createExPropagations(template);
     }
 
-    public abstract Ex accept(Value v);
+    public Ex accept(Value v){
+        process(v);
+        return this;
+    };
+
+    public abstract void process(Value v);
 
     protected abstract void propagate(Value v);
 

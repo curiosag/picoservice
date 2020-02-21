@@ -12,7 +12,7 @@ public class ExF extends Ex {
     }
 
     @Override
-    public ExF accept(Value v) {
+    public void process(Value v) {
         registerReceived(v);
 //TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
         if (template.getAtom() != nop && paramsReceived.size() == template.numParams()) {
@@ -30,7 +30,6 @@ public class ExF extends Ex {
         } else {
             propagate(v);
         }
-        return this;
     }
 
     @Override
@@ -49,9 +48,9 @@ public class ExF extends Ex {
     private void applyFunction() {
         try {
             Object value = template.getAtom().execute(paramsReceived);
-            returnTo.accept(value(template.returnAs, value));
+            returnTo.process(value(template.returnAs, value));
         } catch (Exception e) {
-            returnTo.accept(value(Names.exception, e));
+            returnTo.process(value(Names.exception, e));
         }
     }
 

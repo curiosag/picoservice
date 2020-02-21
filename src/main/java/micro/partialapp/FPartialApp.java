@@ -36,7 +36,7 @@ public class FPartialApp implements _F {
     @Override
     public Ex createExecution(Env env, Ex returnTo) {
         Ex result = inner.createExecution(env, returnTo);
-        partials.forEach((name, value) -> result.accept(new Value(name, value, result)));
+        partials.forEach((name, value) -> result.process(new Value(name, value, result)));
         return result;
     }
 

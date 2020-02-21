@@ -14,7 +14,7 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public Ex accept(Value v) {
+    public void process(Value v) {
         registerReceived(v);
         if (calledEx == null) {
             calledEx = fCallTemplate.called.createExecution(env, this);
@@ -31,7 +31,6 @@ public class ExFCall extends Ex {
             default:
                 calledEx.accept(v.withSender(this));
         }
-        return this;
     }
 
     @Override

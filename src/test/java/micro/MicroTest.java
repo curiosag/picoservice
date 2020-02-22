@@ -9,7 +9,6 @@ import org.junit.Test;
 
 import java.util.function.Supplier;
 
-import static micro.ExTop.TOP;
 import static micro.F.f;
 import static micro.If.If.iff;
 import static micro.If.PropagationType.*;
@@ -25,6 +24,7 @@ import static micro.partialapp.FPartialApp.partial;
 public class MicroTest {
 
     Env env = new Env();
+    ExTop TOP = new ExTop(env);
 
 /*
     a   b
@@ -257,7 +257,7 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
 
-        main.createExecution(env).process(Value.of(Names.a, 100, TOP));
+        main.createExecution(env, TOP).process(Value.of(Names.a, 0, TOP));
 
     }
 

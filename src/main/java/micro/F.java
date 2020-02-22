@@ -5,7 +5,6 @@ import micro.atoms.Atom;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static micro.ExTop.TOP;
 
 public class F implements _F {
     private String label;
@@ -70,10 +69,6 @@ public class F implements _F {
     @Override
     public Ex createExecution(Env env, Ex returnTo) {
         return new ExF(env, this, returnTo);
-    }
-
-    public Ex createExecution(Env env){
-        return createExecution(env, TOP);
     }
 
     public String getLabel() {

@@ -7,8 +7,8 @@ public class ExF extends Ex {
         super(env, template, returnTo);
     }
 
-    ExF() {
-        super(null, new F(), null);
+    ExF(Env env) {
+        super(env, new F(), null);
     }
 
     @Override

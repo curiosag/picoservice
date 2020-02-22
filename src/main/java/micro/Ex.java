@@ -20,7 +20,7 @@ public abstract class Ex {
     }
 
     public Ex accept(Value v){
-        process(v);
+        env.enq(v, this);
         return this;
     };
 

@@ -257,8 +257,17 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
 
-        main.createExecution(env, TOP).process(Value.of(Names.a, 0, TOP));
+        env.setDelay(10);
+        main.createExecution(env, TOP).process(Value.of(Names.a, 100, TOP));
+        sleep(5000);
+    }
 
+    private void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private F CONST(Object i) {

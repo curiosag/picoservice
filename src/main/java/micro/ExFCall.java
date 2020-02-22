@@ -22,7 +22,6 @@ public class ExFCall extends Ex {
         }
         switch (v.getName()) {
             case Names.result:
-                System.out.println("returned " + v.get() + " from (" + level + ") " + template.getLabel() + " to " + returnTo.template.getLabel());
                 returnTo.accept(new Value(fCallTemplate.returnAs, v.get(), this));
                 break;
             case Names.exception:

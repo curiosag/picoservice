@@ -1,16 +1,23 @@
 package micro;
 
 import micro.actor.Message;
+import micro.trace.Tracer;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Env implements Runnable {
+public class Env implements Runnable, Closeable {
 
-    private Queue<Message> messages = new ConcurrentLinkedQueue<>();
+    private final int numThreads;
+    private final Queue<Message> messages = new ConcurrentLinkedQueue<>();
+    private final Tracer tracer = new Tracer(false);
 
-    private AtomicInteger delay = new AtomicInteger(0);
+    private final AtomicInteger delay = new AtomicInteger(0);
+    private final AtomicBoolean suspend = new AtomicBoolean(false);
 
     public int getDelay() {
         return delay.get();
@@ -20,10 +27,15 @@ public class Env implements Runnable {
         this.delay.set(delay);
     }
 
-    public Env() {
-        new Thread(this).start();
-        new Thread(this).start();
-        new Thread(this).start();
+    public void suspend(boolean suspend) {
+        this.suspend.set(suspend);
+    }
+
+    public Env(int numThreads) {
+        this.numThreads = numThreads;
+        for (int i = 0; i < numThreads; i++) {
+            new Thread(this).start();
+        }
     }
 
     public void log(String msg) {
@@ -35,13 +47,23 @@ public class Env implements Runnable {
     }
 
     public void enq(Value v, Ex target) {
-        messages.add(new Message(v, target));
+        Message m = new Message(v, target);
+        tracer.trace(m);
+        if (numThreads > 0) {
+            messages.add(m);
+        } else {
+            target.process(v);
+        }
     }
 
     @Override
     public void run() {
+
         while (true) {
-            Thread.yield();
+            if (suspend.get()) {
+                sleep(200);
+                continue;
+            }
             sleep(delay.get());
             Message m = messages.poll();
             if (m != null) {
@@ -62,4 +84,8 @@ public class Env implements Runnable {
             }
     }
 
+    @Override
+    public void close() throws IOException {
+        tracer.close();
+    }
 }

@@ -1,16 +1,13 @@
 package micro;
 
 public class ExFCall extends Ex {
-    private static int instances = 0;
 
-    private final int level;
-    FCall fCallTemplate;
+    private FCall fCallTemplate;
     private Ex calledEx;
 
     ExFCall(Env env, FCall fCallTemplate, Ex returnTo) {
         super(env, new F().label(fCallTemplate.getLabel()), returnTo);
         this.fCallTemplate = fCallTemplate;
-        this.level = instances;
     }
 
     @Override
@@ -18,7 +15,6 @@ public class ExFCall extends Ex {
         registerReceived(v);
         if (calledEx == null) {
             calledEx = fCallTemplate.called.createExecution(env, this);
-            CallLevel.level++;
         }
         switch (v.getName()) {
             case Names.result:

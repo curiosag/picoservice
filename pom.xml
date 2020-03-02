@@ -14,6 +14,14 @@
         <java.version>1.8</java.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>yahoo-bintray</id>
+            <name>yahoo-bintray</name>
+            <url>https://yahoo.bintray.com/maven</url>
+        </repository>
+    </repositories>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -67,6 +75,12 @@
             <groupId>org.jooq</groupId>
             <artifactId>jool</artifactId>
             <version>0.9.10</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.oath.halodb</groupId>
+            <artifactId>halodb</artifactId>
+            <version>0.5.3</version>
         </dependency>
 
         <!--        <dependency>

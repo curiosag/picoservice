@@ -4,9 +4,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class Ex {
-    private final int level = CallLevel.level;
     final Env env;
-    final F template;
+    public final F template;
     protected final Ex returnTo;
 
     private final HashMap<String, List<ExPropagation>> propagations = new HashMap<>();
@@ -51,6 +50,10 @@ public abstract class Ex {
                 });
     }
 
+    public String getLabel(){
+        return template.getLabel();
+    }
+
     protected ExPropagation createPropagation(FPropagation t) {
         return new ExPropagation(this, t);
     }
@@ -62,7 +65,7 @@ public abstract class Ex {
 
     @Override
     public String toString() {
-        return "(" + level + ") " + template.getLabel();
+        return String.format("%s", template.getLabel());
     }
 
     protected Value value(String name, Object value) {

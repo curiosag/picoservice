@@ -23,7 +23,7 @@ import static micro.partialapp.FPartialApp.partial;
 
 public class MicroTest {
 
-    Env env = new Env();
+    Env env = new Env(3);
     ExTop TOP = new ExTop(env);
 
 /*
@@ -257,8 +257,14 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
 
-        env.setDelay(10);
-        main.createExecution(env, TOP).process(Value.of(Names.a, 100, TOP));
+        env.setDelay(0);
+        main.createExecution(env, TOP).process(Value.of(Names.a, 1000, TOP));
+//        sleep(1000);
+//        env.log("suspending");
+//        env.suspend(true);
+//        sleep(2000);
+//        env.log("resuming");
+//        env.suspend(false);
         sleep(5000);
     }
 

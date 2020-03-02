@@ -8,6 +8,10 @@ public class ExTop extends ExF {
 
     @Override
     public void process(Value v) {
+        if(v.getName().equals(Names.exception))
+        {
+            throw new RuntimeException((Exception) v.get());
+        }
     }
 
     @Override

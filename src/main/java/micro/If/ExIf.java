@@ -4,6 +4,7 @@ import micro.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ExIf extends Ex {
     private Boolean condition;
@@ -14,8 +15,7 @@ public class ExIf extends Ex {
 
     @Override
     protected ExPropagation createPropagation(FPropagation t) {
-        if(! (t instanceof IfPropagation))
-        {
+        if (!(t instanceof IfPropagation)) {
             throw new IllegalStateException();
         }
         return new ExIfPropagation(this, (IfPropagation) t);
@@ -64,35 +64,35 @@ public class ExIf extends Ex {
     }
 
     private void processPendingPropagations() {
-         new ArrayList<>(pendingPropagations).forEach(p -> {
-            if (processPendingPropagations(p)) {
-                pendingPropagations.remove(p);
-            }
+        List<PendingPropagation> pendingToPropagate = pendingPropagations.stream()
+                .filter(this::canProcessPendingPropagation)
+                .collect(Collectors.toList());
+
+        if (pendingToPropagate.size() > 1) {
+            throw new IllegalStateException();
+        }
+
+        pendingToPropagate.forEach(p -> {
+            pendingPropagations.remove(p);
+            Value v = value(p.propagation.template.nameToPropagate, p.value.get());
+            p.propagation.accept(v);
         });
+
     }
 
-    private boolean processPendingPropagations(PendingPropagation pendingPropagation) {
-        ExIfPropagation p = pendingPropagation.propagation;
-        Value v = value(p.template.nameToPropagate, pendingPropagation.value.get());
-
-        switch (p.propagationType) {
+    private boolean canProcessPendingPropagation(PendingPropagation pendingPropagation) {
+        switch (pendingPropagation.propagation.propagationType) {
             case CONDITION:
-                if (condition == null) {
-                    p.accept(v);
+                if (condition != null) {
+                    throw new IllegalStateException();
                 }
                 return true;
 
             case ON_TRUE:
-                if (condition != null && condition) {
-                    p.accept(v);
-                }
-                return condition != null;
+                return condition != null && condition;
 
             case ON_FALSE:
-                if (condition != null && !condition) {
-                    p.accept(v);
-                }
-                return condition != null;
+                return condition != null && !condition;
 
             default:
                 throw new IllegalStateException();

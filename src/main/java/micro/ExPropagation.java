@@ -5,37 +5,45 @@ import java.util.List;
 public class ExPropagation {
     private List<ExPropagation> havingSameTarget;
 
+    private boolean done;
     public final FPropagation template;
     private final Ex current;
-    private Ex target;
+    private _Ex target;
 
     public PropagationType getPropagationType(){
         return template.propagationType;
     }
 
-    public ExPropagation(Ex current, FPropagation template) {
+    ExPropagation(Ex current, FPropagation template) {
         this.current = current;
         this.template = template;
     }
 
-    public void setTarget(Ex target) {
+    public void setTarget(_Ex target) {
         this.target = target;
     }
 
-    public Ex getTarget() {
+    public _Ex getTarget() {
         return target;
     }
 
-    public void accept(Value v) {
+    public void propagate(Value v) {
         if (target == null) {
             target = template.target.createExecution(current.env, current);
             havingSameTarget.forEach(t -> t.setTarget(target));
         }
-        target.process(v);
+        target.accept(v);
     }
 
     void setHavingSameTarget(List<ExPropagation> havingSameTarget) {
         this.havingSameTarget = havingSameTarget;
     }
 
+    boolean isDone() {
+        return done;
+    }
+
+    void setDone(boolean done) {
+        this.done = done;
+    }
 }

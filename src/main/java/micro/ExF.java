@@ -1,12 +1,12 @@
 package micro;
 
 public class ExF extends Ex {
-    public ExF(Env env, F template, Ex returnTo) {
+    public ExF(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
     }
 
     ExF(Env env) {
-        super(env, new F(F.nop), null);
+        super(env, new F(env, F.nop), null);
     }
 
     @Override
@@ -35,7 +35,7 @@ public class ExF extends Ex {
 
     @Override
     protected void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p -> p.accept(value(p.template.nameToPropagate, v.get())));
+        getPropagations(v.getName()).forEach(p -> p.propagate(value(p.template.nameToPropagate, v.get())));
     }
 
     private void applySideEffect() {
@@ -49,9 +49,9 @@ public class ExF extends Ex {
     private void applyFunction() {
         try {
             Object value = template.getAtom().execute(paramsReceived);
-            returnTo.process(value(template.returnAs, value));
+            returnTo.accept(value(template.returnAs, value));
         } catch (Exception e) {
-            returnTo.process(value(Names.exception, e));
+            returnTo.accept(value(Names.exception, e));
         }
     }
 

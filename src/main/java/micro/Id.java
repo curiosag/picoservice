@@ -1,13 +1,14 @@
 package micro;
 
-public class Id {
+public interface Id {
 
-    private final Address address;
-    private final long id;
+    long getId();
 
-    public Id(Address address, long id)
-    {
-        this.address = address;
-        this.id = id;
+    void setId(long value);
+
+    default long checkSetValue(long value){
+        Check.invariant(getId() < 0, "can't reset id");
+        Check.argument(value >= 0, "id < 0");
+        return value;
     }
 }

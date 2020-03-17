@@ -7,13 +7,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
-public class F implements _F {
+public class F implements _F, Id {
     public static final Atom nop = null;
-    private static long instances;
 
-    private final long instanceId;
-    private long executions;
-
+    private long id = -1;
     private String label;
     String returnAs = Names.result;
     private final Atom atom;
@@ -23,12 +20,20 @@ public class F implements _F {
 
     List<String> formalParameters = new ArrayList<>();
 
-
-
-    public F(Atom atom, String... formalParams) {
-        instanceId = instances++;
+    public F(Env env, Atom atom, String... formalParams) {
+        env.enlist(this);
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
+    }
+
+    @Override
+    public long getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(long value) {
+        id = checkSetValue(value);
     }
 
     int numParams() {
@@ -57,10 +62,6 @@ public class F implements _F {
         addPropagation(name, name, to);
     }
 
-    public void ping(_F to) {
-        addPropagation(Names.ping, Names.ping, to);
-    }
-
     @Override
     public void addPropagation(String nameExpected, String namePropagated, _F to) {
         addPropagation(new FPropagation(nameExpected, namePropagated, to));
@@ -80,7 +81,7 @@ public class F implements _F {
     }
 
     @Override
-    public Ex createExecution(Env env, Ex returnTo) {
+    public _Ex createExecution(Env env, _Ex returnTo) {
         return new ExF(env, this, returnTo);
     }
 
@@ -112,11 +113,11 @@ public class F implements _F {
         return  label != null ? label : "no name";
     }
 
-    public static F f(Atom atom, String... params) {
+    public static F f(Env env, Atom atom, String... params) {
         if(atom == null)
         {
             throw new IllegalArgumentException();
         }
-        return new F(atom, params);
+        return new F(env, atom, params);
     }
 }

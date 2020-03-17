@@ -5,8 +5,8 @@ import micro.*;
 
 public class If extends F {
 
-    public If() {
-        super(nop, Names.condition, Names.onTrue, Names.onFalse);
+    public If(Env env) {
+        super(env, nop, Names.condition, Names.onTrue, Names.onFalse);
     }
 
     public void addPropagation(PropagationType propagationType, String nameExpected, String namePropagated, _F to) {
@@ -35,11 +35,11 @@ public class If extends F {
     }
 
     @Override
-    public Ex createExecution(Env env, Ex returnTo) {
+    public _Ex createExecution(Env env, _Ex returnTo) {
         return new ExIf(env, this, returnTo);
     }
 
-    public static If iff(){
-        return new If();
+    public static If iff(Env env){
+        return new If(env);
     }
 }

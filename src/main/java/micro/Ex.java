@@ -3,25 +3,36 @@ package micro;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class Ex {
+public abstract class Ex implements _Ex {
     final Env env;
-    public final F template;
-    protected final Ex returnTo;
 
-    private final HashMap<String, List<ExPropagation>> propagations = new HashMap<>();
+    private long id = -1;
+    public final F template;
+    protected final _Ex returnTo;
+
+    private final HashMap<String, List<ExPropagation>> propagationsByParamName = new HashMap<>();
+    private final List<ExPropagation> propagations = new ArrayList<>();
+
     final Map<String, Value> paramsReceived = new HashMap<>();
 
-    public Ex(Env env, F template, Ex returnTo) {
+    public Ex(Env env, F template, _Ex returnTo) {
         this.env = env;
+        env.enlist(this);
+
         this.returnTo = returnTo;
         this.template = template;
         createExPropagations(template);
     }
 
-    public Ex accept(Value v){
+    @Override
+    public void accept(Value v){
         env.enq(v, this);
-        return this;
-    };
+    }
+
+    @Override
+    public Address getAddress(){
+        return env.getAddress();
+    }
 
     public abstract void process(Value v);
 
@@ -42,9 +53,10 @@ public abstract class Ex {
                             .map(this::createPropagation)
                             .collect(Collectors.toList());
 
-                    exProps.forEach(ex -> {
-                        ex.setHavingSameTarget(exProps);
-                        propagations.computeIfAbsent(ex.template.nameReceived, k -> new ArrayList<>()).add(ex);
+                    exProps.forEach(p -> {
+                        p.setHavingSameTarget(exProps);
+                        propagationsByParamName.computeIfAbsent(p.template.nameReceived, k -> new ArrayList<>()).add(p);
+                        propagations.add(p);
                     });
 
                 });
@@ -54,13 +66,13 @@ public abstract class Ex {
         return template.getLabel();
     }
 
-    protected ExPropagation createPropagation(FPropagation t) {
+    private ExPropagation createPropagation(FPropagation t) {
         return new ExPropagation(this, t);
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
-        List<ExPropagation> result = propagations.get(paramName);
-        return result != null ? result : Collections.emptyList();
+        List<ExPropagation> ps = propagationsByParamName.get(paramName);
+        return ps == null ? Collections.emptyList(): ps.stream().filter(p -> !p.isDone()).collect(Collectors.toList());
     }
 
     @Override
@@ -70,5 +82,15 @@ public abstract class Ex {
 
     protected Value value(String name, Object value) {
         return new Value(name, value, this);
+    }
+
+    @Override
+    public long getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(long value) {
+        id = checkSetValue(value);
     }
 }

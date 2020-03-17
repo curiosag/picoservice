@@ -9,10 +9,9 @@ import org.junit.Test;
 
 import java.util.function.Supplier;
 
-import static micro.F.f;
 import static micro.If.If.iff;
-import static micro.PropagationType.*;
 import static micro.Names.ping;
+import static micro.PropagationType.*;
 import static micro.atoms.AddInt.addInt;
 import static micro.atoms.Eq.eq;
 import static micro.atoms.Gt.gt;
@@ -23,8 +22,9 @@ import static micro.partialapp.FPartialApp.partial;
 
 public class MicroTest {
 
-    Env env = new Env(3);
-    ExTop TOP = new ExTop(env);
+    private Address address = new Address(new byte[0], 1);
+    private Env env = new Env(3, address);
+    private ExTop TOP = new ExTop(env);
 
 /*
     a   b
@@ -50,9 +50,9 @@ public class MicroTest {
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
 
-        Ex ex = main.createExecution(env, TOP);
-        ex.process(Value.of(Names.a, 1, TOP));
-        ex.process(Value.of(Names.b, 2, TOP));
+        _Ex ex = main.createExecution(env, TOP);
+        ex.accept(Value.of(Names.a, 1, TOP));
+        ex.accept(Value.of(Names.b, 2, TOP));
     }
 
     /*
@@ -127,10 +127,10 @@ trisum(a,b,c)   trimul(a,b,c)
         add.addPropagation(Names.b, triMul);
         add.addPropagation(Names.c, triMul);
 
-        Ex ex = main.createExecution(env, TOP);
-        ex.process(Value.of(Names.a, 1, TOP));
-        ex.process(Value.of(Names.c, 3, TOP));
-        ex.process(Value.of(Names.b, 2, TOP));
+        _Ex ex = main.createExecution(env, TOP);
+        ex.accept(Value.of(Names.a, 1, TOP));
+        ex.accept(Value.of(Names.c, 3, TOP));
+        ex.accept(Value.of(Names.b, 2, TOP));
     }
 
     /*
@@ -152,9 +152,9 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
 
-        Ex ex = main.createExecution(env, TOP);
-        ex.process(Value.of(ping, null, TOP));
-        ex.process(Value.of(Names.a, 1, TOP));
+        _Ex ex = main.createExecution(env, TOP);
+        ex.accept(Value.of(ping, null, TOP));
+        ex.accept(Value.of(Names.a, 1, TOP));
     }
 
     /*
@@ -175,8 +175,8 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
 
-        Ex ex = main.createExecution(env, TOP);
-        ex.process(Value.of(Names.a, 1, TOP));
+        _Ex ex = main.createExecution(env, TOP);
+        ex.accept(Value.of(Names.a, 1, TOP));
     }
 
     /* function max(left,right) = if (left > right)
@@ -190,7 +190,7 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testIf() {
         F main = f(print(), Names.result).label("main");
         F max = f(nop, Names.left, Names.right).label("max");
-        If iff = iff().label("if");
+        If iff = iff(env).label("if");
         F gt = f(gt(), Names.left, Names.right).returnAs(Names.condition).label("gt");
 
         main.addPropagation(Names.left, max);
@@ -204,13 +204,13 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(ON_TRUE, Names.left, Names.result, iff);
         iff.addPropagation(ON_FALSE, Names.right, Names.result, iff);
 
-        Ex ex = main.createExecution(env, TOP);
-        ex.process(Value.of(Names.left, 1, TOP));
-        ex.process(Value.of(Names.right, 2, TOP));
+        _Ex ex = main.createExecution(env, TOP);
+        ex.accept(Value.of(Names.left, 1, TOP));
+        ex.accept(Value.of(Names.right, 2, TOP));
 
         ex = main.createExecution(env, TOP);
-        ex.process(Value.of(Names.left, 2, TOP));
-        ex.process(Value.of(Names.right, 1, TOP));
+        ex.accept(Value.of(Names.left, 2, TOP));
+        ex.accept(Value.of(Names.right, 1, TOP));
     }
 
     /* function geo(a) =
@@ -229,7 +229,7 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testSimpleRecursion() {
         F main = f(print(), Names.result).label("main");
         F geo = f(nop, Names.a).label("geo");
-        If iff = iff().label("if");
+        If iff = iff(env).label("if");
 
         main.addPropagation(Names.a, geo);
         geo.addPropagation(Names.a, iff);
@@ -251,14 +251,14 @@ trisum(a,b,c)   trimul(a,b,c)
         sub.addPropagation(Names.left, ping, CONST(1).returnAs(Names.right).label("one"));
         // a + geo(next_a);
         F add = f(addInt(), Names.left, Names.right).label("add");
-        F geoReCall = new FCall(geo).returnAs(Names.right).label("geoCallR");
+        F geoReCall = new FCall(env, geo).returnAs(Names.right).label("geoCallR");
 
         block_else.addPropagation(Names.a, Names.left, add);
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
 
         env.setDelay(0);
-        main.createExecution(env, TOP).process(Value.of(Names.a, 1000, TOP));
+        main.createExecution(env, TOP).accept(Value.of(Names.a, 1000, TOP));
 //        sleep(1000);
 //        env.log("suspending");
 //        env.suspend(true);
@@ -277,7 +277,11 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
     private F CONST(Object i) {
-        return f(new Const(i), ping);
+        return F.f(env, new Const(i), ping);
+    }
+
+    private F f(Atom atom, String... params) {
+        return F.f(env, atom, params);
     }
 
 }

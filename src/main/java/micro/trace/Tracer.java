@@ -1,5 +1,7 @@
 package micro.trace;
 
+import micro.Check;
+import micro.Ex;
 import micro.actor.Message;
 
 import java.io.BufferedWriter;
@@ -68,14 +70,18 @@ public class Tracer implements Closeable, Runnable {
             value = m.value.get().toString();
         }
 
-        return '"' + String.format("%s:", m.value.getSender().template.getLabel()) + value
+        Check.argument(m.value.getSender() instanceof Ex, "uh...");
+
+        return '"' + String.format("%s:", ((Ex) m.value.getSender()).template.getLabel()) + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
     }
 
     private void write(Message m) {
-        String labelSender = m.value.getSender().getLabel();
+        Check.argument(m.value.getSender() instanceof Ex, "uh...");
+
+        String labelSender = ((Ex)m.value.getSender()).getLabel();
         String labelReceiver = m.target.getLabel();
 
         writeLn(String.format("%s -> %s [label=%s];",

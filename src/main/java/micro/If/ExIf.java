@@ -6,10 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static micro.PropagationType.CONDITION;
+
 public class ExIf extends Ex {
     private Boolean condition;
 
-    ExIf(Env env, F template, Ex returnTo) {
+    ExIf(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
     }
 
@@ -61,17 +63,18 @@ public class ExIf extends Ex {
         pendingToPropagate.forEach(p -> {
             pendingPropagations.remove(p);
             Value v = value(p.propagation.template.nameToPropagate, p.value.get());
-            p.propagation.accept(v);
+            p.propagation.propagate(v);
         });
 
     }
 
     private boolean canProcessPendingPropagation(PendingPropagation pendingPropagation) {
-        switch (pendingPropagation.propagation.getPropagationType()) {
+        PropagationType type = pendingPropagation.propagation.getPropagationType();
+
+        Check.invariant(!(type.equals(CONDITION) && condition != null), "condition already set");
+
+        switch (type) {
             case CONDITION:
-                if (condition != null) {
-                    throw new IllegalStateException();
-                }
                 return true;
 
             case ON_TRUE:
@@ -81,7 +84,8 @@ public class ExIf extends Ex {
                 return condition != null && !condition;
 
             default:
-                throw new IllegalStateException();
+                Check.fail("invalid case");
+                return false;
         }
     }
 

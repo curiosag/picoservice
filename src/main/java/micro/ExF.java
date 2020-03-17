@@ -1,21 +1,22 @@
 package micro;
 
-import static micro.atoms.Nop.nop;
-
 public class ExF extends Ex {
     public ExF(Env env, F template, Ex returnTo) {
         super(env, template, returnTo);
     }
 
     ExF(Env env) {
-        super(env, new F(), null);
+        super(env, new F(F.nop), null);
     }
 
     @Override
     public void process(Value v) {
+        Check.invariant(! (template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
+
         registerReceived(v);
 //TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
-        if (template.getAtom() != nop && paramsReceived.size() == template.numParams()) {
+        if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
+
             if (template.getAtom().isSideEffect()) {
                 applySideEffect();
             } else {

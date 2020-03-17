@@ -1,12 +1,13 @@
 package micro.If;
 
+import micro.ExPropagation;
 import micro.Value;
 
 class PendingPropagation {
     final Value value;
-    final ExIfPropagation propagation;
+    final ExPropagation propagation;
 
-    PendingPropagation(Value value, ExIfPropagation propagation) {
+    PendingPropagation(Value value, ExPropagation propagation) {
         this.value = value;
         this.propagation = propagation;
     }

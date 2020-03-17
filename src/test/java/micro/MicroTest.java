@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 
 import static micro.F.f;
 import static micro.If.If.iff;
-import static micro.If.PropagationType.*;
+import static micro.PropagationType.*;
 import static micro.Names.ping;
 import static micro.atoms.AddInt.addInt;
 import static micro.atoms.Eq.eq;

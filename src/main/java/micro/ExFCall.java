@@ -6,7 +6,7 @@ public class ExFCall extends Ex {
     private Ex calledEx;
 
     ExFCall(Env env, FCall fCallTemplate, Ex returnTo) {
-        super(env, new F().label(fCallTemplate.getLabel()), returnTo);
+        super(env, new F(F.nop).label(fCallTemplate.getLabel()), returnTo);
         this.fCallTemplate = fCallTemplate;
     }
 
@@ -24,12 +24,12 @@ public class ExFCall extends Ex {
                 returnTo.accept(new Value(fCallTemplate.returnAs, v.get(), this));
                 break;
             default:
-                calledEx.accept(v.withSender(this));
+                propagate(v);
         }
     }
 
     @Override
     protected void propagate(Value v) {
-
+        calledEx.accept(v.withSender(this));
     }
 }

@@ -8,4 +8,12 @@ public class Check {
         }
         return o;
     }
+
+    public static void invariant(boolean invariant, String msg)
+    {
+        if(! invariant)
+        {
+            throw new IllegalStateException(msg);
+        }
+    }
 }

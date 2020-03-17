@@ -14,14 +14,6 @@ public class ExIf extends Ex {
     }
 
     @Override
-    protected ExPropagation createPropagation(FPropagation t) {
-        if (!(t instanceof IfPropagation)) {
-            throw new IllegalStateException();
-        }
-        return new ExIfPropagation(this, (IfPropagation) t);
-    }
-
-    @Override
     public void process(Value v) {
         registerReceived(v);
 
@@ -52,13 +44,7 @@ public class ExIf extends Ex {
 
     @Override
     protected void propagate(Value v) {
-        getPropagations(v.getName()).forEach(o -> {
-            if (!(o instanceof ExIfPropagation)) {
-                throw new IllegalStateException();
-            }
-            ExIfPropagation p = (ExIfPropagation) o;
-            pendingPropagations.add(new PendingPropagation(v, p));
-        });
+        getPropagations(v.getName()).forEach(p -> pendingPropagations.add(new PendingPropagation(v, p)));
 
         processPendingPropagations();
     }
@@ -81,7 +67,7 @@ public class ExIf extends Ex {
     }
 
     private boolean canProcessPendingPropagation(PendingPropagation pendingPropagation) {
-        switch (pendingPropagation.propagation.propagationType) {
+        switch (pendingPropagation.propagation.getPropagationType()) {
             case CONDITION:
                 if (condition != null) {
                     throw new IllegalStateException();

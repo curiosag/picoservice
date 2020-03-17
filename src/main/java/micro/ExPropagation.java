@@ -9,6 +9,10 @@ public class ExPropagation {
     private final Ex current;
     private Ex target;
 
+    public PropagationType getPropagationType(){
+        return template.propagationType;
+    }
+
     public ExPropagation(Ex current, FPropagation template) {
         this.current = current;
         this.template = template;

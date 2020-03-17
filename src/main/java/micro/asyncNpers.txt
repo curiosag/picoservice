@@ -1,0 +1,17 @@
+transactions:
+
+create propagations
+
+register param
+
+
+propagate -> accept -> ack -> remove propagation
+propagate -> accept -> nack ->
+
+natives: calculate, store result, return
+
+result storage
+
+redo always possible
+
+exids

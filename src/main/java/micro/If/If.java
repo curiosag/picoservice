@@ -6,11 +6,11 @@ import micro.*;
 public class If extends F {
 
     public If() {
-        super(Names.condition, Names.onTrue, Names.onFalse);
+        super(nop, Names.condition, Names.onTrue, Names.onFalse);
     }
 
     public void addPropagation(PropagationType propagationType, String nameExpected, String namePropagated, _F to) {
-        addPropagation(new IfPropagation(propagationType, nameExpected, namePropagated, to));
+        addPropagation(new FPropagation(propagationType, nameExpected, namePropagated, to));
     }
 
     public void addPropagation(PropagationType propagationType, String name, _F to) {

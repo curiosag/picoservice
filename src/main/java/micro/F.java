@@ -1,12 +1,19 @@
 package micro;
 
 import micro.atoms.Atom;
+import micro.atoms.Nop;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 
 public class F implements _F {
+    public static final Atom nop = null;
+    private static long instances;
+
+    private final long instanceId;
+    private long executions;
+
     private String label;
     String returnAs = Names.result;
     private final Atom atom;
@@ -16,14 +23,12 @@ public class F implements _F {
 
     List<String> formalParameters = new ArrayList<>();
 
+
+
     public F(Atom atom, String... formalParams) {
+        instanceId = instances++;
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
-    }
-
-    public F(String... formalParams) {
-        this.atom = null;
-        Collections.addAll(this.formalParameters, formalParams);
     }
 
     int numParams() {
@@ -32,6 +37,14 @@ public class F implements _F {
 
     Atom getAtom() {
         return atom;
+    }
+
+    boolean hasAtom(){
+        return getAtom() != Nop.nop;
+    }
+
+    boolean hasFunctionAtom(){
+        return hasAtom() && ! getAtom().isSideEffect();
     }
 
     F returnAs(String returnAs) {

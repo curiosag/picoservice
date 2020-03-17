@@ -82,7 +82,11 @@
             <artifactId>halodb</artifactId>
             <version>0.5.3</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>5.0.0-RC5</version>
+        </dependency>
         <!--        <dependency>
                     <groupId>com.hootsuite</groupId>
                     <artifactId>akka-persistence-redis_2.12</artifactId>

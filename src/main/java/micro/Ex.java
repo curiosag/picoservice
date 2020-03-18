@@ -77,7 +77,6 @@ public abstract class Ex implements _Ex, KryoSerializable {
         return ps != null ? ps : Collections.emptyList();
     }
 
-
     protected Value value(String name, Object value) {
         return new Value(name, value, this);
     }

@@ -4,6 +4,7 @@ import micro.atoms.Atom;
 import micro.atoms.Nop;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 import static micro.PropagationType.INDISCRIMINATE;
 
@@ -11,7 +12,7 @@ import static micro.PropagationType.INDISCRIMINATE;
 public class F implements _F, Id {
     public static final Atom nop = null;
 
-    private final Env env;
+    private final Supplier<Long> nextPropagationId;
     private long id = -1;
     private String label;
     String returnAs = Names.result;
@@ -22,7 +23,7 @@ public class F implements _F, Id {
     List<String> formalParameters = new ArrayList<>();
 
     public F(Env env, Atom atom, String... formalParams) {
-        this.env = env;
+        this.nextPropagationId = env::nextFPropagationId;
         env.addF(this);
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
@@ -69,7 +70,7 @@ public class F implements _F, Id {
 
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
-        FPropagation p = new FPropagation(env.nextFPropagationId(), type, nameExpected, namePropagated, to);
+        FPropagation p = new FPropagation(nextPropagationId.get(), type, nameExpected, namePropagated, to);
         targetsToPropagations
                 .computeIfAbsent(p.target, k -> new ArrayList<>())
                 .add(p);

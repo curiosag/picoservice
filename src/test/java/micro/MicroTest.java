@@ -203,8 +203,8 @@ trisum(a,b,c)   trimul(a,b,c)
 
         iff.addPropagation(CONDITION, Names.left, gt);
         iff.addPropagation(CONDITION, Names.right, gt);
-        iff.addPropagation(ON_TRUE, Names.left, Names.result, iff);
-        iff.addPropagation(ON_FALSE, Names.right, Names.result, iff);
+        iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
+        iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
         _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.left, 1, TOP));
@@ -234,10 +234,10 @@ trisum(a,b,c)   trimul(a,b,c)
         env.setDelay(1);
 
         _Ex m1 = env.createExecution(main);
-        _Ex m2 = env.createExecution(main);
+      //  _Ex m2 = env.createExecution(main);
 
         m1.accept(Value.of(Names.a, 100, m1.returnTo()));
-        m2.accept(Value.of(Names.a, 100, m1.returnTo()));
+        //  m2.accept(Value.of(Names.a, 100, m1.returnTo()));
 
 //        sleep(1000);
 //        env.log("suspending");
@@ -262,10 +262,10 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(CONDITION, Names.a, Names.left, eq);
         eq.addPropagation(Names.left, ping, CONST(0).returnAs(Names.right).label("zero:eq"));
         // onTrue
-        iff.addPropagation(ON_TRUE, Names.a, ping, CONST(0).label("zero:ontrue"));
+        iff.addPropagation(TRUE_BRANCH, Names.a, ping, CONST(0).label("zero:ontrue"));
         // onFalse
         F block_else = f(nop).label("block_else");
-        iff.addPropagation(ON_FALSE, Names.a, block_else);
+        iff.addPropagation(FALSE_BRANCH, Names.a, block_else);
         // let next_a = a - 1
         String next_a = "next_a";
         F sub = f(subInt(), Names.left, Names.right).returnAs(next_a).label("sub");

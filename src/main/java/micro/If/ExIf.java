@@ -6,10 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static micro.PropagationType.CONDITION;
+import static micro.PropagationType.*;
 
 public class ExIf extends Ex {
     private Boolean condition;
+    private List<ValuePropagation> conditionalPropagations = new ArrayList<>();
 
     public ExIf(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
@@ -25,12 +26,9 @@ public class ExIf extends Ex {
 
         switch (v.getName()) {
             case Names.condition:
-                if (!(v.get() instanceof Boolean)) {
-                    throw new IllegalStateException();
-                }
-
+                Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
                 this.condition = (Boolean) v.get();
-                processPendingPropagations();
+                processConditionalPropagations();
                 break;
 
             case Names.result:
@@ -46,41 +44,41 @@ public class ExIf extends Ex {
         }
     }
 
-    private List<PendingPropagation> pendingPropagations = new ArrayList<>();
-
     @Override
     protected void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p -> pendingPropagations.add(new PendingPropagation(v, p)));
+        getPropagations(v.getName()).forEach(p -> {
+            if (p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH)) {
+                conditionalPropagations.add(new ValuePropagation(v, p));
+            } else {
+                p.propagate(value(p.getNameToPropagate(), v.get()));
+            }
+        });
 
-        processPendingPropagations();
+        processConditionalPropagations();
     }
 
-    private void processPendingPropagations() {
-        List<PendingPropagation> pendingToPropagate = pendingPropagations.stream()
-                .filter(this::canProcessPendingPropagation)
+    private void processConditionalPropagations() {
+        List<ValuePropagation> conditionalToPropagate = conditionalPropagations.stream()
+                .filter(this::canProcessPropagation)
                 .collect(Collectors.toList());
 
-        pendingToPropagate.forEach(p -> {
-            pendingPropagations.remove(p);
+        conditionalToPropagate.forEach(p -> {
+            conditionalPropagations.remove(p);
             Value v = value(p.propagation.getNameToPropagate(), p.value.get());
             p.propagation.propagate(v);
         });
 
     }
 
-    private boolean canProcessPendingPropagation(PendingPropagation pendingPropagation) {
-        PropagationType type = pendingPropagation.propagation.getPropagationType();
-
-        Check.invariant(!(type.equals(CONDITION) && condition != null), "condition already set");
+    private boolean canProcessPropagation(ValuePropagation valuePropagation) {
+        PropagationType type = valuePropagation.propagation.getPropagationType();
 
         switch (type) {
-            case CONDITION:
-                return true;
 
-            case ON_TRUE:
+            case TRUE_BRANCH:
                 return condition != null && condition;
 
-            case ON_FALSE:
+            case FALSE_BRANCH:
                 return condition != null && !condition;
 
             default:

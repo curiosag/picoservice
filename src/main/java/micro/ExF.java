@@ -5,7 +5,7 @@ public class ExF extends Ex {
         super(env, template, returnTo);
     }
 
-    ExF(Env env) {
+    public ExF(Env env) {
         super(env, new F(env, F.nop), null);
     }
 

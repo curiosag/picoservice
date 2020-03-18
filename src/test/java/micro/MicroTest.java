@@ -23,8 +23,8 @@ import static micro.partialapp.FPartialApp.partial;
 public class MicroTest {
 
     private Address address = new Address(new byte[0], 1);
-    private Env env = new Env(3, address);
-    private ExTop TOP = new ExTop(env);
+    private Env env = new Env(1, address);
+
 
 /*
     a   b
@@ -50,6 +50,7 @@ public class MicroTest {
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
 
+        _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.a, 1, TOP));
         ex.accept(Value.of(Names.b, 2, TOP));
@@ -127,6 +128,7 @@ trisum(a,b,c)   trimul(a,b,c)
         add.addPropagation(Names.b, triMul);
         add.addPropagation(Names.c, triMul);
 
+        _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.a, 1, TOP));
         ex.accept(Value.of(Names.c, 3, TOP));
@@ -151,7 +153,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
-
+        _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(ping, null, TOP));
         ex.accept(Value.of(Names.a, 1, TOP));
@@ -167,14 +169,14 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testLetPartial() {
-        _F main = f(print(), Names.result).label("main");
-        _F dec = f(nop, Names.a).label("dec");
+        F main = f(print(), Names.result).label("main");
+        F dec = f(nop, Names.a).label("dec");
         _F sub = partial(f(subInt(), Names.left, Names.right).label("sub"))
                 .withParam(Names.left).resolvedBy(Names.delta);
 
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
-
+        _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.a, 1, TOP));
     }
@@ -203,7 +205,7 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(CONDITION, Names.right, gt);
         iff.addPropagation(ON_TRUE, Names.left, Names.result, iff);
         iff.addPropagation(ON_FALSE, Names.right, Names.result, iff);
-
+        _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
         ex.accept(Value.of(Names.left, 1, TOP));
         ex.accept(Value.of(Names.right, 2, TOP));
@@ -227,6 +229,26 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testSimpleRecursion() {
+        F main = createRecSum();
+
+        env.setDelay(1);
+
+        _Ex m1 = env.createExecution(main);
+        _Ex m2 = env.createExecution(main);
+
+        m1.accept(Value.of(Names.a, 100, m1.returnTo()));
+        m2.accept(Value.of(Names.a, 100, m1.returnTo()));
+
+//        sleep(1000);
+//        env.log("suspending");
+//        env.suspend(true);
+//        sleep(2000);
+//        env.log("resuming");
+//        env.suspend(false);
+        sleep(5000);
+    }
+
+    private F createRecSum() {
         F main = f(print(), Names.result).label("main");
         F geo = f(nop, Names.a).label("geo");
         If iff = iff(env).label("if");
@@ -256,16 +278,7 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(Names.a, Names.left, add);
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
-
-        env.setDelay(0);
-        main.createExecution(env, TOP).accept(Value.of(Names.a, 1000, TOP));
-//        sleep(1000);
-//        env.log("suspending");
-//        env.suspend(true);
-//        sleep(2000);
-//        env.log("resuming");
-//        env.suspend(false);
-        sleep(5000);
+        return main;
     }
 
     private void sleep(int i) {
@@ -283,5 +296,6 @@ trisum(a,b,c)   trimul(a,b,c)
     private F f(Atom atom, String... params) {
         return F.f(env, atom, params);
     }
+
 
 }

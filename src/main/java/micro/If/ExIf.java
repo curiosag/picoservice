@@ -11,8 +11,12 @@ import static micro.PropagationType.CONDITION;
 public class ExIf extends Ex {
     private Boolean condition;
 
-    ExIf(Env env, F template, _Ex returnTo) {
+    public ExIf(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
+    }
+
+    public ExIf(Env env) {
+        super(env);
     }
 
     @Override
@@ -55,10 +59,6 @@ public class ExIf extends Ex {
         List<PendingPropagation> pendingToPropagate = pendingPropagations.stream()
                 .filter(this::canProcessPendingPropagation)
                 .collect(Collectors.toList());
-
-        if (pendingToPropagate.size() > 1) {
-            throw new IllegalStateException();
-        }
 
         pendingToPropagate.forEach(p -> {
             pendingPropagations.remove(p);

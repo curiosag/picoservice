@@ -13,8 +13,4 @@ public class FPropagation {
         this.target = target;
     }
 
-    FPropagation(String nameReceived, String nameToPropagate, _F target) {
-        this(PropagationType.INDISCRIMINATE, nameReceived, nameToPropagate, target);
-    }
-
 }

@@ -1,33 +1,47 @@
 package micro;
 
 import micro.actor.Message;
+import micro.serialization.Serialization;
 import micro.trace.Tracer;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Env implements Runnable, Closeable {
-
+    private final Serialization serialization;
     private final int numThreads;
     private final Queue<Message> messages = new ConcurrentLinkedQueue<>();
     private final Tracer tracer = new Tracer(false);
 
-    private final AtomicLong maxId = new AtomicLong(0);
+    private long maxFId = 0;
+    private final AtomicLong maxExId = new AtomicLong(0);
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean suspend = new AtomicBoolean(false);
 
-    private Map<Long, Id> items = new HashMap<>();
+    private Map<Long, _F> idToF = new HashMap<>();
+    private Map<Long, _Ex> idToX = new HashMap<>();
 
     private final Address address;
 
-    public void enlist(Id i){
-        i.setId(nextId());
-        items.put(i.getId(), i);
+    public _Ex createTop(){
+        return new ExTop(this);
+    }
+
+    void addF(_F f){
+        f.setId(maxFId++);
+        idToF.put(f.getId(), f);
+    }
+
+    void addX(_Ex x){
+        x.setId(nextId());
+        idToX.put(x.getId(), x);
     }
 
     public int getDelay() {
@@ -43,10 +57,11 @@ public class Env implements Runnable, Closeable {
     }
 
     long nextId(){
-        return maxId.getAndIncrement();
+        return maxExId.getAndIncrement();
     }
 
     public Env(int numThreads, Address address) {
+        this.serialization = new Serialization(this);
         this.address = address;
         this.numThreads = numThreads;
         for (int i = 0; i < numThreads; i++) {
@@ -94,7 +109,6 @@ public class Env implements Runnable, Closeable {
         }
     }
 
-
     private void sleep(int millis) {
         if (millis > 0)
             try {
@@ -109,7 +123,19 @@ public class Env implements Runnable, Closeable {
         tracer.close();
     }
 
-    _Ex createExecution(F called, ExFCall returnTo) {
+    _Ex createExecution(_F called, ExFCall returnTo) {
         return called.createExecution(this, returnTo);
+    }
+
+    public _Ex createExecution(_F called) {
+        ExTop top = new ExTop(this); //todo abandoned top possible
+        _Ex result = called.createExecution(this, top);
+
+        return result;
+    }
+
+    public void registerDone(ExPropagation p) {
+
+        p.setDone(true);
     }
 }

@@ -35,7 +35,7 @@ public class Value implements Persistable {
 
     }
 
-    public static Value of(String name, Object value, ExF sender) {
+    public static Value of(String name, Object value, _Ex sender) {
         return new Value(name, value, sender);
     }
 

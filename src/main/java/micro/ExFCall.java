@@ -2,26 +2,31 @@ package micro;
 
 public class ExFCall extends Ex {
 
-    private FCall fCallTemplate;
-    private _Ex toCall;
+    private FCall callTemplate;
+    private _Ex beingCalled;
 
-    ExFCall(Env env, FCall fCallTemplate, _Ex returnTo) {
-        super(env, new F(env, F.nop).label(fCallTemplate.getLabel()), returnTo);
-        this.fCallTemplate = fCallTemplate;
+    ExFCall(Env env, FCall callTemplate, _Ex returnTo) {
+        super(env, new F(env, F.nop).label(callTemplate.getLabel()), returnTo);
+        this.callTemplate = callTemplate;
+    }
+
+    public ExFCall(Env env) {
+        super(env);
     }
 
     @Override
     public void process(Value v) {
         registerReceived(v);
-        if (toCall == null) {
-            toCall = env.createExecution(fCallTemplate.called, this);
+
+        if (beingCalled == null) {
+            beingCalled = env.createExecution(callTemplate.called, this);
         }
         switch (v.getName()) {
             case Names.result:
-                returnTo.accept(new Value(fCallTemplate.returnAs, v.get(), this));
+                returnTo.accept(new Value(callTemplate.returnAs, v.get(), this));
                 break;
             case Names.exception:
-                returnTo.accept(new Value(fCallTemplate.returnAs, v.get(), this));
+                returnTo.accept(new Value(callTemplate.returnAs, v.get(), this));
                 break;
             default:
                 propagate(v);
@@ -30,6 +35,6 @@ public class ExFCall extends Ex {
 
     @Override
     protected void propagate(Value v) {
-        toCall.accept(v.withSender(this));
+        beingCalled.accept(v.withSender(this));
     }
 }

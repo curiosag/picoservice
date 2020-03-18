@@ -1,4 +1,4 @@
-package micro;
+package micro.experiments;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
@@ -7,12 +7,21 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class SomeClass implements KryoSerializable {
     private long l;
+    private long i;
 
-    public SomeClass(){
+    public long getl() {
+        return l;
     }
 
-    public SomeClass(long l) {
+    public void setl(long l) {
         this.l = l;
+    }
+
+    protected SomeClass() {
+    }
+
+    public SomeClass(long i) {
+        this.i = i;
     }
 
     @Override

@@ -1,10 +1,8 @@
 package micro;
 
-public interface _F {
+public interface _F extends Id {
 
-    void addPropagation(String name, _F to);
-
-    void addPropagation(String nameExpected, String namePropagated, _F to);
+    void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to);
 
     _Ex createExecution(Env env, _Ex returnTo);
 }

@@ -24,13 +24,8 @@ public class FPartialApp implements _F {
     }
 
     @Override
-    public void addPropagation(String name, _F to) {
-        inner.addPropagation(name, to);
-    }
-
-    @Override
-    public void addPropagation(String nameExpected, String namePropagated, _F to) {
-        inner.addPropagation(nameExpected, namePropagated, to);
+    public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
+        inner.addPropagation(type, nameExpected, namePropagated, to);
     }
 
     @Override
@@ -42,5 +37,15 @@ public class FPartialApp implements _F {
 
     public static FPartialApp partial(F inner) {
         return new FPartialApp(inner);
+    }
+
+    @Override
+    public long getId() {
+        return 0;
+    }
+
+    @Override
+    public void setId(long value) {
+
     }
 }

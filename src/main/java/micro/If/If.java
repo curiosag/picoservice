@@ -9,10 +9,6 @@ public class If extends F {
         super(env, nop, Names.condition, Names.onTrue, Names.onFalse);
     }
 
-    public void addPropagation(PropagationType propagationType, String nameExpected, String namePropagated, _F to) {
-        addPropagation(new FPropagation(propagationType, nameExpected, namePropagated, to));
-    }
-
     public void addPropagation(PropagationType propagationType, String name, _F to) {
         addPropagation(propagationType, name, name, to);
     }
@@ -21,12 +17,6 @@ public class If extends F {
     public void addPropagation(String name, _F to) {
         throw new IllegalStateException();
     }
-
-    @Override
-    public void addPropagation(String nameExpected, String namePropagated, _F to) {
-        throw new IllegalStateException();
-    }
-
 
     @Override
     public If label(String label) {

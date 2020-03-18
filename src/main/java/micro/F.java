@@ -4,7 +4,8 @@ import micro.atoms.Atom;
 import micro.atoms.Nop;
 
 import java.util.*;
-import java.util.stream.Collectors;
+
+import static micro.PropagationType.INDISCRIMINATE;
 
 
 public class F implements _F, Id {
@@ -15,13 +16,13 @@ public class F implements _F, Id {
     String returnAs = Names.result;
     private final Atom atom;
 
-    private Map<String, List<FPropagation>> propagations = new TreeMap<>();
-    private Map<_F, List<FPropagation>> functionsToPropagations;
+    private Map<String, List<FPropagation>> paramNamesToPropagations = new TreeMap<>();
+    private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();
 
     List<String> formalParameters = new ArrayList<>();
 
     public F(Env env, Atom atom, String... formalParams) {
-        env.enlist(this);
+        env.addF(this);
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
     }
@@ -44,12 +45,12 @@ public class F implements _F, Id {
         return atom;
     }
 
-    boolean hasAtom(){
+    boolean hasAtom() {
         return getAtom() != Nop.nop;
     }
 
-    boolean hasFunctionAtom(){
-        return hasAtom() && ! getAtom().isSideEffect();
+    boolean hasFunctionAtom() {
+        return hasAtom() && !getAtom().isSideEffect();
     }
 
     F returnAs(String returnAs) {
@@ -57,27 +58,20 @@ public class F implements _F, Id {
         return this;
     }
 
-    @Override
     public void addPropagation(String name, _F to) {
-        addPropagation(name, name, to);
+        addPropagation(INDISCRIMINATE, name, name, to);
+    }
+
+    void addPropagation(String nameExpected, String namePropagated, _F to) {
+        addPropagation(INDISCRIMINATE, nameExpected, namePropagated, to);
     }
 
     @Override
-    public void addPropagation(String nameExpected, String namePropagated, _F to) {
-        addPropagation(new FPropagation(nameExpected, namePropagated, to));
-    }
+    public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
+        FPropagation p = new FPropagation(type, nameExpected, namePropagated, to);
 
-    protected void addPropagation(FPropagation p){
-        assertNoAccessHappened();
-        getPropagations()
-                .computeIfAbsent(p.nameReceived, k -> new ArrayList<>())
-                .add(p);
-    }
-
-    private void assertNoAccessHappened() {
-        if (functionsToPropagations != null) {
-            throw new IllegalStateException();
-        }
+        paramNamesToPropagations.computeIfAbsent(p.nameReceived, k -> new ArrayList<>()).add(p);
+        targetsToPropagations.computeIfAbsent(to, k -> new ArrayList<>()).add(p);
     }
 
     @Override
@@ -94,30 +88,36 @@ public class F implements _F, Id {
         return this;
     }
 
-    private Map<String, List<FPropagation>> getPropagations() {
-        return propagations;
+    private Map<String, List<FPropagation>> getParamNamesToPropagations() {
+        return paramNamesToPropagations;
     }
 
     Map<_F, List<FPropagation>> getTargetFunctionsToPropagations() {
-        if (functionsToPropagations == null) {
-            functionsToPropagations = propagations.values().stream()
-                    .flatMap(Collection::stream)
-                    .distinct()
-                    .collect(Collectors.groupingBy(i -> i.target));
-        }
-        return functionsToPropagations;
+        return targetsToPropagations;
     }
 
     @Override
     public String toString() {
-        return  label != null ? label : "no name";
+        return label != null ? label : "no name";
     }
 
     public static F f(Env env, Atom atom, String... params) {
-        if(atom == null)
-        {
+        if (atom == null) {
             throw new IllegalArgumentException();
         }
         return new F(env, atom, params);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        F f = (F) o;
+        return id == f.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

@@ -1,36 +1,48 @@
 package micro;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoSerializable;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class Ex implements _Ex {
+public abstract class Ex implements _Ex, KryoSerializable {
     final Env env;
-
     private long id = -1;
-    public final F template;
-    protected final _Ex returnTo;
+    public F template;
+    protected _Ex returnTo;
 
     private final HashMap<String, List<ExPropagation>> propagationsByParamName = new HashMap<>();
     private final List<ExPropagation> propagations = new ArrayList<>();
 
     final Map<String, Value> paramsReceived = new HashMap<>();
 
-    public Ex(Env env, F template, _Ex returnTo) {
+    public Ex(Env env) {
         this.env = env;
-        env.enlist(this);
+    }
 
+    public Ex(Env env, F template, _Ex returnTo) {
+        this(env);
         this.returnTo = returnTo;
         this.template = template;
         createExPropagations(template);
+        env.addX(this);
     }
 
     @Override
-    public void accept(Value v){
+    public _Ex returnTo() {
+        return returnTo;
+    }
+
+    @Override
+    public void accept(Value v) {
         env.enq(v, this);
     }
 
     @Override
-    public Address getAddress(){
+    public Address getAddress() {
         return env.getAddress();
     }
 
@@ -62,17 +74,17 @@ public abstract class Ex implements _Ex {
                 });
     }
 
-    public String getLabel(){
+    public String getLabel() {
         return template.getLabel();
     }
 
     private ExPropagation createPropagation(FPropagation t) {
-        return new ExPropagation(this, t);
+        return new ExPropagation(env, this, t);
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
         List<ExPropagation> ps = propagationsByParamName.get(paramName);
-        return ps == null ? Collections.emptyList(): ps.stream().filter(p -> !p.isDone()).collect(Collectors.toList());
+        return ps == null ? Collections.emptyList() : ps.stream().filter(p -> !p.isDone()).collect(Collectors.toList());
     }
 
     @Override
@@ -92,5 +104,28 @@ public abstract class Ex implements _Ex {
     @Override
     public void setId(long value) {
         id = checkSetValue(value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return id == ((Ex) o).id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public void write(Kryo kryo, Output output) {
+        output.writeVarLong(template.getId(), true);
+        output.writeVarLong(id, true);
+    }
+
+    @Override
+    public void read(Kryo kryo, Input input) {
+
     }
 }

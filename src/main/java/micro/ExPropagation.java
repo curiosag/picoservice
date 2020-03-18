@@ -3,36 +3,39 @@ package micro;
 import java.util.List;
 
 public class ExPropagation {
+    private final Env env;
     private List<ExPropagation> havingSameTarget;
 
     private boolean done;
     public final FPropagation template;
-    private final Ex current;
-    private _Ex target;
+    private final Ex from;
+    private _Ex to;
 
     public PropagationType getPropagationType(){
         return template.propagationType;
     }
 
-    ExPropagation(Ex current, FPropagation template) {
-        this.current = current;
+    ExPropagation(Env env, Ex from, FPropagation template) {
+        this.env = env;
+        this.from = from;
         this.template = template;
     }
 
-    public void setTarget(_Ex target) {
-        this.target = target;
+    public void setTo(_Ex to) {
+        this.to = to;
     }
 
-    public _Ex getTarget() {
-        return target;
+    public _Ex getTo() {
+        return to;
     }
 
     public void propagate(Value v) {
-        if (target == null) {
-            target = template.target.createExecution(current.env, current);
-            havingSameTarget.forEach(t -> t.setTarget(target));
+        if (to == null) {
+            to = template.target.createExecution(from.env, from);
+            havingSameTarget.forEach(t -> t.setTo(to));
         }
-        target.accept(v);
+        to.accept(v);
+        env.registerDone(this);
     }
 
     void setHavingSameTarget(List<ExPropagation> havingSameTarget) {

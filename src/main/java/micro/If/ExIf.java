@@ -62,7 +62,7 @@ public class ExIf extends Ex {
 
         pendingToPropagate.forEach(p -> {
             pendingPropagations.remove(p);
-            Value v = value(p.propagation.template.nameToPropagate, p.value.get());
+            Value v = value(p.propagation.getNameToPropagate(), p.value.get());
             p.propagation.propagate(v);
         });
 

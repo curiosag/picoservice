@@ -21,6 +21,7 @@ public class Env implements Runnable, Closeable {
     private final Tracer tracer = new Tracer(false);
 
     private long maxFId = 0;
+    private long maxPropagationId = 0;
     private final AtomicLong maxExId = new AtomicLong(0);
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean suspend = new AtomicBoolean(false);
@@ -34,13 +35,17 @@ public class Env implements Runnable, Closeable {
         return new ExTop(this);
     }
 
+    public long nextFPropagationId(){
+        return maxPropagationId++;
+    }
+
     void addF(_F f){
         f.setId(maxFId++);
         idToF.put(f.getId(), f);
     }
 
     void addX(_Ex x){
-        x.setId(nextId());
+        x.setId(maxExId.getAndIncrement());
         idToX.put(x.getId(), x);
     }
 
@@ -56,9 +61,6 @@ public class Env implements Runnable, Closeable {
         this.suspend.set(suspend);
     }
 
-    long nextId(){
-        return maxExId.getAndIncrement();
-    }
 
     public Env(int numThreads, Address address) {
         this.serialization = new Serialization(this);
@@ -136,6 +138,6 @@ public class Env implements Runnable, Closeable {
 
     public void registerDone(ExPropagation p) {
 
-        p.setDone(true);
+
     }
 }

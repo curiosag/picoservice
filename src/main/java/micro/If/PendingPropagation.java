@@ -11,4 +11,5 @@ class PendingPropagation {
         this.value = value;
         this.propagation = propagation;
     }
+
 }

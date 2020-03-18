@@ -11,17 +11,18 @@ import static micro.PropagationType.INDISCRIMINATE;
 public class F implements _F, Id {
     public static final Atom nop = null;
 
+    private final Env env;
     private long id = -1;
     private String label;
     String returnAs = Names.result;
     private final Atom atom;
 
-    private Map<String, List<FPropagation>> paramNamesToPropagations = new TreeMap<>();
     private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();
 
     List<String> formalParameters = new ArrayList<>();
 
     public F(Env env, Atom atom, String... formalParams) {
+        this.env = env;
         env.addF(this);
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
@@ -34,7 +35,7 @@ public class F implements _F, Id {
 
     @Override
     public void setId(long value) {
-        id = checkSetValue(value);
+        id = checkSetIdValue(value);
     }
 
     int numParams() {
@@ -68,10 +69,10 @@ public class F implements _F, Id {
 
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
-        FPropagation p = new FPropagation(type, nameExpected, namePropagated, to);
-
-        paramNamesToPropagations.computeIfAbsent(p.nameReceived, k -> new ArrayList<>()).add(p);
-        targetsToPropagations.computeIfAbsent(to, k -> new ArrayList<>()).add(p);
+        FPropagation p = new FPropagation(env.nextFPropagationId(), type, nameExpected, namePropagated, to);
+        targetsToPropagations
+                .computeIfAbsent(p.target, k -> new ArrayList<>())
+                .add(p);
     }
 
     @Override
@@ -86,10 +87,6 @@ public class F implements _F, Id {
     public F label(String label) {
         this.label = label;
         return this;
-    }
-
-    private Map<String, List<FPropagation>> getParamNamesToPropagations() {
-        return paramNamesToPropagations;
     }
 
     Map<_F, List<FPropagation>> getTargetFunctionsToPropagations() {

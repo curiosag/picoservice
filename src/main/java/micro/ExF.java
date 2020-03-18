@@ -35,7 +35,7 @@ public class ExF extends Ex {
 
     @Override
     protected void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p -> p.propagate(value(p.template.nameToPropagate, v.get())));
+        getPropagations(v.getName()).forEach(p -> p.propagate(value(p.getNameToPropagate(), v.get())));
     }
 
     private void applySideEffect() {

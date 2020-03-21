@@ -16,25 +16,19 @@ public class ExFCall extends Ex {
 
     @Override
     public void process(Value v) {
-        registerReceived(v);
-
         if (beingCalled == null) {
             beingCalled = env.createExecution(callTemplate.called, this);
         }
         switch (v.getName()) {
             case Names.result:
-                returnTo.accept(new Value(callTemplate.returnAs, v.get(), this));
+                returnTo.receive(new Value(callTemplate.returnAs, v.get(), this));
                 break;
             case Names.exception:
-                returnTo.accept(new Value(callTemplate.returnAs, v.get(), this));
+                returnTo.receive(new Value(callTemplate.returnAs, v.get(), this));
                 break;
             default:
-                propagate(v);
+                beingCalled.receive(v.withSender(this));
         }
     }
 
-    @Override
-    protected void propagate(Value v) {
-        beingCalled.accept(v.withSender(this));
-    }
 }

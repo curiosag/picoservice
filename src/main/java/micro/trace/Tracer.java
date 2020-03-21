@@ -2,7 +2,7 @@ package micro.trace;
 
 import micro.Check;
 import micro.Ex;
-import micro.actor.Message;
+import micro.exevent.ValueEvent;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -20,7 +20,7 @@ public class Tracer implements Closeable, Runnable {
 
     private boolean active;
     private BufferedWriter writer;
-    private Queue<Message> messages = new ConcurrentLinkedQueue<>();
+    private Queue<ValueEvent> events = new ConcurrentLinkedQueue<>();
     private AtomicBoolean terminate = new AtomicBoolean(false);
 
     private void setTrace(boolean active) {
@@ -62,7 +62,7 @@ public class Tracer implements Closeable, Runnable {
         }
     }
 
-    private String payload(Message m) {
+    private String payload(ValueEvent m) {
         String value;
         if (m.value.get() == null) {
             value = "NULL";
@@ -78,18 +78,18 @@ public class Tracer implements Closeable, Runnable {
                 + '"';
     }
 
-    private void write(Message m) {
+    private void write(ValueEvent m) {
         Check.argument(m.value.getSender() instanceof Ex, "uh...");
 
         String labelSender = ((Ex)m.value.getSender()).getLabel();
-        String labelReceiver = m.target.getLabel();
+        String labelReceiver = "";//m.target.getLabel();
 
         writeLn(String.format("%s -> %s [label=%s];",
                 labelSender, labelReceiver, payload(m)));
     }
 
-    public void trace(Message m) {
-        messages.add(m);
+    public void trace(ValueEvent m) {
+        events.add(m);
     }
 
     private BufferedWriter createWriter() {
@@ -121,7 +121,7 @@ public class Tracer implements Closeable, Runnable {
     @Override
     public void run() {
         while (!terminate.get()) {
-            Message m = messages.poll();
+            ValueEvent m = events.poll();
             if (m != null) {
                 write(m);
             } else {

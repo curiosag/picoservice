@@ -12,7 +12,7 @@ public class ExIf extends Ex {
     private Boolean condition;
     private List<ValuePropagation> conditionalPropagations = new ArrayList<>();
 
-    public ExIf(Env env, F template, _Ex returnTo) {
+    ExIf(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
     }
 
@@ -22,8 +22,6 @@ public class ExIf extends Ex {
 
     @Override
     public void process(Value v) {
-        registerReceived(v);
-
         switch (v.getName()) {
             case Names.condition:
                 Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
@@ -32,11 +30,11 @@ public class ExIf extends Ex {
                 break;
 
             case Names.result:
-                returnTo.accept(v.withSender(this));
+                returnTo.receive(v.withSender(this));
                 break;
 
             case Names.exception:
-                returnTo.accept(v.withSender(this));
+                returnTo.receive(v.withSender(this));
                 break;
 
             default:
@@ -44,8 +42,7 @@ public class ExIf extends Ex {
         }
     }
 
-    @Override
-    protected void propagate(Value v) {
+    private void propagate(Value v) {
         getPropagations(v.getName()).forEach(p -> {
             if (p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH)) {
                 conditionalPropagations.add(new ValuePropagation(v, p));

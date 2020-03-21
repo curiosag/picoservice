@@ -13,7 +13,6 @@ public class ExF extends Ex {
     public void process(Value v) {
         Check.invariant(! (template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
-        registerReceived(v);
 //TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
 
@@ -25,16 +24,15 @@ public class ExF extends Ex {
         }
 
         if (Names.result.equals(v.getName())) {
-            returnTo.accept(value(template.returnAs, v.get()));
+            returnTo.receive(value(template.returnAs, v.get()));
         } else if (Names.exception.equals(v.getName())) {
-            returnTo.accept(v.withSender(this));
+            returnTo.receive(v.withSender(this));
         } else {
             propagate(v);
         }
     }
 
-    @Override
-    protected void propagate(Value v) {
+    private void propagate(Value v) {
         getPropagations(v.getName()).forEach(p -> p.propagate(value(p.getNameToPropagate(), v.get())));
     }
 
@@ -49,9 +47,9 @@ public class ExF extends Ex {
     private void applyFunction() {
         try {
             Object value = template.getAtom().execute(paramsReceived);
-            returnTo.accept(value(template.returnAs, value));
+            returnTo.receive(value(template.returnAs, value));
         } catch (Exception e) {
-            returnTo.accept(value(Names.exception, e));
+            returnTo.receive(value(Names.exception, e));
         }
     }
 

@@ -52,8 +52,8 @@ public class MicroTest {
 
         _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.a, 1, TOP));
-        ex.accept(Value.of(Names.b, 2, TOP));
+        ex.receive(Value.of(Names.a, 1, TOP));
+        ex.receive(Value.of(Names.b, 2, TOP));
     }
 
     /*
@@ -130,9 +130,9 @@ trisum(a,b,c)   trimul(a,b,c)
 
         _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.a, 1, TOP));
-        ex.accept(Value.of(Names.c, 3, TOP));
-        ex.accept(Value.of(Names.b, 2, TOP));
+        ex.receive(Value.of(Names.a, 1, TOP));
+        ex.receive(Value.of(Names.c, 3, TOP));
+        ex.receive(Value.of(Names.b, 2, TOP));
     }
 
     /*
@@ -155,8 +155,8 @@ trisum(a,b,c)   trimul(a,b,c)
         dec.addPropagation(Names.a, Names.left, sub);
         _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(ping, null, TOP));
-        ex.accept(Value.of(Names.a, 1, TOP));
+        ex.receive(Value.of(ping, null, TOP));
+        ex.receive(Value.of(Names.a, 1, TOP));
     }
 
     /*
@@ -178,7 +178,7 @@ trisum(a,b,c)   trimul(a,b,c)
         dec.addPropagation(Names.a, Names.left, sub);
         _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.a, 1, TOP));
+        ex.receive(Value.of(Names.a, 1, TOP));
     }
 
     /* function max(left,right) = if (left > right)
@@ -207,12 +207,12 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
         _Ex TOP = env.createTop();
         _Ex ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.left, 1, TOP));
-        ex.accept(Value.of(Names.right, 2, TOP));
+        ex.receive(Value.of(Names.left, 1, TOP));
+        ex.receive(Value.of(Names.right, 2, TOP));
 
         ex = main.createExecution(env, TOP);
-        ex.accept(Value.of(Names.left, 2, TOP));
-        ex.accept(Value.of(Names.right, 1, TOP));
+        ex.receive(Value.of(Names.left, 2, TOP));
+        ex.receive(Value.of(Names.right, 1, TOP));
     }
 
     /* function geo(a) =
@@ -236,8 +236,8 @@ trisum(a,b,c)   trimul(a,b,c)
         _Ex m1 = env.createExecution(main);
       //  _Ex m2 = env.createExecution(main);
 
-        m1.accept(Value.of(Names.a, 100, m1.returnTo()));
-        //  m2.accept(Value.of(Names.a, 100, m1.returnTo()));
+        m1.receive(Value.of(Names.a, 100, m1.returnTo()));
+        //  m2.receive(Value.of(Names.a, 100, m1.returnTo()));
 
 //        sleep(1000);
 //        env.log("suspending");

@@ -1,23 +1,24 @@
 package micro;
 
-import micro.actor.Message;
+import micro.exevent.ExEvent;
+import micro.exevent.ValueReceivedEvent;
 import micro.serialization.Serialization;
 import micro.trace.Tracer;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class Env implements Runnable, Closeable {
+public class Env implements Closeable {
     private final Serialization serialization;
     private final int numThreads;
-    private final Queue<Message> messages = new ConcurrentLinkedQueue<>();
+
     private final Tracer tracer = new Tracer(false);
 
     private long maxFId = 0;
@@ -25,26 +26,27 @@ public class Env implements Runnable, Closeable {
     private final AtomicLong maxExId = new AtomicLong(0);
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean suspend = new AtomicBoolean(false);
+    public final Queue<ExEvent> events = new ArrayDeque<>();
 
     private Map<Long, _F> idToF = new HashMap<>();
     private Map<Long, _Ex> idToX = new HashMap<>();
 
     private final Address address;
 
-    public _Ex createTop(){
+    public _Ex createTop() {
         return new ExTop(this);
     }
 
-    public long nextFPropagationId(){
+    public long nextFPropagationId() {
         return maxPropagationId++;
     }
 
-    void addF(_F f){
+    void addF(_F f) {
         f.setId(maxFId++);
         idToF.put(f.getId(), f);
     }
 
-    void addX(_Ex x){
+    void addX(_Ex x) {
         x.setId(maxExId.getAndIncrement());
         idToX.put(x.getId(), x);
     }
@@ -67,7 +69,7 @@ public class Env implements Runnable, Closeable {
         this.address = address;
         this.numThreads = numThreads;
         for (int i = 0; i < numThreads; i++) {
-            new Thread(this).start();
+            new Thread(this::processEvents).start();
         }
     }
 
@@ -83,18 +85,17 @@ public class Env implements Runnable, Closeable {
         System.out.println(Thread.currentThread().getId() + " " + msg);
     }
 
-    public void enq(Value v, Ex target) {
-        Message m = new Message(v, target);
-        tracer.trace(m);
-        if (numThreads > 0) {
-            messages.add(m);
-        } else {
-            target.process(v);
+    public void noteEvent(ExEvent e) {
+        // persist e
+        if(e instanceof ValueReceivedEvent)
+        {
+            ValueReceivedEvent v = (ValueReceivedEvent)e;
+            log(v.getEx().getLabel() + " " + v.value.getName() + " " + v.value.get().toString());
         }
+        events.add(e);
     }
 
-    @Override
-    public void run() {
+    private void processEvents() {
 
         while (true) {
             if (suspend.get()) {
@@ -102,9 +103,9 @@ public class Env implements Runnable, Closeable {
                 continue;
             }
             sleep(delay.get());
-            Message m = messages.poll();
-            if (m != null) {
-                m.target.process(m.value);
+            ExEvent e = events.poll();
+            if (e != null) {
+                e.perform();
             } else {
                 sleep(100);
             }
@@ -136,8 +137,4 @@ public class Env implements Runnable, Closeable {
         return result;
     }
 
-    public void registerDone(ExPropagation p) {
-
-
-    }
 }

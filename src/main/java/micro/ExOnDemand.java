@@ -23,8 +23,8 @@ public class ExOnDemand implements _Ex {
     }
 
     @Override
-    public void accept(Value v) {
-        getEx().accept(v);
+    public void receive(Value v) {
+        getEx().receive(v);
     }
 
     @Override

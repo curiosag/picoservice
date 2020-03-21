@@ -27,7 +27,7 @@ public class ExPropagation {
     }
 
     public void propagate(Value v) {
-        to.accept(v);
+        to.receive(v);
     }
 
 }

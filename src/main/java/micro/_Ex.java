@@ -4,7 +4,7 @@ public interface _Ex extends Id {
 
     _Ex returnTo();
 
-    void accept(Value v);
+    void receive(Value v);
 
     Address getAddress();
 

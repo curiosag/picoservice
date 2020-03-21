@@ -4,6 +4,9 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import micro.exevent.ExEvent;
+import micro.exevent.ValueReceivedEvent;
+import micro.exevent.ValueProcessedEvent;
 
 import java.util.*;
 
@@ -13,8 +16,10 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public F template;
     protected _Ex returnTo;
 
+
     private final HashMap<String, List<ExPropagation>> propagationsByParamName = new HashMap<>();
 
+    private final HashSet<String> valuesProcessed = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
     public Ex(Env env) {
@@ -35,25 +40,68 @@ public abstract class Ex implements _Ex, KryoSerializable {
     }
 
     @Override
-    public void accept(Value v) {
-        env.enq(v, this);
-    }
-
-    @Override
     public Address getAddress() {
         return env.getAddress();
     }
 
-    public abstract void process(Value v);
+    @Override
+    public void receive(Value v) {
+        raise(new ValueReceivedEvent(this, v));
+    }
 
-    protected abstract void propagate(Value v);
+    public void raise(ExEvent e) {
+        env.noteEvent(e);
+    }
 
-    protected void registerReceived(Value v) {
-        env.debug(v.getSender() + " -> " + this + " " + v.toString());
-        if (template.formalParameters.contains(v.getName())) {
-            paramsReceived.put(v.getName(), v);
+    public void handle(ExEvent e){
+        if(e instanceof ValueReceivedEvent)
+        {
+            ValueReceivedEvent va = (ValueReceivedEvent) e;
+            Value v = va.value;
+
+            alterStateFor(va);
+            if (!valuesProcessed.contains(v.getName())) {
+                process(v);
+                raise(new ValueProcessedEvent(this, v.getName()));
+            }
+            return;
+        }
+        if(e instanceof ValueProcessedEvent)
+        {
+            alterStateFor((ValueProcessedEvent) e);
+            return;
+        }
+        Check.fail("unhandled event " + e.toString());
+    }
+
+    private void recover(ExEvent e){
+        if(e instanceof ValueReceivedEvent)
+        {
+            alterStateFor((ValueReceivedEvent) e);
+            return;
+        }
+        if(e instanceof ValueProcessedEvent)
+        {
+            alterStateFor((ValueProcessedEvent) e);
+            return;
+        }
+        Check.fail("unhandled event " + e.toString());
+    }
+
+    private void alterStateFor(ValueReceivedEvent va) {
+        Value v = va.value;
+        if (!valuesProcessed.contains(v.getName())) {
+            if (template.formalParameters.contains(v.getName())) {
+                paramsReceived.put(v.getName(), v);
+            }
         }
     }
+
+    private void alterStateFor(ValueProcessedEvent v) {
+        valuesProcessed.add(v.valueName);
+    }
+
+    protected abstract void process(Value v);
 
     private void createExPropagations(F template) {
         template.getTargetFunctionsToPropagations().forEach(

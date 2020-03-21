@@ -1,12 +1,14 @@
 package micro.If;
 
 import micro.*;
+import micro.exevent.PropagateValueEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static micro.PropagationType.*;
+import static micro.PropagationType.FALSE_BRANCH;
+import static micro.PropagationType.TRUE_BRANCH;
 
 public class ExIf extends Ex {
     private Boolean condition;
@@ -38,7 +40,7 @@ public class ExIf extends Ex {
             if (p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH)) {
                 conditionalPropagations.add(new ValuePropagation(v, p));
             } else {
-                p.propagate(value(p.getNameToPropagate(), v.get()));
+                raise(new PropagateValueEvent(this, p.getTo(), value(p.getNameToPropagate(), v.get())));
             }
         });
 
@@ -50,12 +52,11 @@ public class ExIf extends Ex {
                 .filter(this::canProcessPropagation)
                 .collect(Collectors.toList());
 
-        conditionalToPropagate.forEach(p -> {
-            conditionalPropagations.remove(p);
-            Value v = value(p.propagation.getNameToPropagate(), p.value.get());
-            p.propagation.propagate(v);
-        });
+        conditionalPropagations.removeAll(conditionalToPropagate);
 
+        conditionalToPropagate.forEach(p ->
+                raise(new PropagateValueEvent(this, p.propagation.getTo(),
+                        value(p.propagation.getNameToPropagate(), p.value.get()))));
     }
 
     private boolean canProcessPropagation(ValuePropagation valuePropagation) {

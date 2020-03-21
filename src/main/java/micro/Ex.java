@@ -4,9 +4,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.exevent.ExEvent;
-import micro.exevent.ValueReceivedEvent;
-import micro.exevent.ValueProcessedEvent;
+import micro.exevent.*;
 
 import java.util.*;
 
@@ -15,7 +13,6 @@ public abstract class Ex implements _Ex, KryoSerializable {
     private long id = -1;
     public F template;
     protected _Ex returnTo;
-
 
     private final HashMap<String, List<ExPropagation>> propagationsByParamName = new HashMap<>();
 
@@ -56,20 +53,23 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public void handle(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent va = (ValueReceivedEvent) e;
-            Value v = va.value;
-
             alterStateFor(va);
-            processValueReceived(v);
+            processValueReceived(va.value);
             return;
         }
         if (e instanceof ValueProcessedEvent) {
             alterStateFor((ValueProcessedEvent) e);
             return;
         }
+        if (e instanceof PropagateValueEvent) {
+            PropagateValueEvent p = (PropagateValueEvent) e;
+            p.to.receive(p.value);
+            return;
+        }
         Check.fail("unhandled event " + e.toString());
     }
 
-    String getReturnValueName() {
+    String getNameForReturnValue() {
         return template.returnAs;
     }
 
@@ -78,7 +78,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
             switch (v.getName()) {
                 case Names.result:
-                    returnTo.receive(new Value(getReturnValueName(), v.get(), this));
+                    returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
                     break;
 
                 case Names.exception:

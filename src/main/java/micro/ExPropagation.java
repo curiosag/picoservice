@@ -26,8 +26,4 @@ public class ExPropagation {
         return to;
     }
 
-    public void propagate(Value v) {
-        to.receive(v);
-    }
-
 }

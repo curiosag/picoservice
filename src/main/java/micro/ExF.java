@@ -1,5 +1,7 @@
 package micro;
 
+import micro.exevent.PropagateValueEvent;
+
 public class ExF extends Ex {
     public ExF(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
@@ -28,7 +30,8 @@ public class ExF extends Ex {
     }
 
     private void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p -> p.propagate(value(p.getNameToPropagate(), v.get())));
+        getPropagations(v.getName()).forEach(p ->
+                raise(new PropagateValueEvent(this, p.getTo(), value(p.getNameToPropagate(), v.get()))));
     }
 
     private void applySideEffect() {

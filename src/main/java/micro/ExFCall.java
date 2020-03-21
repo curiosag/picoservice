@@ -14,21 +14,18 @@ public class ExFCall extends Ex {
         super(env);
     }
 
+    String getReturnValueName() {
+        return callTemplate.returnAs;
+    }
+
     @Override
     public void process(Value v) {
+        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
+
         if (beingCalled == null) {
             beingCalled = env.createExecution(callTemplate.called, this);
         }
-        switch (v.getName()) {
-            case Names.result:
-                returnTo.receive(new Value(callTemplate.returnAs, v.get(), this));
-                break;
-            case Names.exception:
-                returnTo.receive(new Value(callTemplate.returnAs, v.get(), this));
-                break;
-            default:
-                beingCalled.receive(v.withSender(this));
-        }
+        beingCalled.receive(v.withSender(this));
     }
 
 }

@@ -53,35 +53,51 @@ public abstract class Ex implements _Ex, KryoSerializable {
         env.noteEvent(e);
     }
 
-    public void handle(ExEvent e){
-        if(e instanceof ValueReceivedEvent)
-        {
+    public void handle(ExEvent e) {
+        if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent va = (ValueReceivedEvent) e;
             Value v = va.value;
 
             alterStateFor(va);
-            if (!valuesProcessed.contains(v.getName())) {
-                process(v);
-                raise(new ValueProcessedEvent(this, v.getName()));
-            }
+            processValueReceived(v);
             return;
         }
-        if(e instanceof ValueProcessedEvent)
-        {
+        if (e instanceof ValueProcessedEvent) {
             alterStateFor((ValueProcessedEvent) e);
             return;
         }
         Check.fail("unhandled event " + e.toString());
     }
 
-    private void recover(ExEvent e){
-        if(e instanceof ValueReceivedEvent)
-        {
+    String getReturnValueName() {
+        return template.returnAs;
+    }
+
+    private void processValueReceived(Value v) {
+        if (!valuesProcessed.contains(v.getName())) {
+
+            switch (v.getName()) {
+                case Names.result:
+                    returnTo.receive(new Value(getReturnValueName(), v.get(), this));
+                    break;
+
+                case Names.exception:
+                    returnTo.receive(v.withSender(this));
+                    break;
+
+                default:
+                    process(v);
+            }
+            raise(new ValueProcessedEvent(this, v.getName()));
+        }
+    }
+
+    private void recover(ExEvent e) {
+        if (e instanceof ValueReceivedEvent) {
             alterStateFor((ValueReceivedEvent) e);
             return;
         }
-        if(e instanceof ValueProcessedEvent)
-        {
+        if (e instanceof ValueProcessedEvent) {
             alterStateFor((ValueProcessedEvent) e);
             return;
         }

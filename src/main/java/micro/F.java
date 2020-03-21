@@ -15,7 +15,7 @@ public class F implements _F, Id {
     private final Supplier<Long> nextPropagationId;
     private long id = -1;
     private String label;
-    String returnAs = Names.result;
+    public String returnAs = Names.result;
     private final Atom atom;
 
     private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();

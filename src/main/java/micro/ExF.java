@@ -11,9 +11,12 @@ public class ExF extends Ex {
 
     @Override
     public void process(Value v) {
-        Check.invariant(! (template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
+        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
+        Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
-//TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
+        propagate(v);
+
+        //TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
 
             if (template.getAtom().isSideEffect()) {
@@ -21,14 +24,6 @@ public class ExF extends Ex {
             } else {
                 applyFunction();
             }
-        }
-
-        if (Names.result.equals(v.getName())) {
-            returnTo.receive(value(template.returnAs, v.get()));
-        } else if (Names.exception.equals(v.getName())) {
-            returnTo.receive(v.withSender(this));
-        } else {
-            propagate(v);
         }
     }
 

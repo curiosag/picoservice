@@ -22,23 +22,14 @@ public class ExIf extends Ex {
 
     @Override
     public void process(Value v) {
-        switch (v.getName()) {
-            case Names.condition:
-                Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
-                this.condition = (Boolean) v.get();
-                processConditionalPropagations();
-                break;
+        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
 
-            case Names.result:
-                returnTo.receive(v.withSender(this));
-                break;
-
-            case Names.exception:
-                returnTo.receive(v.withSender(this));
-                break;
-
-            default:
-                propagate(v);
+        if (Names.condition.equals(v.getName())) {
+            Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
+            this.condition = (Boolean) v.get();
+            processConditionalPropagations();
+        } else {
+            propagate(v);
         }
     }
 

@@ -32,7 +32,7 @@ public class ExTop extends ExF {
     }
 
     @Override
-    public void process(Value v) {
+    public void perfromFunctionInputValueReceived(Value v) {
         if(v.getName().equals(Names.exception))
         {
             throw new RuntimeException((Exception) v.get());

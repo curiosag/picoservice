@@ -237,7 +237,7 @@ trisum(a,b,c)   trimul(a,b,c)
       //  _Ex m2 = env.createExecution(main);
 
         m1.receive(Value.of(Names.a, 100, m1.returnTo()));
-        //  m2.receive(Value.of(Names.a, 100, m1.returnTo()));
+          //m2.receive(Value.of(Names.a, 100, m1.returnTo()));
 
 //        sleep(1000);
 //        env.log("suspending");
@@ -245,7 +245,7 @@ trisum(a,b,c)   trimul(a,b,c)
 //        sleep(2000);
 //        env.log("resuming");
 //        env.suspend(false);
-        sleep(5000);
+        sleep(50000);
     }
 
     private F createRecSum() {

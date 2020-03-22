@@ -19,8 +19,8 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public void process(Value v) {
-        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
+    public void perfromFunctionInputValueReceived(Value v) {
+        Check.isFunctionInputValue(v);
         getBeingCalled().receive(v.withSender(this));
     }
 

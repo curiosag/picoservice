@@ -12,8 +12,8 @@ public class ExF extends Ex {
     }
 
     @Override
-    public void process(Value v) {
-        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
+    public void perfromFunctionInputValueReceived(Value v) {
+        Check.isFunctionInputValue(v);
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
         propagate(v);
@@ -30,8 +30,7 @@ public class ExF extends Ex {
     }
 
     private void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p ->
-                raise(new PropagateValueEvent(this, p.getTo(), value(p.getNameToPropagate(), v.get()))));
+        getPropagations(v.getName()).forEach(p -> raise(new PropagateValueEvent(this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
     }
 
     private void applySideEffect() {
@@ -45,9 +44,9 @@ public class ExF extends Ex {
     private void applyFunction() {
         try {
             Object value = template.getAtom().execute(paramsReceived);
-            returnTo.receive(value(template.returnAs, value));
+            returnTo.receive(new Value(template.returnAs, value, this));
         } catch (Exception e) {
-            returnTo.receive(value(Names.exception, e));
+            returnTo.receive(new Value(Names.exception, e, this));
         }
     }
 

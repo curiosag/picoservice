@@ -1,18 +1,22 @@
 package micro.If;
 
 import micro.*;
+import micro.exevent.ExEvent;
 import micro.exevent.PropagateValueEvent;
+import micro.exevent.ValueReceivedEvent;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 
 import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
 
 public class ExIf extends Ex {
     private Boolean condition;
-    private List<ValuePropagation> conditionalPropagations = new ArrayList<>();
+
+    // conditional propagations here don't protect against double propagations
+    // its the business of the recipients to guard against that
+    private Set<ValuePropagation> conditionalValuePropagations = new HashSet<>();
 
     ExIf(Env env, F template, _Ex returnTo) {
         super(env, template, returnTo);
@@ -23,55 +27,71 @@ public class ExIf extends Ex {
     }
 
     @Override
-    public void process(Value v) {
-        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
+    public void handle(ExEvent e) {
+        alterStateFor(e);
+        super.handle(e); // super depends an local state changed
+    }
 
-        if (Names.condition.equals(v.getName())) {
-            Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
-            this.condition = (Boolean) v.get();
-            processConditionalPropagations();
-        } else {
-            propagate(v);
+    @Override
+    public void recover(ExEvent e) {
+        super.recover(e);
+        alterStateFor(e);
+    }
+
+    private void alterStateFor(ExEvent e) {
+        if (e instanceof ValueReceivedEvent) {
+            Value v = ((ValueReceivedEvent) e).value;
+            if (Names.condition.equals(v.getName())) {
+                Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
+                this.condition = (Boolean) v.get();
+            } else {
+                getPropagations(v.getName()).forEach(p -> { //todo unnecessary foreach, could be replaced by structure
+                    if (p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH)) {
+                        conditionalValuePropagations.add(new ValuePropagation(v, p));
+                    }
+                });
+            }
+        }
+
+        if (e instanceof PropagateValueEvent) {
+            conditionalValuePropagations.removeIf(i -> i.propagation.getTo().equals(((PropagateValueEvent) e).to) && i.value.equals(((PropagateValueEvent) e).value));
         }
     }
 
+    @Override
+    public void perfromFunctionInputValueReceived(Value v) {
+        Check.isFunctionInputValue(v);
+        propagate(v);
+    }
+
     private void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p -> {
-            if (p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH)) {
-                conditionalPropagations.add(new ValuePropagation(v, p));
-            } else {
-                raise(new PropagateValueEvent(this, p.getTo(), value(p.getNameToPropagate(), v.get())));
-            }
-        });
+        getPropagations(v.getName()).stream()
+                .filter(this::isUnconditionalPropagation)
+                .forEach(p -> raise(new PropagateValueEvent(this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
 
-        processConditionalPropagations();
+        if (condition != null) {
+            conditionalValuePropagations.stream()
+                    .filter(this::canPerformConditionalValuePropagation)
+                    .forEach(p -> raise(new PropagateValueEvent(this, p.propagation.getTo(),
+                            new Value(p.propagation.getNameToPropagate(), p.value.get(), this))));
+        }
     }
 
-    private void processConditionalPropagations() {
-        List<ValuePropagation> conditionalToPropagate = conditionalPropagations.stream()
-                .filter(this::canProcessPropagation)
-                .collect(Collectors.toList());
-
-        conditionalPropagations.removeAll(conditionalToPropagate);
-
-        conditionalToPropagate.forEach(p ->
-                raise(new PropagateValueEvent(this, p.propagation.getTo(),
-                        value(p.propagation.getNameToPropagate(), p.value.get()))));
+    private boolean isUnconditionalPropagation(ExPropagation p) {
+        return !p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH);
     }
 
-    private boolean canProcessPropagation(ValuePropagation valuePropagation) {
-        PropagationType type = valuePropagation.propagation.getPropagationType();
-
-        switch (type) {
+    private boolean canPerformConditionalValuePropagation(ValuePropagation valuePropagation) {
+        switch (valuePropagation.propagation.getPropagationType()) {
 
             case TRUE_BRANCH:
-                return condition != null && condition;
+                return condition;
 
             case FALSE_BRANCH:
-                return condition != null && !condition;
+                return !condition;
 
             default:
-                Check.fail("invalid case");
+                Check.fail("invalid case " + valuePropagation.propagation.getPropagationType().name());
                 return false;
         }
     }

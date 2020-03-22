@@ -81,7 +81,7 @@ public class Env implements Closeable {
             sleep(delay.get());
             if (events.size() > 0) {
                 ExEvent e = events.get(0);
-                e.perform();
+                e.getEx().handle(e);
                 raiseEvent(new EventQueueRemove(e));
             } else {
                 sleep(100);

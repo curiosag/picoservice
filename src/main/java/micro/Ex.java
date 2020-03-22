@@ -14,8 +14,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public F template;
     protected _Ex returnTo;
 
-    private final HashMap<String, List<ExPropagation>> propagationsByParamName = new HashMap<>();
-
+    private final HashMap<String, List<ExPropagation>> paramNameToPropagations = new HashMap<>();
     private final HashSet<String> valuesProcessed = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
@@ -46,7 +45,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
         raise(new ValueReceivedEvent(this, v));
     }
 
-    public void raise(ExEvent e) {
+    protected void raise(ExEvent e) {
         env.noteEvent(e);
     }
 
@@ -54,7 +53,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent va = (ValueReceivedEvent) e;
             alterStateFor(va);
-            processValueReceived(va.value);
+            perform(va);
             return;
         }
         if (e instanceof ValueProcessedEvent) {
@@ -62,43 +61,22 @@ public abstract class Ex implements _Ex, KryoSerializable {
             return;
         }
         if (e instanceof PropagateValueEvent) {
-            PropagateValueEvent p = (PropagateValueEvent) e;
-            p.to.receive(p.value);
+            perform((PropagateValueEvent) e);
             return;
         }
         Check.fail("unhandled event " + e.toString());
     }
 
-    String getNameForReturnValue() {
-        return template.returnAs;
-    }
-
-    private void processValueReceived(Value v) {
-        if (!valuesProcessed.contains(v.getName())) {
-
-            switch (v.getName()) {
-                case Names.result:
-                    returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
-                    break;
-
-                case Names.exception:
-                    returnTo.receive(v.withSender(this));
-                    break;
-
-                default:
-                    process(v);
-            }
-            raise(new ValueProcessedEvent(this, v.getName()));
-        }
-    }
-
-    private void recover(ExEvent e) {
+    public void recover(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             alterStateFor((ValueReceivedEvent) e);
             return;
         }
         if (e instanceof ValueProcessedEvent) {
             alterStateFor((ValueProcessedEvent) e);
+            return;
+        }
+        if (e instanceof PropagateValueEvent) {
             return;
         }
         Check.fail("unhandled event " + e.toString());
@@ -117,7 +95,35 @@ public abstract class Ex implements _Ex, KryoSerializable {
         valuesProcessed.add(v.valueName);
     }
 
-    protected abstract void process(Value v);
+    private void perform(ValueReceivedEvent va) {
+        Value v = va.value;
+        if (!valuesProcessed.contains(v.getName())) {
+
+            switch (v.getName()) {
+                case Names.result:
+                    returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
+                    break;
+
+                case Names.exception:
+                    returnTo.receive(v.withSender(this));
+                    break;
+
+                default:
+                    perfromFunctionInputValueReceived(v);
+            }
+            raise(new ValueProcessedEvent(this, v.getName()));
+        }
+    }
+
+    String getNameForReturnValue() {
+        return template.returnAs;
+    }
+
+    private void perform(PropagateValueEvent v) {
+        v.to.receive(v.value);
+    }
+
+    protected abstract void perfromFunctionInputValueReceived(Value v);
 
     private void createExPropagations(F template) {
         template.getTargetFunctionsToPropagations().forEach(
@@ -126,23 +132,19 @@ public abstract class Ex implements _Ex, KryoSerializable {
                     ExOnDemand to = new ExOnDemand(() -> targetFunc.createExecution(env, this));
                     templateProps.stream()
                             .map(t -> new ExPropagation(t, to))
-                            .forEach(p -> propagationsByParamName
+                            .forEach(p -> paramNameToPropagations
                                     .computeIfAbsent(p.getNameReceived(), k -> new ArrayList<>())
                                     .add(p));
                 });
     }
 
-    public String getLabel() {
-        return template.getLabel();
-    }
-
     protected List<ExPropagation> getPropagations(String paramName) {
-        List<ExPropagation> ps = propagationsByParamName.get(paramName);
+        List<ExPropagation> ps = paramNameToPropagations.get(paramName);
         return ps != null ? ps : Collections.emptyList();
     }
 
-    protected Value value(String name, Object value) {
-        return new Value(name, value, this);
+    public String getLabel() {
+        return template.getLabel();
     }
 
     @Override
@@ -182,4 +184,5 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public void read(Kryo kryo, Input input) {
 
     }
+
 }

@@ -1,9 +1,9 @@
 package micro.If;
 
 import micro.*;
-import micro.exevent.ExEvent;
-import micro.exevent.PropagateValueEvent;
-import micro.exevent.ValueReceivedEvent;
+import micro.event.ExEvent;
+import micro.event.PropagateValueEvent;
+import micro.event.ValueReceivedEvent;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -18,12 +18,12 @@ public class ExIf extends Ex {
     // its the business of the recipients to guard against that
     private Set<ValuePropagation> conditionalValuePropagations = new HashSet<>();
 
-    ExIf(Env env, F template, _Ex returnTo) {
-        super(env, template, returnTo);
+    ExIf(Node node, F template, _Ex returnTo) {
+        super(node, template, returnTo);
     }
 
-    public ExIf(Env env) {
-        super(env);
+    public ExIf(Node node) {
+        super(node);
     }
 
     @Override

@@ -7,17 +7,21 @@ import com.esotericsoftware.kryo.io.Output;
 
 import java.util.Objects;
 
-public class Value implements KryoSerializable {
-    public static Value PING = new Value(Names.ping, null, null);
+public class Value implements Hydratable, KryoSerializable {
 
-    private final _Ex sender;
-    private final String name;
-    private final Object value;
+    private long senderId;
+    private _Ex sender;
+    private String name;
+    private Object value;
 
     public Value(String name, Object value, _Ex sender) {
         this.name = name;
         this.value = value;
         this.sender = sender;
+        this.senderId = sender.getId();
+    }
+
+    public Value() {
     }
 
     public String getName() {
@@ -44,20 +48,10 @@ public class Value implements KryoSerializable {
                 '}';
     }
 
-    public Value withSender(Ex sender)
-    {
+    public Value withSender(Ex sender) {
         return new Value(name, value, sender);
     }
 
-    @Override
-    public void write(Kryo kryo, Output output) {
-
-    }
-
-    @Override
-    public void read(Kryo kryo, Input input) {
-
-    }
 
     @Override
     public boolean equals(Object o) {
@@ -72,5 +66,50 @@ public class Value implements KryoSerializable {
     @Override
     public int hashCode() {
         return Objects.hash(sender, name, value);
+    }
+
+    @Override
+    public void write(Kryo kryo, Output output) {
+        output.writeVarLong(senderId, true);
+        output.writeString(name);
+
+        if (value instanceof Integer) {
+
+            output.writeVarInt(0, true);
+            output.writeVarInt((Integer) value, false);
+
+        } else if (value instanceof Boolean) {
+
+            output.writeVarInt(1, true);
+            output.writeBoolean((Boolean) value);
+
+        } else {
+            throw new IllegalArgumentException("unknown value type " + value.getClass().getSimpleName());
+        }
+    }
+
+    @Override
+    public void read(Kryo kryo, Input input) {
+        senderId = input.readVarLong(true);
+        name = input.readString();
+
+        int valType = input.readVarInt(true);
+        switch (valType) {
+            case 0:
+                value = input.readVarInt(false);
+                break;
+            case 1:
+                value = input.readBoolean();
+                break;
+            default:
+                throw new IllegalArgumentException("unknown value type " + valType);
+
+        }
+
+    }
+
+    @Override
+    public void hydrate(Hydrator h) {
+        sender = h.getExForId(senderId);
     }
 }

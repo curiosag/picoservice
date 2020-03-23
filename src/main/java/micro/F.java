@@ -22,9 +22,9 @@ public class F implements _F, Id {
 
     List<String> formalParameters = new ArrayList<>();
 
-    public F(Env env, Atom atom, String... formalParams) {
-        this.nextPropagationId = env::nextFPropagationId;
-        env.addF(this);
+    public F(Node node, Atom atom, String ... formalParams) {
+        this.nextPropagationId = node::nextFPropagationId;
+        node.addF(this);
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
     }
@@ -77,8 +77,8 @@ public class F implements _F, Id {
     }
 
     @Override
-    public _Ex createExecution(Env env, _Ex returnTo) {
-        return new ExF(env, this, returnTo);
+    public _Ex createExecution(Node node, _Ex returnTo) {
+        return new ExF(node, this, returnTo);
     }
 
     public String getLabel() {
@@ -99,11 +99,11 @@ public class F implements _F, Id {
         return label != null ? label : "no name";
     }
 
-    public static F f(Env env, Atom atom, String... params) {
+    public static F f(Node node, Atom atom, String... params) {
         if (atom == null) {
             throw new IllegalArgumentException();
         }
-        return new F(env, atom, params);
+        return new F(node, atom, params);
     }
 
     @Override

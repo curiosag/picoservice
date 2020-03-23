@@ -4,14 +4,14 @@ public class FCall extends F {
 
     protected final F called;
 
-    public FCall(Env env, F called, String... formalParams) {
-        super(env, nop, formalParams);
+    public FCall(Node node, F called, String... formalParams) {
+        super(node, nop, formalParams);
         this.called = called;
     }
 
     @Override
-    public _Ex createExecution(Env env, _Ex returnTo) {
-        return new ExFCall(env, this, returnTo);
+    public _Ex createExecution(Node node, _Ex returnTo) {
+        return new ExFCall(node, this, returnTo);
     }
 
 }

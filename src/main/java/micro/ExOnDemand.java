@@ -1,18 +1,20 @@
 package micro;
 
-import java.util.function.Supplier;
-
 public class ExOnDemand implements _Ex {
-    Supplier<_Ex> createEx;
+    Node node;
+    Ex returnTo;
+    _F targetFunc;
     _Ex ex;
 
-    ExOnDemand(Supplier<_Ex> createEx) {
-        this.createEx = createEx;
+    public ExOnDemand(Node node, _F targetFunc, Ex returnTo) {
+        this.node = node;
+        this.returnTo = returnTo;
+        this.targetFunc = targetFunc;
     }
 
     private _Ex getEx() {
         if (ex == null) {
-            ex = createEx.get();
+            ex = node.getExecution(targetFunc, returnTo);
         }
         return ex;
     }
@@ -20,6 +22,11 @@ public class ExOnDemand implements _Ex {
     @Override
     public _Ex returnTo() {
         return getEx().returnTo();
+    }
+
+    @Override
+    public _F getTemplate() {
+        return targetFunc;
     }
 
     @Override

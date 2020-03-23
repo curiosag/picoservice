@@ -2,7 +2,7 @@ package micro.trace;
 
 import micro.Check;
 import micro.Ex;
-import micro.exevent.ValueEvent;
+import micro.event.ValueEvent;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;

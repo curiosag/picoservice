@@ -1,14 +1,14 @@
 package micro;
 
-import micro.exevent.PropagateValueEvent;
+import micro.event.PropagateValueEvent;
 
 public class ExF extends Ex {
-    public ExF(Env env, F template, _Ex returnTo) {
-        super(env, template, returnTo);
+    public ExF(Node node, F template, _Ex returnTo) {
+        super(node, template, returnTo);
     }
 
-    public ExF(Env env) {
-        super(env, new F(env, F.nop), null);
+    public ExF(Node node) {
+        super(node, new F(node, F.nop), null);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class ExF extends Ex {
         try {
             template.getAtom().execute(paramsReceived);
         } catch (Exception e) {
-            env.log(e.getMessage());
+            node.log(e.getMessage()); // todo remove
         }
     }
 

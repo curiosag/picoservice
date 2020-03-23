@@ -4,12 +4,12 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.exevent.*;
+import micro.event.*;
 
 import java.util.*;
 
 public abstract class Ex implements _Ex, KryoSerializable {
-    final Env env;
+    final Node node;
     private long id = -1;
     public F template;
     protected _Ex returnTo;
@@ -18,16 +18,15 @@ public abstract class Ex implements _Ex, KryoSerializable {
     private final HashSet<String> valuesProcessed = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
-    public Ex(Env env) {
-        this.env = env;
+    public Ex(Node node) {
+        this.node = node;
     }
 
-    public Ex(Env env, F template, _Ex returnTo) {
-        this(env);
+    public Ex(Node node, F template, _Ex returnTo) {
+        this(node);
         this.returnTo = returnTo;
         this.template = template;
         createExPropagations(template);
-        env.addX(this);
     }
 
     @Override
@@ -36,8 +35,13 @@ public abstract class Ex implements _Ex, KryoSerializable {
     }
 
     @Override
+    public _F getTemplate() {
+        return template;
+    }
+
+    @Override
     public Address getAddress() {
-        return env.getAddress();
+        return node.getAddress();
     }
 
     @Override
@@ -46,7 +50,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
     }
 
     protected void raise(ExEvent e) {
-        env.noteEvent(e);
+        node.note(e);
     }
 
     public void handle(ExEvent e) {
@@ -126,16 +130,16 @@ public abstract class Ex implements _Ex, KryoSerializable {
     protected abstract void perfromFunctionInputValueReceived(Value v);
 
     private void createExPropagations(F template) {
-        template.getTargetFunctionsToPropagations().forEach(
-                (targetFunc, templateProps) -> {
+        template.getTargetFunctionsToPropagations().forEach(this::createPropagationsForTargetFunc);
+    }
 
-                    ExOnDemand to = new ExOnDemand(() -> targetFunc.createExecution(env, this));
-                    templateProps.stream()
-                            .map(t -> new ExPropagation(t, to))
-                            .forEach(p -> paramNameToPropagations
-                                    .computeIfAbsent(p.getNameReceived(), k -> new ArrayList<>())
-                                    .add(p));
-                });
+    private void createPropagationsForTargetFunc(_F targetFunc, List<FPropagation> templateProps) {
+        ExOnDemand to = new ExOnDemand(node, targetFunc, this);
+        templateProps.stream()
+                .map(t -> new ExPropagation(t, to))
+                .forEach(p -> paramNameToPropagations
+                        .computeIfAbsent(p.getNameReceived(), k -> new ArrayList<>())
+                        .add(p));
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {

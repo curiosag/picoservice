@@ -5,13 +5,13 @@ public class ExFCall extends Ex {
     private FCall callTemplate;
     private _Ex beingCalled;
 
-    ExFCall(Env env, FCall callTemplate, _Ex returnTo) {
-        super(env, new F(env, F.nop).label(callTemplate.getLabel()), returnTo);
+    ExFCall(Node node, FCall callTemplate, _Ex returnTo) {
+        super(node, new F(node, F.nop).label(callTemplate.getLabel()), returnTo);
         this.callTemplate = callTemplate;
     }
 
-    public ExFCall(Env env) {
-        super(env);
+    public ExFCall(Node node) {
+        super(node);
     }
 
     String getNameForReturnValue() {
@@ -26,7 +26,7 @@ public class ExFCall extends Ex {
 
     private _Ex getBeingCalled() {
         if (beingCalled == null) {
-            beingCalled = env.createExecution(callTemplate.called, this);
+            beingCalled = node.getExecution(callTemplate.called, this);
         }
         return beingCalled;
     }

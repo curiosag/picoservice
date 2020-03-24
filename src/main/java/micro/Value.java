@@ -48,10 +48,10 @@ public class Value implements Hydratable, KryoSerializable {
                 '}';
     }
 
-    public Value withSender(Ex sender) {
+    public Value withSender(Ex sender)
+    {
         return new Value(name, value, sender);
     }
-
 
     @Override
     public boolean equals(Object o) {

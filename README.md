@@ -26,7 +26,7 @@ A picoservice is:
 
 Computations are nested recursive functions. Some of them are primitive (+, -, * ...). A condition is just another somewhat special primitive function. Each function has a dedicated function to return its result to. 
 
-Every function receives named values as as messages and propagates them on to subsequent functions if needed. Each function is an actor, so all off them operate concurrently.  
+Every function receives named values as messages and propagates them to subsequent functions if needed. Each function is an actor, so all off them operate concurrently.  
 
 Further, if it is a primitive function and got all values to compute a result it does so and sends it to the designated recipient.   
 
@@ -34,6 +34,8 @@ Further, if it is a primitive function and got all values to compute a result it
  So it has kind of this signature: `if(condition, value_true_branch, value_false_branch)` 
 
 Here's an example, a function `C` that takes 2 values (`a`, `b`) and subtracts the smaller one from the bigger one. It consists of 3 primitive functions (`>` and 2 times `-`, say `-t`, `-f`) and one `if`.
+
+![if](./if.png)
 
 That's a possible sequence of events, le's say `X`->`a`->`Y` means `X` sends `a` to `Y` and let's assume a caller `Γ`
 ```
@@ -54,15 +56,14 @@ if -> result -> C
 C -> result -> Γ 
 ```
 
-![if](./if.png)
 
 
-##implications, maybe
+## implications, maybe
 
 Messages between functions can be logged and be used to restore computation states.
 All computations are inherently parallel and location transparent 
 
-##experience
+## experience
 
 Those concepts could be modelled:
 

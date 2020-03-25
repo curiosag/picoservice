@@ -79,13 +79,15 @@ The approach chosen prevented event sourcing eventually.
 The main issue was the decision that a function is one actor, a function call are messages to this actor, several calls go to the same actor.
 So there must be some logic per actor to maintain those messages from different souces, correlate them with results from subsequent actors and send the results to the proper recipients. 
 
-It proved possible, but too complicated IMHO. 
+It proved possible, but too complicated IMHO.
+
+It seems more promising to represent the computation as a data structure that grows as the computation progresses.  
 
 
 ### thanks & credits
 [Jörg W Mittag](https://stackoverflow.com/users/2988/j%c3%b6rg-w-mittag) for straightening out [my view on conditional expressions](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) and pointing out the historical relationship between the actor model and Smalltalk.
 
-
+All the zillion articles about ever more micro microservices which caused my mind to generate this approach one morning in the shower while I picked up some old stockings. It has earned me a few insights and cost me lots of time ever since. 
 
     java.lang.IllegalArgumentException: invalid ActorSystem name [picosörvis], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-' or '_')
 

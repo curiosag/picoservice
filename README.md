@@ -24,7 +24,9 @@ A picoservice is:
 
 ## the idea 
 
-Computations are nested recursive functions. Some of them are primitive (+, -, * ...). A condition is just another somewhat special primitive function. Each function has a dedicated function to return its result to. 
+Computations are nested recursive functions. They can be primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time as of cost charged.
+   
+A condition is just another somewhat special primitive function. Each function has a dedicated function to return its result to. 
 
 Every function receives named values as messages and propagates them to subsequent functions if needed. Each function is an actor, so all off them operate concurrently.  
 
@@ -37,31 +39,49 @@ Here's an example, a function `C` that takes 2 values (`a`, `b`) and subtracts t
 
 ![if](./if.png)
 
-That's a possible sequence of events, le's say `X`->`a`->`Y` means `X` sends `a` to `Y` and let's assume a caller `Γ`
-```
-Γ -> a -> C
-Γ -> b -> C
-C -> a -> if 
-C -> b -> if
-if -> a -> >
-if -> b -> >
-> -> condition -> if
-if -> a -> > `-t`
-if -> a -> > `-f`
-if -> b -> > `-t`
-if -> b -> > `-f`
-`-t` -> value_true_branch -> if
-`-t` -> value_false_branch -> if  
-if -> result -> C
-C -> result -> Γ 
-```
+That's a possible sequence of events, le's say `X`->`a`->`Y` means `X` sends `a` to `Y` and let's assume a caller `Γ`.
 
+```
+1  Γ -> a -> C
+2  C -> a -> if 
+3  Γ -> b -> C
+4  C -> b -> if
+5  if -> a -> >
+6  if -> b -> >
+7  > -> condition -> if
+8  if -> a -> -t
+9  if -> a -> -f
+10 if -> b -> -t
+11 if -> b -> -f
+12 -t -> value_true_branch -> if
+13 -t -> value_false_branch -> if  
+14 if -> result -> C
+15 C -> result -> Γ 
+```
+Note, that it could as well happen that way.
 
+```
+1  Γ -> b -> C
+2  Γ -> a -> C
+3  C -> a -> if 
+4  if -> a -> >
+5  if -> a -> -t
+6  if -> a -> -f
+7  C -> b -> if
+8  if -> b -> >
+9  if -> b -> -t
+10 > -> condition -> if
+11 -t -> value_true_branch -> if
+12 if -> b -> -f
+13 if -> result -> C
+14 C -> result -> Γ 
+15 -t -> value_false_branch -> if  
+```
 
 ## implications, maybe
 
-Messages between functions can be logged and be used to restore computation states.
-All computations are inherently parallel and location transparent 
+Messages between functions can be logged and used to restore computation states, if the internal state changes of the actors are event sourced too.
+All computations are inherently parallel and transparent regarding their location. 
 
 ## experience
 
@@ -79,9 +99,9 @@ The approach chosen prevented event sourcing eventually.
 The main issue was the decision that a function is one actor, a function call are messages to this actor, several calls go to the same actor.
 So there must be some logic per actor to maintain those messages from different souces, correlate them with results from subsequent actors and send the results to the proper recipients. 
 
-It proved possible, but too complicated IMHO.
+An implementation without event sourcing proved possible, but already too complicated IMHO. Actors became quite complex, making them bad candidates for event sourcing.
 
-It seems more promising to represent the computation as a data structure that grows as the computation progresses.  
+It seems more promising to represent the computation as a data structure that grows as the computation progresses, its elements being executions of functions, as can be seen in [this branch](https://github.com/curiosag/picoservice/tree/MoreMicro) (only the recursive sum sample is implemented).
 
 
 ### thanks & credits

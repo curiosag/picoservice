@@ -5,6 +5,7 @@ import micro.atoms.AddInt;
 import micro.atoms.Atom;
 import micro.atoms.Const;
 import micro.atoms.MulInt;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.function.Supplier;
@@ -21,8 +22,8 @@ import static micro.atoms.SubInt.subInt;
 
 public class MicroTest {
 
-    private Address address = new Address(new byte[0], 1, 1);
-    private Node node = new Node(1, address);
+    private final Address address = new Address(new byte[0], 1, 1);
+    private Node node;
 
 
 /*
@@ -40,6 +41,10 @@ public class MicroTest {
 
 */
 
+    @Before
+    public void setUp() {
+        node = new Node( address);
+    }
 
     @Test
     public void testSimpleFunc() {
@@ -49,7 +54,7 @@ public class MicroTest {
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
 
-        _Ex TOP = node.createTop();
+        _Ex TOP = node.getTop();
         _Ex ex = main.createExecution(node, TOP);
         ex.receive(Value.of(Names.a, 1, TOP));
         ex.receive(Value.of(Names.b, 2, TOP));
@@ -127,7 +132,7 @@ trisum(a,b,c)   trimul(a,b,c)
         add.addPropagation(Names.b, triMul);
         add.addPropagation(Names.c, triMul);
 
-        _Ex TOP = node.createTop();
+        _Ex TOP = node.getTop();
         _Ex ex = main.createExecution(node, TOP);
         ex.receive(Value.of(Names.a, 1, TOP));
         ex.receive(Value.of(Names.c, 3, TOP));
@@ -152,7 +157,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
-        _Ex TOP = node.createTop();
+        _Ex TOP = node.getTop();
         _Ex ex = main.createExecution(node, TOP);
         ex.receive(Value.of(ping, null, TOP));
         ex.receive(Value.of(Names.a, 1, TOP));
@@ -175,7 +180,7 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(CONDITION, Names.right, gt);
         iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
         iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
-        _Ex TOP = node.createTop();
+        _Ex TOP = node.getTop();
         _Ex ex = main.createExecution(node, TOP);
         ex.receive(Value.of(Names.left, 1, TOP));
         ex.receive(Value.of(Names.right, 2, TOP));
@@ -202,20 +207,29 @@ trisum(a,b,c)   trimul(a,b,c)
         F main = createRecSum();
 
         node.setDelay(1);
+        node.start();
 
         _Ex m1 = node.getExecution(main);
-      //  _Ex m2 = env.getExecution(main);
+        //  _Ex m2 = env.getExecution(main);
 
         m1.receive(Value.of(Names.a, 100, m1.returnTo()));
-          //m2.receive(Value.of(Names.a, 100, m1.returnTo()));
+        //m2.receive(Value.of(Names.a, 100, m1.returnTo()));
 
-//        sleep(1000);
-//        env.log("suspending");
-//        env.suspend(true);
-//        sleep(2000);
-//        env.log("resuming");
-//        env.suspend(false);
-        sleep(8000);
+        Concurrent.sleep(1000);
+        node.log("stopping");
+        node.stop();
+        Concurrent.sleep(2000);
+        node.close();
+    }
+
+
+    @Test
+    public void testResumeSimpleRecursion() {
+        F main = createRecSum();
+        node.setDelay(1);
+        node.recover();
+        node.start();
+        Concurrent.sleep(50000);
         node.close();
     }
 
@@ -250,14 +264,6 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
         return main;
-    }
-
-    private void sleep(int i) {
-        try {
-            Thread.sleep(i);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private F CONST(Object i) {

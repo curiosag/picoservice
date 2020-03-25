@@ -6,6 +6,8 @@ import java.util.Map;
 
 public interface Atom {
 
+    Atom nop = parameters -> null;
+
     default boolean isSideEffect(){
         return false;
     };

@@ -9,7 +9,15 @@ import micro.Id;
 
 public abstract class Event implements Id, Hydratable, KryoSerializable {
 
-    private long id;
+    private long id = -1;
+
+    Event(long id)
+    {
+        this.id = id;
+    }
+
+    protected Event() {
+    }
 
     @Override
     public long getId() {

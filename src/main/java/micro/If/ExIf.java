@@ -67,12 +67,12 @@ public class ExIf extends Ex {
     private void propagate(Value v) {
         getPropagations(v.getName()).stream()
                 .filter(this::isUnconditionalPropagation)
-                .forEach(p -> raise(new PropagateValueEvent(this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
+                .forEach(p -> raise(new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
 
         if (condition != null) {
             conditionalValuePropagations.stream()
                     .filter(this::canPerformConditionalValuePropagation)
-                    .forEach(p -> raise(new PropagateValueEvent(this, p.propagation.getTo(),
+                    .forEach(p -> raise(new PropagateValueEvent(node.getNextObjectId(), this, p.propagation.getTo(),
                             new Value(p.propagation.getNameToPropagate(), p.value.get(), this))));
         }
     }

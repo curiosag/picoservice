@@ -21,6 +21,7 @@ public class ExecutionCreatedEvent extends NodeEvent {
     }
 
     public ExecutionCreatedEvent(_Ex ex) {
+        super(0);
         this.templateId = ex.getTemplate().getId();
         this.exId = ex.getId();
         this.exIdToReturnTo = ex.returnTo().getId();
@@ -28,7 +29,7 @@ public class ExecutionCreatedEvent extends NodeEvent {
 
     @Override
     public void hydrate(Hydrator h) {
-        Check.fail("not hydratable acutally");
+
     }
 
     @Override

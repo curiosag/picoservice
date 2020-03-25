@@ -84,7 +84,7 @@ public class Value implements Hydratable, KryoSerializable {
             output.writeBoolean((Boolean) value);
 
         } else {
-            throw new IllegalArgumentException("unknown value type " + value.getClass().getSimpleName());
+            throw new IllegalArgumentException("value type not handled " + value.getClass().getSimpleName());
         }
     }
 
@@ -102,7 +102,7 @@ public class Value implements Hydratable, KryoSerializable {
                 value = input.readBoolean();
                 break;
             default:
-                throw new IllegalArgumentException("unknown value type " + valType);
+                throw new IllegalArgumentException("value type not handled " + valType);
 
         }
 

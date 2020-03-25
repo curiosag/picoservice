@@ -8,10 +8,11 @@ import micro.Hydrator;
 import micro._Ex;
 
 public abstract class ExEvent extends Event {
-    private _Ex ex;
+    public _Ex ex;
     long exId;
 
-    public ExEvent(_Ex ex) {
+    public ExEvent(long id, _Ex ex) {
+        super(id);
         this.ex = ex;
         this.exId = ex.getId();
     }
@@ -42,8 +43,6 @@ public abstract class ExEvent extends Event {
 
     @Override
     public void hydrate(Hydrator h) {
-        if (ex == null) {
-            ex = h.getExForId(exId);
-        }
+        ex = h.getExForId(exId);
     }
 }

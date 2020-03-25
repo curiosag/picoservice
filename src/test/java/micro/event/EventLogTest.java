@@ -7,6 +7,7 @@ public class EventLogTest {
 
     @Test
     public void testReadWrite() {
+
         Event e0 = new ExecutionCreatedEvent(0, 0, 0);
         Event e1 = new ExecutionCreatedEvent(1, 1, 1);
 
@@ -21,7 +22,6 @@ public class EventLogTest {
             Assert.assertEquals(iter.next(), e0);
             Assert.assertTrue(iter.hasNext());
             Assert.assertEquals(iter.next(), e1);
-            Assert.assertFalse(iter.hasNext());
             Assert.assertFalse(iter.hasNext());
         }
 

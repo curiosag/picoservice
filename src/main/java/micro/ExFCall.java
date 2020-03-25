@@ -6,12 +6,17 @@ public class ExFCall extends Ex {
     private _Ex beingCalled;
 
     ExFCall(Node node, FCall callTemplate, _Ex returnTo) {
-        super(node, new F(node, F.nop).label(callTemplate.getLabel()), returnTo);
+        super(node, callTemplate, returnTo);
         this.callTemplate = callTemplate;
     }
 
     public ExFCall(Node node) {
         super(node);
+    }
+
+    @Override
+    public String getLabel(){
+        return callTemplate.getLabel();
     }
 
     String getNameForReturnValue() {

@@ -9,7 +9,7 @@ public class ValueReceivedEvent extends ValueEvent {
         super();
     }
 
-    public ValueReceivedEvent(Ex ex, Value value) {
-        super(ex, value);
+    public ValueReceivedEvent(long exId, Ex ex, Value value) {
+        super(exId, ex, value);
     }
 }

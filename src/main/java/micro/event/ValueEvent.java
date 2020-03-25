@@ -11,16 +11,12 @@ import micro.Value;
 public class ValueEvent extends ExEvent {
     public Value value;
 
-    public ValueEvent(Ex ex, Value value) {
-        super(ex);
+    public ValueEvent(long eventId, Ex ex, Value value) {
+        super(eventId, ex);
         this.value = value;
     }
 
     public ValueEvent() {
-    }
-
-    public static ValueEvent of(Ex ex, Value value) {
-        return new ValueEvent(ex, value);
     }
 
     @Override

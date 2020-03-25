@@ -1,5 +1,6 @@
 package micro;
 
+import micro.atoms.Atom;
 import micro.event.PropagateValueEvent;
 
 public class ExF extends Ex {
@@ -8,7 +9,7 @@ public class ExF extends Ex {
     }
 
     public ExF(Node node) {
-        super(node, new F(node, F.nop), null);
+        super(node, new F(node, Atom.nop), null);
     }
 
     @Override
@@ -30,7 +31,8 @@ public class ExF extends Ex {
     }
 
     private void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p -> raise(new PropagateValueEvent(this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
+        getPropagations(v.getName()).forEach(p ->
+                raise(new PropagateValueEvent(node.getNextObjectId(),this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
     }
 
     private void applySideEffect() {

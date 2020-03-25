@@ -1,51 +1,74 @@
 package micro;
 
-public class ExTop extends ExF {
+public class ExTop implements  _Ex, Id {
 
-    public ExTop(Node node) {
-        super(node, new F(node, F.nop), new _Ex() {
-            @Override
-            public _Ex returnTo() {
-                return null;
-            }
+    public final static long TOP_ID = 0;
 
-            @Override
-            public _F getTemplate() {
-                return null;
-            }
+    private final _F template;
+    private final Address address;
 
-            @Override
-            public void receive(Value v) {
+    public ExTop(Address address) {
+        this.address = address;
+        this.template = createTemplate();
+    }
 
-            }
-
-            @Override
-            public Address getAddress() {
-                return null;
-            }
-
+    private _F createTemplate() {
+        return new _F(){
             @Override
             public long getId() {
-                return 0;
+                return TOP_ID;
             }
 
             @Override
             public void setId(long value) {
-
+                throw new IllegalStateException();
             }
-        });
-    }
 
-    @Override
-    public void perfromFunctionInputValueReceived(Value v) {
-        if(v.getName().equals(Names.exception))
-        {
-            throw new RuntimeException((Exception) v.get());
-        }
+            @Override
+            public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
+                throw new IllegalStateException();
+            }
+
+            @Override
+            public _Ex createExecution(Node node, _Ex returnTo) {
+                throw new IllegalStateException();
+            }
+
+        };
     }
 
     @Override
     public String toString() {
         return "TOP";
+    }
+
+    @Override
+    public _Ex returnTo() {
+        return this;
+    }
+
+    @Override
+    public _F getTemplate() {
+        return template;
+    }
+
+    @Override
+    public void receive(Value v) {
+
+    }
+
+    @Override
+    public Address getAddress() {
+        return address;
+    }
+
+    @Override
+    public long getId() {
+        return TOP_ID;
+    }
+
+    @Override
+    public void setId(long value) {
+
     }
 }

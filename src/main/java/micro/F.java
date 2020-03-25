@@ -10,10 +10,9 @@ import static micro.PropagationType.INDISCRIMINATE;
 
 
 public class F implements _F, Id {
-    public static final Atom nop = null;
 
     private final Supplier<Long> nextPropagationId;
-    private long id = -1;
+    private final long id;
     private String label;
     public String returnAs = Names.result;
     private final Atom atom;
@@ -23,8 +22,9 @@ public class F implements _F, Id {
     List<String> formalParameters = new ArrayList<>();
 
     public F(Node node, Atom atom, String ... formalParams) {
-        this.nextPropagationId = node::nextFPropagationId;
+        this.id = node.getNextFId();
         node.addF(this);
+        this.nextPropagationId = node::getNextObjectId;
         this.atom = atom;
         Collections.addAll(formalParameters, formalParams);
     }
@@ -36,7 +36,7 @@ public class F implements _F, Id {
 
     @Override
     public void setId(long value) {
-        id = checkSetIdValue(value);
+        Check.fail("no call expected");
     }
 
     int numParams() {

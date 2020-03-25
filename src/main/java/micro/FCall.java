@@ -1,11 +1,13 @@
 package micro;
 
+import micro.atoms.Atom;
+
 public class FCall extends F {
 
     protected final F called;
 
     public FCall(Node node, F called, String... formalParams) {
-        super(node, nop, formalParams);
+        super(node, Atom.nop, formalParams);
         this.called = called;
     }
 

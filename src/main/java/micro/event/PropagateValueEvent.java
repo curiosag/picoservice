@@ -16,8 +16,8 @@ public final class PropagateValueEvent extends ExEvent {
     public PropagateValueEvent() {
     }
 
-    public PropagateValueEvent(Ex from, _Ex to, Value value) {
-        super(from);
+    public PropagateValueEvent(long eventId, Ex from, _Ex to, Value value) {
+        super(eventId, from);
         this.value = value;
         this.to = to;
         this.exIdTo = to.getId();

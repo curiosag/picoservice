@@ -9,6 +9,7 @@ public class QueueRemoveEvent extends NodeEvent {
     public long idEventToRemove;
 
     public QueueRemoveEvent() {
+        super(0);
     }
 
     public QueueRemoveEvent(long idEventToRemove) {

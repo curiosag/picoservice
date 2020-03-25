@@ -9,7 +9,7 @@ import micro.event.*;
 import java.util.*;
 
 public abstract class Ex implements _Ex, KryoSerializable {
-    final Node node;
+    protected final Node node;
     private long id = -1;
     public F template;
     protected _Ex returnTo;
@@ -46,10 +46,11 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
     @Override
     public void receive(Value v) {
-        raise(new ValueReceivedEvent(this, v));
+        raise(new ValueReceivedEvent(node.getNextObjectId(), this, v));
     }
 
     protected void raise(ExEvent e) {
+        e.setId(node.getNextObjectId());
         node.note(e);
     }
 
@@ -115,7 +116,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
                 default:
                     perfromFunctionInputValueReceived(v);
             }
-            raise(new ValueProcessedEvent(this, v.getName()));
+            raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
         }
     }
 

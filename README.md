@@ -24,13 +24,15 @@ A picoservice is:
 
 ## the idea 
 
-Computations are nested recursive functions. They can be primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time as of cost charged.
+Computations are nested recursive functions. Functions can be a primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time and of money charged.
    
 A condition is just another somewhat special primitive function. Each function has a dedicated function to return its result to. 
 
 Every function receives named values as messages and propagates them to subsequent functions if needed. Each function is an actor, so all off them operate concurrently.  
 
-Further, if it is a primitive function and got all values to compute a result it does so and sends it to the designated recipient.   
+Further, if it is a primitive and got all values to compute a result it does so and sends it to the designated recipient. 
+
+If any function f receives a result value, it passes it on the the designated recipient of f's result.
 
 `if` deserves some words: in one version it does just the same as every primitive function: it waits for the necessary parameters (the calculated value of the condition `Vc`, true or false, and the value of both branches, and returns one of them depending on`Vc`). This doesn't limit the evaluation to one of the branches, which is an issue if you want to use it to terminate recursion. So `if` also comes in a second flavor, that only propagates values to a branch, if `Vc` indicates so. 
  So it has kind of this signature: `if(condition, value_true_branch, value_false_branch)` 
@@ -85,14 +87,14 @@ All computations are inherently parallel and transparent regarding their locatio
 
 ## experience
 
-Those concepts could be modelled:
+It was possible to model
 
 - Recursive functions and function calls
 - Partially applied functions
 - Functions as parameters
 - Conditionals
 
-A [functional version of quicksort](http://learnyouahaskell.com/recursion) could be expressed this way, multiple quicksorts could be executed in parallel. 
+and to express a [functional version of quicksort](http://learnyouahaskell.com/recursion). Multiple quicksorts could be executed in parallel. 
 
 The approach chosen prevented event sourcing eventually.
 

@@ -104,7 +104,7 @@ So there must be some logic per actor to maintain those messages from different 
 An implementation without event sourcing proved possible, but already too complicated IMHO. Actors became quite complex, making them bad candidates for event sourcing.
 
 It seems more promising to represent the computation as a data structure that grows as the computation progresses, each element representing one execution of a function, as can be seen in [this branch](https://github.com/curiosag/picoservice/tree/MoreMicro).
-Only the recursive sum sample is implemented, but it was way less headache and comes with event sourcing and recovery of the execution state from the event stream. It is single threaded at the moment, but with a few consisderatinos it should scale to arbitrary numbers of threads or one per function, bringing it again closer to the original actor approach. 
+Only the recursive sum sample is implemented, but it was way less headache and comes with event sourcing and recovery of the execution state from the event stream. It is single threaded at the moment, but with a few consisderatinos it should scale to an arbitrary number of threads, or it could be backed again by an actor system, with one actor per function, bringing it closer to the first attempt. 
 
 
 ### thanks & credits

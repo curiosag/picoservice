@@ -107,19 +107,53 @@ public class Node implements Closeable, Hydrator {
     private void handle(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
-            log((v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.value.getName() + " " + v.value.get().toString());
+            logValueReceived(v);
             events.add(e);
             return;
         }
         if (e instanceof PropagateValueEvent) {
+            //logPropagateValue((PropagateValueEvent) e);
             events.add(0, e);
             return;
         }
         if (e instanceof ValueProcessedEvent) {
+            //logPropagateValue((ValueProcessedEvent) e);
             events.add(e);
             return;
         }
         Check.fail("unknown event type " + e.toString());
+    }
+
+    private void logValueReceived(ValueReceivedEvent v) {
+        if(! v.value.getName().startsWith("sorted"))
+        {
+            return;
+        }
+        String to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
+        String from = v.value.getSender().toString() + " " + v.value.getSender().getId();
+
+        log("Rec: " +  from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
+    }
+
+    private void logPropagateValue(ValueProcessedEvent v) {
+        if (v.getEx().getId() != 100L)
+        {
+            return;
+        }
+        String to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
+
+        log( "Del: -> " + to + ": " + v.valueName);
+    }
+
+    private void logPropagateValue(PropagateValueEvent v) {
+        if (v.getEx().getId() != 100L)
+        {
+            return;
+        }
+        String to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
+        String from = v.value.getSender().toString() + " " + v.value.getSender().getId();
+
+        log( "Prp: " + from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
     }
 
     private void processEvents() {

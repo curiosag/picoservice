@@ -16,4 +16,10 @@ public interface Names {
     String output = "output";
     String voidRetVal = "void";
     String paramFVar = "FVar";
+    String list = "list";
+    String element = "element";
+    String head = "head";
+    String tail = "tail";
+    String predicate = "predicate";
+    String argument = "arg";
 }

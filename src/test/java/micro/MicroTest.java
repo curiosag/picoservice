@@ -2,14 +2,18 @@ package micro;
 
 import micro.If.If;
 import micro.atoms.*;
+import micro.atoms.Lists.*;
 import nano.ingredients.Name;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
 import java.util.function.Supplier;
 
+import static java.util.Arrays.asList;
 import static micro.If.If.iff;
-import static micro.Names.paramFVar;
-import static micro.Names.ping;
+import static micro.Names.*;
 import static micro.PropagationType.*;
 import static micro.atoms.Add.add;
 import static micro.atoms.Eq.eq;
@@ -394,6 +398,207 @@ trisum(a,b,c)   trimul(a,b,c)
         return main;
     }
 
+    @Test
+    public void testQuicksort() {
+
+        ResultCollector result = new ResultCollector();
+        Action resultListener = new Action(i -> result.set(i.values()));
+
+        F main = f(resultListener, Names.output).label("main");
+        F quicksort = createQuicksort();
+        F callQuicksort = new FCall(node, quicksort, list).returnAs(Names.output).label("callQuicksort initially");
+
+        main.addPropagation(list, callQuicksort);
+
+        node.start();
+        //testFor(result, main, list(), list());
+        //testFor(result, main, list(1), list(1));
+        //testFor(result, main, list(1, 2), list(1, 2));
+        //testFor(result, main, list(2, 1), list(1, 2));
+        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2,3, 4, 5, 6, 7, 8, 9));
+
+
+        ArrayList<Integer> randList = randomList(100);
+        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
+        randListSorted.sort(Integer::compareTo);
+    }
+
+        /*
+        lteq: (u,v) -> boolean
+        lteq: (u,v) -> boolean
+
+        function quicksort(list) = {
+            iff (list == []){
+                []
+            } else {
+                let head = head(list);
+                let tail = tail(list);
+                let testGt = lteq(_, head)
+                let testLteq = lteq(_, head)
+                let filteredGt = filter(tail, testGt)
+                let filteredLteq = filter(tail, testLteq)
+                let sortedGt = quicksort(filteredGt)
+                let sortedLteq = quicksort(filteredLteq)
+                sortedLteq ::  head :: sortedGt
+            }
+        }
+        */
+
+    private F createQuicksort() {
+        String predicateTestGt = "predicateTestGt";
+        String predicateTestLteq = "predicateTestLteq";
+        String filteredGt = "filteredGt";
+        String filteredLteq = "filteredLteq";
+        String sortedGt = "sortedGt";
+        String sortedLteq = "sortedLteq";
+        String consed = "consed";
+
+        If if_listEmpty = iff(node).label("if:listEmpty");
+
+        F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("isEmpty");
+        if_listEmpty.addPropagation(CONDITION, list, isEmpty);
+        F constEmptyList = new F(node, new Const(Collections.emptyList())).label("const:emptylist()");
+        if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
+
+        F block_else = f(nop).label("block_else");
+        if_listEmpty.addPropagation(FALSE_BRANCH, list, block_else);
+
+        F head = new F(node, new Head(), list).returnAs(Names.head).label("head()");
+        F tail = new F(node, new Tail(), list).returnAs(Names.tail).label("tail()");
+        block_else.addPropagation(list, head);
+        block_else.addPropagation(list, tail);
+
+        F gt = f(Gt.gt(), Names.left, Names.right).label("gt?");
+        F createTestGt = new FCreatePartiallyAppliedFunction(node, gt, Names.right).returnAs(predicateTestGt).label("createTestGt");
+        block_else.addPropagation(Names.head, right, createTestGt);
+
+        F lteq = f(Lteq.lteq(), Names.left, Names.right).label("lteq?");
+        F createTestLteq = new FCreatePartiallyAppliedFunction(node, lteq, Names.right).returnAs(predicateTestLteq).label("createTestLteq");
+        block_else.addPropagation(Names.head, right, createTestLteq);
+
+        F filter = filter();
+        F filterCallGt = new FCall(node, filter, Names.list, predicate).returnAs(filteredGt).label("filterCallGt");
+        F filterCallLteq = new FCall(node, filter, Names.list, predicate).returnAs(filteredLteq).label("filterCallLteq");
+
+        block_else.addPropagation(predicateTestGt, predicate, filterCallGt);
+        block_else.addPropagation(predicateTestLteq, predicate, filterCallLteq);
+        block_else.addPropagation(Names.tail, list, filterCallGt);
+        block_else.addPropagation(Names.tail, list, filterCallLteq);
+
+        F qsortRecallGt = new FCall(node, if_listEmpty, Names.list).returnAs(sortedGt).label("qsortRecallGt");
+        F qsortRecallLteq = new FCall(node, if_listEmpty, Names.list).returnAs(sortedLteq).label("qsortRecallLteq");
+        block_else.addPropagation(filteredGt, Names.list, qsortRecallGt);
+        block_else.addPropagation(filteredLteq, Names.list, qsortRecallLteq);
+
+        F cons = new F(node, new Cons(), element, list).returnAs(consed).label("cons");
+        block_else.addPropagation(Names.head, Names.element, cons);
+        block_else.addPropagation(sortedGt, list, cons);
+
+        F concat = new F(node, new Concat(), left, right).label("concat");
+        block_else.addPropagation(consed, right, concat);
+        block_else.addPropagation(sortedLteq, Names.left, concat);
+
+        return if_listEmpty;
+    }
+
+    @Test
+    public void testFilter() {
+
+        ResultCollector result = new ResultCollector();
+        Action resultListener = new Action(i -> result.set(i.values()));
+
+        F main = f(resultListener, Names.output).label("main");
+
+        String const3 = "const:3";
+        F gt = f(Gt.gt(), Names.left, Names.right).label("gt?");
+        F createPredicate = new FCreatePartiallyAppliedFunction(node, gt, Names.right).returnAs(predicate).label("createPredicate");
+
+        main.addPropagation(list, ping, createPredicate);
+        createPredicate.addPropagation(ping, CONST(3).returnAs(Names.right).label(const3));
+
+        F filter = filter();
+        F callFilter = new FCall(node, filter, predicate, list).returnAs(Names.output).label("callFilter initially");
+
+        main.addPropagation(predicate, callFilter);
+        main.addPropagation(list, callFilter);
+
+        node.start();
+        testFor(result, main, list(), list());
+        testFor(result, main, list(1, 2, 3), list());
+        testFor(result, main, list(1, 2, 3, 4, 5), list(4, 5));
+        testFor(result, main, list(5), list(5));
+    }
+
+    private void testFor(ResultCollector resultCollector, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
+        resultCollector.clear();
+        _Ex ex = main.createExecution(node, node.getTop());
+        ex.receive(Value.of(Names.list, source, node.getTop()));
+        Concurrent.await(() -> !resultCollector.isEmpty());
+        assertEquals(expected, resultCollector.get().get(0).get());
+    }
+
+    /*
+        predicate: arg -> boolean
+
+        function filter(list, predicate) = {
+            iff (list == []){
+                []
+            } else {
+                let head = head(list);
+                let tail = tail(list);
+                let tail_filtered = filter(tail, predicate)
+                iff (predicate(head))
+                    head :: tail_filtered
+                else
+                    tail_filtered
+            }
+        }
+        */
+
+    private F filter() {
+        String tailFiltered = "tailFiltered";
+
+        If if_listEmpty = iff(node).label("**if:listEmpty");
+
+        F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("**isEmpty");
+        if_listEmpty.addPropagation(CONDITION, list, isEmpty);
+        F constEmptyList = new F(node, new Const(Collections.emptyList())).label("**const:emptylist()");
+        if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
+
+        F block_else = f(nop).label("**block_else");
+        if_listEmpty.addPropagation(FALSE_BRANCH, list, block_else);
+        if_listEmpty.addPropagation(FALSE_BRANCH, predicate, block_else);
+
+        F head = new F(node, new Head(), list).returnAs(Names.head).label("**head()");
+        F tail = new F(node, new Tail(), list).returnAs(Names.tail).label("**tail()");
+        F filterReCall = new FCall(node, if_listEmpty, Names.list, predicate).returnAs(tailFiltered).label("**filterReCall");
+
+        If if_predicate = iff(node).label("**if:predicate");
+        block_else.addPropagation(list, head);
+        block_else.addPropagation(list, tail);
+        block_else.addPropagation(Names.tail, Names.list, filterReCall);
+        block_else.addPropagation(predicate, filterReCall);
+
+        block_else.addPropagation(predicate, if_predicate);
+        block_else.addPropagation(Names.head, if_predicate);
+        block_else.addPropagation(tailFiltered, if_predicate);
+
+        // TODO: underlying partial function takes left/right, right is already applied, left needs to be supplied
+        // would be nice to have a remapping somewhere for the remaining 1 parameter, "left" -> "argument" or so
+        F callPredicate = new FCallByFunctionalValue(node, predicate, Names.left).returnAs(condition).label("**callPredicateByFVal");
+
+        if_predicate.addPropagation(CONDITION, predicate, callPredicate);
+        if_predicate.addPropagation(CONDITION, Names.head, Names.left, callPredicate);
+
+        F cons = new F(node, new Cons(), element, list).label("**cons");
+        if_predicate.addPropagation(TRUE_BRANCH, Names.head, element, cons);
+        if_predicate.addPropagation(TRUE_BRANCH, tailFiltered, Names.list, cons);
+
+        if_predicate.addPropagation(FALSE_BRANCH, tailFiltered, new F(node, new Val(), tailFiltered).label("**VAL:tailFiltered"));
+
+        return if_listEmpty;
+    }
+
     private F CONST(Object i) {
         return F.f(node, new Const(i), ping);
     }
@@ -402,5 +607,18 @@ trisum(a,b,c)   trimul(a,b,c)
         return F.f(node, primitive, params);
     }
 
+    private ArrayList<Integer> list(Integer... i) {
+        return new ArrayList<>(asList(i));
+    }
 
+    private ArrayList<Integer> randomList(int size) {
+        ArrayList<Integer> list = new ArrayList<>();
+        Random rand = new Random();
+
+        for (int i = 0; i < size; i++) {
+            list.add(rand.nextInt(size * 10));
+        }
+
+        return list;
+    }
 }

@@ -20,11 +20,16 @@ public class ResultCollector {
         }
     }
 
-    void set(Collection<Value> values){
-        synchronized (this){
+    void set(Collection<Value> values) {
+        synchronized (this) {
             this.values.addAll(values);
         }
     }
 
+    public void clear() {
+        synchronized (this) {
+            values.clear();
+        }
+    }
 
 }

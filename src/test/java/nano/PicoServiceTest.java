@@ -939,7 +939,7 @@ public class PicoServiceTest {
 //  arrive after the params and after a result has already been returned, resulting in a new executionState being
 //  created that never again will be removed
 //        resultMonitor.kickOff(_if);
-//        _if.kickOff(gt);
+//        _if.kickOff(lteq);
 //        _if.kickOff(subT);
 //        _if.kickOff(subF);
 

@@ -6,7 +6,9 @@ import micro.event.PropagateValueEvent;
 import micro.event.ValueReceivedEvent;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
@@ -70,10 +72,14 @@ public class ExIf extends Ex {
                 .forEach(p -> raise(new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
 
         if (condition != null) {
-            conditionalValuePropagations.stream()
+            List<ValuePropagation> canPropagate = conditionalValuePropagations.stream()
                     .filter(this::canPerformConditionalValuePropagation)
-                    .forEach(p -> raise(new PropagateValueEvent(node.getNextObjectId(), this, p.propagation.getTo(),
-                            new Value(p.propagation.getNameToPropagate(), p.value.get(), this))));
+                    .collect(Collectors.toList());
+            canPropagate.forEach(p -> {
+                raise(new PropagateValueEvent(node.getNextObjectId(), this, p.propagation.getTo(),
+                        new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
+                conditionalValuePropagations.remove(p);
+            });
         }
     }
 

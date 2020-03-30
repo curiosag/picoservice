@@ -10,10 +10,6 @@ public class ExFCall extends Ex {
         this.callTemplate = callTemplate;
     }
 
-    public ExFCall(Node node) {
-        super(node);
-    }
-
     @Override
     public String getLabel(){
         return callTemplate.getLabel();
@@ -24,7 +20,7 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public void perfromFunctionInputValueReceived(Value v) {
+    public void perfromValueReceived(Value v) {
         Check.isFunctionInputValue(v);
         getBeingCalled().receive(v.withSender(this));
     }

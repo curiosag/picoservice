@@ -5,7 +5,7 @@ import micro.Value;
 
 import java.util.Map;
 
-public class MulInt implements Atom {
+public class MulInt implements Primitive {
 
     @Override
     public Object execute(Map<String, Value> params) {

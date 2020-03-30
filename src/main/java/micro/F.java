@@ -1,7 +1,6 @@
 package micro;
 
-import micro.atoms.Atom;
-import micro.atoms.Nop;
+import micro.atoms.Primitive;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -15,17 +14,22 @@ public class F implements _F, Id {
     private final long id;
     private String label;
     public String returnAs = Names.result;
-    private final Atom atom;
+    private Primitive primitive;
 
     private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();
 
     List<String> formalParameters = new ArrayList<>();
 
-    public F(Node node, Atom atom, String ... formalParams) {
+    public F(Node node, Primitive primitive, List<String> formalParams) {
         this.id = node.getNextFId();
         node.addF(this);
         this.nextPropagationId = node::getNextObjectId;
-        this.atom = atom;
+        this.primitive = primitive;
+        this.formalParameters.addAll(formalParams);
+    }
+
+    public F(Node node, Primitive primitive, String ... formalParams) {
+        this(node, primitive, Collections.emptyList());
         Collections.addAll(formalParameters, formalParams);
     }
 
@@ -43,16 +47,20 @@ public class F implements _F, Id {
         return formalParameters.size();
     }
 
-    Atom getAtom() {
-        return atom;
+    void setPrimitive(Primitive primitive) {
+        this.primitive = primitive;
+    }
+
+    Primitive getPrimitive() {
+        return primitive;
     }
 
     boolean hasAtom() {
-        return getAtom() != Nop.nop;
+        return getPrimitive() != Primitive.nop;
     }
 
     boolean hasFunctionAtom() {
-        return hasAtom() && !getAtom().isSideEffect();
+        return hasAtom() && !getPrimitive().isSideEffect();
     }
 
     F returnAs(String returnAs) {
@@ -99,11 +107,11 @@ public class F implements _F, Id {
         return label != null ? label : "no name";
     }
 
-    public static F f(Node node, Atom atom, String... params) {
-        if (atom == null) {
+    public static F f(Node node, Primitive primitive, String... params) {
+        if (primitive == null) {
             throw new IllegalArgumentException();
         }
-        return new F(node, atom, params);
+        return new F(node, primitive, params);
     }
 
     @Override

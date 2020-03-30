@@ -7,7 +7,7 @@ import micro.Value;
 import java.util.Map;
 import java.util.Objects;
 
-public class Eq implements Atom {
+public class Eq implements Primitive {
 
     @Override
     public Object execute(Map<String, Value> values) {

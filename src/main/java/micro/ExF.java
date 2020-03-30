@@ -1,6 +1,5 @@
 package micro;
 
-import micro.atoms.Atom;
 import micro.event.PropagateValueEvent;
 
 public class ExF extends Ex {
@@ -8,12 +7,8 @@ public class ExF extends Ex {
         super(node, template, returnTo);
     }
 
-    public ExF(Node node) {
-        super(node, new F(node, Atom.nop), null);
-    }
-
     @Override
-    public void perfromFunctionInputValueReceived(Value v) {
+    public void perfromValueReceived(Value v) {
         Check.isFunctionInputValue(v);
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
@@ -22,7 +17,7 @@ public class ExF extends Ex {
         //TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
 
-            if (template.getAtom().isSideEffect()) {
+            if (template.getPrimitive().isSideEffect()) {
                 applySideEffect();
             } else {
                 applyFunction();
@@ -37,7 +32,7 @@ public class ExF extends Ex {
 
     private void applySideEffect() {
         try {
-            template.getAtom().execute(paramsReceived);
+            template.getPrimitive().execute(paramsReceived);
         } catch (Exception e) {
             node.log(e.getMessage()); // todo remove
         }
@@ -45,7 +40,7 @@ public class ExF extends Ex {
 
     private void applyFunction() {
         try {
-            Object value = template.getAtom().execute(paramsReceived);
+            Object value = template.getPrimitive().execute(paramsReceived);
             returnTo.receive(new Value(template.returnAs, value, this));
         } catch (Exception e) {
             returnTo.receive(new Value(Names.exception, e, this));

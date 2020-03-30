@@ -1,13 +1,13 @@
 package micro.If;
 
 import micro.*;
-import micro.atoms.Atom;
+import micro.atoms.Primitive;
 
 
 public class If extends F {
 
     public If(Node node) {
-        super(node, Atom.nop, Names.condition, Names.onTrue, Names.onFalse);
+        super(node, Primitive.nop, Names.condition, Names.onTrue, Names.onFalse);
     }
 
     public void addPropagation(PropagationType propagationType, String name, _F to) {

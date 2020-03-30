@@ -4,14 +4,14 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import micro.Check;
-import micro.Ex;
 import micro.Hydrator;
 import micro.Value;
+import micro._Ex;
 
 public class ValueEvent extends ExEvent {
     public Value value;
 
-    public ValueEvent(long eventId, Ex ex, Value value) {
+    public ValueEvent(long eventId, _Ex ex, Value value) {
         super(eventId, ex);
         this.value = value;
     }

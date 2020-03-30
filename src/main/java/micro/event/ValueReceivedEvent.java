@@ -1,7 +1,7 @@
 package micro.event;
 
-import micro.Ex;
 import micro.Value;
+import micro._Ex;
 
 public class ValueReceivedEvent extends ValueEvent {
 
@@ -9,7 +9,7 @@ public class ValueReceivedEvent extends ValueEvent {
         super();
     }
 
-    public ValueReceivedEvent(long exId, Ex ex, Value value) {
+    public ValueReceivedEvent(long exId, _Ex ex, Value value) {
         super(exId, ex, value);
     }
 }

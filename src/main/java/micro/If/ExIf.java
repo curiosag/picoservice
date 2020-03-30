@@ -59,7 +59,7 @@ public class ExIf extends Ex {
     }
 
     @Override
-    public void perfromFunctionInputValueReceived(Value v) {
+    public void perfromValueReceived(Value v) {
         Check.isFunctionInputValue(v);
         propagate(v);
     }

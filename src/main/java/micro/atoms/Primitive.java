@@ -4,9 +4,9 @@ import micro.Value;
 
 import java.util.Map;
 
-public interface Atom {
+public interface Primitive {
 
-    Atom nop = parameters -> null;
+    Primitive nop = parameters -> null;
 
     default boolean isSideEffect(){
         return false;

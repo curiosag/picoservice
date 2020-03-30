@@ -1,29 +1,74 @@
 package micro;
 
 import micro.If.If;
-import micro.atoms.AddInt;
-import micro.atoms.Atom;
-import micro.atoms.Const;
-import micro.atoms.MulInt;
-import org.junit.Before;
+import micro.atoms.*;
+import nano.ingredients.Name;
 import org.junit.Test;
 
 import java.util.function.Supplier;
 
 import static micro.If.If.iff;
+import static micro.Names.paramFVar;
 import static micro.Names.ping;
 import static micro.PropagationType.*;
-import static micro.atoms.AddInt.addInt;
+import static micro.atoms.Add.add;
 import static micro.atoms.Eq.eq;
 import static micro.atoms.Gt.gt;
-import static micro.atoms.Nop.nop;
+import static micro.atoms.Mul.mul;
+import static micro.atoms.Primitive.nop;
 import static micro.atoms.Print.print;
-import static micro.atoms.SubInt.subInt;
+import static micro.atoms.Sub.subInt;
+import static org.junit.Assert.assertEquals;
 
 public class MicroTest {
 
     private final Address address = new Address(new byte[0], 1, 1);
-    private Node node;
+    private Node node = new Node(address);
+
+
+    @Test
+    public void testLet() {
+
+        /*
+
+        func f(){
+            let a = 1;
+            let b = a * a;
+            return a + b;
+          }
+
+        main{
+         f()
+        }
+
+        */
+
+        ResultCollector result = new ResultCollector();
+        Action resultListener = new Action(i -> result.set(i.values()));
+
+        F f = f(nop, Names.a).returnAs(Names.output).label("f");
+        F mul = f(mul(), Names.left, Names.right).label("mul").returnAs(Names.b);
+        F add = f(add(), Names.left, Names.right).label("add");
+
+        f.addPropagation(ping, CONST(2).returnAs(Names.a).label("const:2"));
+        f.addPropagation(Names.a, Names.left, mul);
+        f.addPropagation(Names.a, Names.right, mul);
+
+        f.addPropagation(Names.a, Names.left, add);
+        f.addPropagation(Names.b, Names.right, add);
+
+        F main = f(resultListener, Names.output).label("main");
+        main.addPropagation(ping, f);
+
+        _Ex ex = main.createExecution(node, node.getTop());
+
+        node.start();
+
+        ex.receive(Value.of(ping, 0, node.getTop()));
+
+        Concurrent.await(() -> !result.isEmpty());
+        assertEquals(6, result.get().get(0).get());
+    }
 
 
 /*
@@ -41,23 +86,17 @@ public class MicroTest {
 
 */
 
-    @Before
-    public void setUp() {
-        node = new Node( address);
-    }
-
     @Test
     public void testSimpleFunc() {
         F main = f(print(), Names.result).label("main");
-        F add = f(addInt(), Names.left, Names.right).label("add");
+        F add = f(add(), Names.left, Names.right).label("add");
 
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
 
-        _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(node, TOP);
-        ex.receive(Value.of(Names.a, 1, TOP));
-        ex.receive(Value.of(Names.b, 2, TOP));
+        _Ex ex = main.createExecution(node, node.getTop());
+        ex.receive(Value.of(Names.a, 1, node.getTop()));
+        ex.receive(Value.of(Names.b, 2, node.getTop()));
     }
 
     /*
@@ -93,7 +132,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
     * */
 
-    private F createTriOp(Supplier<Atom> getBinOp, String resultName, String label) {
+    private F createTriOp(Supplier<Primitive> getBinOp, String resultName, String label) {
         F op1 = f(getBinOp.get(), Names.left, Names.right).label(label + "_1");
         F op2 = f(getBinOp.get(), Names.left, Names.right).label(label + "_2");
         F triOp = f(nop, Names.a, Names.b, Names.c).label(label + "_triop");
@@ -116,8 +155,8 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testSimpleFuncs() {
         F main = f(print(), Names.result).label("main");
 
-        F add = f(addInt(), Names.left, Names.right).label("add").returnAs(Names.result);
-        F triSum = createTriOp(AddInt::new, Names.left, "tsum").returnAs(Names.left);
+        F add = f(add(), Names.left, Names.right).label("add").returnAs(Names.result);
+        F triSum = createTriOp(Add::new, Names.left, "tsum").returnAs(Names.left);
         F triMul = createTriOp(MulInt::new, Names.right, "tmul").returnAs(Names.right);
 
         main.addPropagation(Names.a, add);
@@ -139,10 +178,99 @@ trisum(a,b,c)   trimul(a,b,c)
         ex.receive(Value.of(Names.b, 2, TOP));
     }
 
+
+
     /*
-       function dec(a) = a - 1
-       print(dec(1));
+
+        def sub(a: Int, b: Int): Int = a - b
+
+        def useFVar(a: Int, b: Int):Int = {
+          val subtract  = sub
+          subtract(a, b)
+        }
+
+       print(useFVar(2,1));
+
     */
+
+    @Test
+    public void testFunctionalValue() {
+        ResultCollector result = new ResultCollector();
+        Action resultListener = new Action(i -> result.set(i.values()));
+
+        F main = f(resultListener, Names.output).label("main");
+
+        F sub = f(subInt(), Names.left, Names.right).label("sub");
+        F useFVar = f(nop, Names.a, Names.b).label("useFVar").returnAs(Names.output);
+
+        // a plain functional value is a partially applied function with no partial parameters
+        F createSubtract = new FCreatePartiallyAppliedFunction(node, sub).returnAs(paramFVar).label("createSubtract");
+        F callSubtract = new FCallByFunctionalValue(node, paramFVar, Names.left, Names.right).label("callSubtract");
+
+        useFVar.addPropagation(Names.a, ping, createSubtract);
+        useFVar.addPropagation(paramFVar, callSubtract);
+        useFVar.addPropagation(Name.a, Names.left, callSubtract);
+        useFVar.addPropagation(Name.b, Names.right, callSubtract);
+
+        main.addPropagation(Names.a, useFVar);
+        main.addPropagation(Names.b, useFVar);
+
+        _Ex ex = main.createExecution(node, node.getTop());
+
+        node.start();
+
+        ex.receive(Value.of(Names.a, 2, node.getTop()));
+        ex.receive(Value.of(Names.b, 1, node.getTop()));
+
+        Concurrent.await(() -> !result.isEmpty());
+        assertEquals(1, result.get().get(0).get());
+    }
+
+
+    /*
+
+        def sub(a: Int, b: Int): Int = a - b
+
+        def usePartial(a: Int, b: Int):Int = {
+          val dec : Int => Int = sub(_, b)
+          dec(a)
+        }
+
+       print(usePartial(2,3));
+
+    */
+
+    @Test
+    public void testPartialFunctionApplication() {
+
+        ResultCollector result = new ResultCollector();
+        Action resultListener = new Action(i -> result.set(i.values()));
+
+        F main = f(resultListener, Names.output).label("main");
+
+        F sub = f(subInt(), Names.left, Names.right).label("sub");
+        F usePartial = f(nop, Names.a, Names.b).returnAs(Names.output).label("usePartial");
+
+        F createDec = new FCreatePartiallyAppliedFunction(node, sub, Names.right).returnAs(paramFVar).label("createDec");
+        F callDec = new FCallByFunctionalValue(node, paramFVar, Names.left).label("callDec");
+
+        usePartial.addPropagation(Names.b, Names.right, createDec);
+        usePartial.addPropagation(paramFVar, callDec);
+        usePartial.addPropagation(Name.a, Names.left, callDec);
+
+        main.addPropagation(Names.a, usePartial);
+        main.addPropagation(Names.b, usePartial);
+
+        _Ex ex = main.createExecution(node, node.getTop());
+
+        node.start();
+
+        ex.receive(Value.of(Names.a, 2, node.getTop()));
+        ex.receive(Value.of(Names.b, 1, node.getTop()));
+
+        Concurrent.await(() -> !result.isEmpty());
+        assertEquals(1, result.get().get(0).get());
+    }
 
     @Test
     public void testConst() {
@@ -206,7 +334,7 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testSimpleRecursion() {
         F main = createRecSum();
 
-        node.setDelay(1);
+        node.setDelay(0);
         node.start();
 
         _Ex m1 = node.getExecution(main);
@@ -215,10 +343,10 @@ trisum(a,b,c)   trimul(a,b,c)
         m1.receive(Value.of(Names.a, 100, m1.returnTo()));
         //m2.receive(Value.of(Names.a, 100, m1.returnTo()));
 
-        Concurrent.sleep(1000);
-        node.log("stopping");
-        node.stop();
-        Concurrent.sleep(2000);
+        //Concurrent.sleep(1000);
+        //node.log("stopping");
+        //node.stop();
+        Concurrent.sleep(5000);
         node.close();
     }
 
@@ -257,7 +385,7 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(Names.a, Names.left, sub);
         sub.addPropagation(Names.left, ping, CONST(1).returnAs(Names.right).label("one"));
         // a + geo(next_a);
-        F add = f(addInt(), Names.left, Names.right).label("add");
+        F add = f(add(), Names.left, Names.right).label("add");
         F geoReCall = new FCall(node, geo).returnAs(Names.right).label("geoCallR");
 
         block_else.addPropagation(Names.a, Names.left, add);
@@ -270,8 +398,8 @@ trisum(a,b,c)   trimul(a,b,c)
         return F.f(node, new Const(i), ping);
     }
 
-    private F f(Atom atom, String... params) {
-        return F.f(node, atom, params);
+    private F f(Primitive primitive, String... params) {
+        return F.f(node, primitive, params);
     }
 
 

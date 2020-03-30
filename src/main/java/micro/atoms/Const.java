@@ -4,7 +4,7 @@ import micro.Value;
 
 import java.util.Map;
 
-public class Const implements Atom {
+public class Const implements Primitive {
 
     private final Object value;
 

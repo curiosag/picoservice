@@ -74,7 +74,6 @@ public class Value implements Hydratable, KryoSerializable {
         output.writeString(name);
 
         if (value instanceof Integer) {
-
             output.writeVarInt(0, true);
             output.writeVarInt((Integer) value, false);
 

@@ -5,7 +5,7 @@ import micro.Value;
 
 import java.util.Map;
 
-public class Gt implements Atom {
+public class Gt implements Primitive {
 
     @Override
     public Object execute(Map<String, Value> params) {

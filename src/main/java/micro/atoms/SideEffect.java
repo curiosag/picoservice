@@ -1,6 +1,6 @@
 package micro.atoms;
 
-public interface SideEffect extends Atom {
+public interface SideEffect extends Primitive {
 
     @Override
     default boolean isSideEffect() {

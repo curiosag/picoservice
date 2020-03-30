@@ -105,12 +105,6 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void handle(ExEvent e) {
-        if(e.getEx() instanceof Ex)
-        {
-            Ex ex = (Ex) e.getEx();
-            ex.recover(e);
-        }
-
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
             log((v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.value.getName() + " " + v.value.get().toString());
@@ -173,7 +167,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void eventLogPut(Event e) {
-        eventLog.put(e);
+ //       eventLog.put(e);
     }
 
     _Ex getExecution(_F targetFunc) {

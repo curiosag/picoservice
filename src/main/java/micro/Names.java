@@ -13,4 +13,7 @@ public interface Names {
     String onFalse = "onFalse";
     String ping = "ping";
     String delta = "delta";
+    String output = "output";
+    String voidRetVal = "void";
+    String paramFVar = "FVar";
 }

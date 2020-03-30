@@ -4,7 +4,10 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.event.*;
+import micro.event.ExEvent;
+import micro.event.PropagateValueEvent;
+import micro.event.ValueProcessedEvent;
+import micro.event.ValueReceivedEvent;
 
 import java.util.*;
 
@@ -114,7 +117,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
                     break;
 
                 default:
-                    perfromFunctionInputValueReceived(v);
+                    perfromValueReceived(v);
             }
             raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
         }
@@ -128,7 +131,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
         v.to.receive(v.value);
     }
 
-    protected abstract void perfromFunctionInputValueReceived(Value v);
+    protected abstract void perfromValueReceived(Value v);
 
     private void createExPropagations(F template) {
         template.getTargetFunctionsToPropagations().forEach(this::createPropagationsForTargetFunc);

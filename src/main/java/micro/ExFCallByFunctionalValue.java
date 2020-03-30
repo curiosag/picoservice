@@ -20,6 +20,15 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
+    void clear() {
+        beingCalled = null;
+        baseFunction = null;
+        f = null;
+        pendingValues.clear();
+        super.clear();
+    }
+
+    @Override
     public String getLabel() {
         return f.getLabel();
     }

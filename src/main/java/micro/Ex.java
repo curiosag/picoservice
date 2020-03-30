@@ -110,10 +110,12 @@ public abstract class Ex implements _Ex, KryoSerializable {
             switch (v.getName()) {
                 case Names.result:
                     returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
+                    clear();
                     break;
 
                 case Names.exception:
                     returnTo.receive(v.withSender(this));
+                    clear();
                     break;
 
                 default:
@@ -121,6 +123,13 @@ public abstract class Ex implements _Ex, KryoSerializable {
             }
             raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
         }
+    }
+
+    void clear() {
+        returnTo = null;
+        paramNameToPropagations.clear();
+        valuesProcessed.clear();
+        paramsReceived.clear();
     }
 
     String getNameForReturnValue() {

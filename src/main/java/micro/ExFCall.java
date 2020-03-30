@@ -32,4 +32,11 @@ public class ExFCall extends Ex {
         return beingCalled;
     }
 
+    @Override
+    void clear() {
+        beingCalled = null;
+        callTemplate = null;
+        super.clear();
+    }
+
 }

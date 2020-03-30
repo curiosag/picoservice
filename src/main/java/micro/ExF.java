@@ -14,9 +14,7 @@ public class ExF extends Ex {
 
         propagate(v);
 
-        //TODO: looks really fishy. always apply? Side effect maybe, but function should be always terminal?
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
-
             if (template.getPrimitive().isSideEffect()) {
                 applySideEffect();
             } else {

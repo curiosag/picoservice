@@ -107,7 +107,7 @@ public class Node implements Closeable, Hydrator {
     private void handle(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
-            logValueReceived(v);
+            //logValueReceived(v);
             events.add(e);
             return;
         }

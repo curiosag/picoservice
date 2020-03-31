@@ -1,6 +1,6 @@
 package micro;
 
-import micro.atoms.Primitive;
+import micro.primitives.Primitive;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -20,16 +20,20 @@ public class F implements _F, Id {
 
     List<String> formalParameters = new ArrayList<>();
 
-    public F(Node node, Primitive primitive, List<String> formalParams) {
+    private F(Node node, Primitive primitive) {
         this.id = node.getNextFId();
         node.addF(this);
         this.nextPropagationId = node::getNextObjectId;
         this.primitive = primitive;
+    }
+
+    public F(Node node, Primitive primitive, List<String> formalParams) {
+        this(node, primitive);
         this.formalParameters.addAll(formalParams);
     }
 
     public F(Node node, Primitive primitive, String ... formalParams) {
-        this(node, primitive, Collections.emptyList());
+        this(node, primitive);
         Collections.addAll(formalParameters, formalParams);
     }
 

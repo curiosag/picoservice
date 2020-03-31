@@ -7,13 +7,15 @@ import micro.Hydrator;
 
 public class QueueRemoveEvent extends NodeEvent {
     public long idEventToRemove;
+    public long idRelatedExecution;
 
     public QueueRemoveEvent() {
         super(0);
     }
 
-    public QueueRemoveEvent(long idEventToRemove) {
+    public QueueRemoveEvent(long idEventToRemove, long idRelatedExecution) {
         this.idEventToRemove = idEventToRemove;
+        this.idRelatedExecution = idRelatedExecution;
     }
 
     @Override

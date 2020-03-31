@@ -1,4 +1,4 @@
-package micro.atoms;
+package micro.primitives;
 
 import micro.Names;
 import micro.Value;

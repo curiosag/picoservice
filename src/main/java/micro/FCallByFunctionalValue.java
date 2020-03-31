@@ -1,6 +1,6 @@
 package micro;
 
-import micro.atoms.Primitive;
+import micro.primitives.Primitive;
 
 public class FCallByFunctionalValue extends F {
 

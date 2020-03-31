@@ -11,7 +11,7 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public String getLabel(){
+    public String getLabel() {
         return callTemplate.getLabel();
     }
 

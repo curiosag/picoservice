@@ -12,13 +12,14 @@ import micro.event.ValueReceivedEvent;
 import java.util.*;
 
 public abstract class Ex implements _Ex, KryoSerializable {
+    boolean done = false;
     protected final Node node;
     private long id = -1;
     public F template;
     protected _Ex returnTo;
 
     private final HashMap<String, List<ExPropagation>> paramNameToPropagations = new HashMap<>();
-    private final HashSet<String> valuesProcessed = new HashSet<>();
+    private final HashSet<String> valuesReceived = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
     public Ex(Node node) {
@@ -49,6 +50,9 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
     @Override
     public void receive(Value v) {
+        if (done) {
+            return;
+        }
         raise(new ValueReceivedEvent(node.getNextObjectId(), this, v));
     }
 
@@ -58,14 +62,18 @@ public abstract class Ex implements _Ex, KryoSerializable {
     }
 
     public void handle(ExEvent e) {
+        if (done) {
+            return;
+        }
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent va = (ValueReceivedEvent) e;
-            alterStateFor(va);
-            perform(va);
+            if (!valuesReceived.contains(va.value.getName())) {
+                alterStateFor(va);
+                perform(va);
+            }
             return;
         }
         if (e instanceof ValueProcessedEvent) {
-            alterStateFor((ValueProcessedEvent) e);
             return;
         }
         if (e instanceof PropagateValueEvent) {
@@ -81,7 +89,6 @@ public abstract class Ex implements _Ex, KryoSerializable {
             return;
         }
         if (e instanceof ValueProcessedEvent) {
-            alterStateFor((ValueProcessedEvent) e);
             return;
         }
         if (e instanceof PropagateValueEvent) {
@@ -92,44 +99,37 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
     private void alterStateFor(ValueReceivedEvent va) {
         Value v = va.value;
-        if (!valuesProcessed.contains(v.getName())) {
-            if (template.formalParameters.contains(v.getName())) {
-                paramsReceived.put(v.getName(), v);
-            }
+        if (template.formalParameters.contains(v.getName())) {
+            paramsReceived.put(v.getName(), v);
         }
-    }
-
-    private void alterStateFor(ValueProcessedEvent v) {
-        valuesProcessed.add(v.valueName);
     }
 
     private void perform(ValueReceivedEvent va) {
         Value v = va.value;
-        if (!valuesProcessed.contains(v.getName())) {
+        switch (v.getName()) {
+            case Names.result:
+                returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
+                clear();
+                break;
 
-            switch (v.getName()) {
-                case Names.result:
-                    returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
-                    clear();
-                    break;
+            case Names.exception:
+                returnTo.receive(v.withSender(this));
 
-                case Names.exception:
-                    returnTo.receive(v.withSender(this));
-                    clear();
-                    break;
+                break;
 
-                default:
-                    perfromValueReceived(v);
-            }
-            raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
+            default:
+                perfromValueReceived(v);
         }
+
+        raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
     }
 
     void clear() {
         returnTo = null;
         paramNameToPropagations.clear();
-        valuesProcessed.clear();
+        valuesReceived.clear();
         paramsReceived.clear();
+        done = true;
     }
 
     String getNameForReturnValue() {

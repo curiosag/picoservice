@@ -1,8 +1,8 @@
 package micro;
 
 import micro.If.If;
-import micro.atoms.*;
-import micro.atoms.Lists.*;
+import micro.primitives.*;
+import micro.primitives.Lists.*;
 import nano.ingredients.Name;
 import org.junit.Test;
 
@@ -15,13 +15,13 @@ import static java.util.Arrays.asList;
 import static micro.If.If.iff;
 import static micro.Names.*;
 import static micro.PropagationType.*;
-import static micro.atoms.Add.add;
-import static micro.atoms.Eq.eq;
-import static micro.atoms.Gt.gt;
-import static micro.atoms.Mul.mul;
-import static micro.atoms.Primitive.nop;
-import static micro.atoms.Print.print;
-import static micro.atoms.Sub.subInt;
+import static micro.primitives.Add.add;
+import static micro.primitives.Eq.eq;
+import static micro.primitives.Gt.gt;
+import static micro.primitives.Mul.mul;
+import static micro.primitives.Primitive.nop;
+import static micro.primitives.Print.print;
+import static micro.primitives.Sub.subInt;
 import static org.junit.Assert.assertEquals;
 
 public class MicroTest {
@@ -411,16 +411,17 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(list, callQuicksort);
 
         node.start();
-        testFor(result, main, list(), list());
-        testFor(result, main, list(1), list(1));
-        testFor(result, main, list(1, 2), list(1, 2));
-        testFor(result, main, list(2, 1), list(1, 2));
-        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2,3, 4, 5, 6, 7, 8, 9));
+        //testFor(result, main, list(), list());
+        //testFor(result, main, list(1), list(1));
+        //testFor(result, main, list(1, 2), list(1, 2));
+        //testFor(result, main, list(2, 1), list(1, 2));
+        //testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2,3, 4, 5, 6, 7, 8, 9));
 
-        ArrayList<Integer> randList = randomList(100);
+        ArrayList<Integer> randList = randomList(10);
         ArrayList<Integer> randListSorted = new ArrayList<>(randList);
         randListSorted.sort(Integer::compareTo);
         testFor(result, main, randList, randListSorted);
+        System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
     }
 
         /*
@@ -457,7 +458,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
-        F constEmptyList = new F(node, new Const(Collections.emptyList())).label("const:emptylist()");
+        F constEmptyList = new F(node, new Const(Collections.emptyList()), ping).label("const:emptylist()");
         if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(nop).label("block_else");
@@ -531,7 +532,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
     private void testFor(ResultCollector resultCollector, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         resultCollector.clear();
-        _Ex ex = main.createExecution(node, node.getTop());
+        _Ex ex = node.getExecution(main, node.getTop());
         ex.receive(Value.of(Names.list, source, node.getTop()));
         Concurrent.await(() -> !resultCollector.isEmpty());
         assertEquals(expected, resultCollector.get().get(0).get());
@@ -562,7 +563,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("**isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
-        F constEmptyList = new F(node, new Const(Collections.emptyList())).label("**const:emptylist()");
+        F constEmptyList = new F(node, new Const(Collections.emptyList()), ping).label("**const:emptylist()");
         if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(nop).label("**block_else");

@@ -1,9 +1,9 @@
-package micro.atoms.Lists;
+package micro.primitives.Lists;
 
 import micro.Check;
 import micro.Names;
 import micro.Value;
-import micro.atoms.Primitive;
+import micro.primitives.Primitive;
 
 import java.util.List;
 import java.util.Map;

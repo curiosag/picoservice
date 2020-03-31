@@ -1,4 +1,4 @@
-package micro.atoms;
+package micro.primitives;
 
 public class Mul extends BinOp {
 

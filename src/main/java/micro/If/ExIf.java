@@ -6,9 +6,7 @@ import micro.event.PropagateValueEvent;
 import micro.event.ValueReceivedEvent;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
@@ -18,14 +16,10 @@ public class ExIf extends Ex {
 
     // conditional propagations here don't protect against double propagations
     // its the business of the recipients to guard against that
-    private Set<ValuePropagation> conditionalValuePropagations = new HashSet<>();
+    private Set<ValuePropagation> toPropagateOnConditionSet = new HashSet<>();
 
     ExIf(Node node, F template, _Ex returnTo) {
         super(node, template, returnTo);
-    }
-
-    public ExIf(Node node) {
-        super(node);
     }
 
     @Override
@@ -46,60 +40,40 @@ public class ExIf extends Ex {
             if (Names.condition.equals(v.getName())) {
                 Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
                 this.condition = (Boolean) v.get();
-            } else {
-                getPropagations(v.getName()).forEach(p -> { //todo unnecessary foreach, could be replaced by structure
-                    if (p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH)) {
-                        conditionalValuePropagations.add(new ValuePropagation(v, p));
-                    }
-                });
             }
-        }
-
-        if (e instanceof PropagateValueEvent) {
-            conditionalValuePropagations.removeIf(i -> i.propagation.getTo().equals(((PropagateValueEvent) e).to) && i.value.equals(((PropagateValueEvent) e).value));
+            if (condition == null) {
+                getPropagations(v.getName()).stream()
+                        .filter(this::isConditioned)
+                        .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
+            }
         }
     }
 
     @Override
-    public void perfromValueReceived(Value v) {
+    public void performValueReceived(Value v) {
         Check.isFunctionInputValue(v);
-        propagate(v);
-    }
 
-    private void propagate(Value v) {
-        getPropagations(v.getName()).stream()
-                .filter(this::isUnconditionalPropagation)
-                .forEach(p -> raise(new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
-
-        if (condition != null) {
-            List<ValuePropagation> canPropagate = conditionalValuePropagations.stream()
-                    .filter(this::canPerformConditionalValuePropagation)
-                    .collect(Collectors.toList());
-            canPropagate.forEach(p -> {
-                raise(new PropagateValueEvent(node.getNextObjectId(), this, p.propagation.getTo(),
-                        new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
-                conditionalValuePropagations.remove(p);
-            });
+        if (Names.condition.equals(v.getName())) {
+            toPropagateOnConditionSet.stream()
+                    .filter(p -> canPerformConditionalPropagation(p.propagation.getPropagationType()))
+                    .forEach(p -> raise(newPropagateValueEvent(p.value, p.propagation)));
+        } else {
+            getPropagations(v.getName()).stream()
+                    .filter(p -> !isConditioned(p) || canPerformConditionalPropagation(p.getPropagationType()))
+                    .forEach(p -> raise(newPropagateValueEvent(v, p)));
         }
     }
 
-    private boolean isUnconditionalPropagation(ExPropagation p) {
-        return !p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH);
+    private boolean isConditioned(ExPropagation p) {
+        return p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH);
     }
 
-    private boolean canPerformConditionalValuePropagation(ValuePropagation valuePropagation) {
-        switch (valuePropagation.propagation.getPropagationType()) {
+    private boolean canPerformConditionalPropagation(PropagationType pType) {
+        return condition != null && ((condition && pType == TRUE_BRANCH) || (!condition && pType == FALSE_BRANCH));
+    }
 
-            case TRUE_BRANCH:
-                return condition;
-
-            case FALSE_BRANCH:
-                return !condition;
-
-            default:
-                Check.fail("invalid case " + valuePropagation.propagation.getPropagationType().name());
-                return false;
-        }
+    private PropagateValueEvent newPropagateValueEvent(Value v, ExPropagation p) {
+        return new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this));
     }
 
 }

@@ -8,7 +8,7 @@ public class ExF extends Ex {
     }
 
     @Override
-    public void perfromValueReceived(Value v) {
+    public void performValueReceived(Value v) {
         Check.isFunctionInputValue(v);
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 

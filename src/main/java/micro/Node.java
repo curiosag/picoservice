@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Node implements Closeable, Hydrator {
-    private static final int NUM_EXEVENTQUEUES = 1;
+    private static final int NUM_EXEVENTQUEUES = 4;
 
     private final Tracer tracer = new Tracer(false);
     private final EventLogWriter eventLog;
@@ -22,8 +22,7 @@ public class Node implements Closeable, Hydrator {
 
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean stop = new AtomicBoolean(true);
-    private final List<ExEvent>[] events = (List<ExEvent>[]) new List[NUM_EXEVENTQUEUES + 1];
-
+    private final List<ExEvent>[] events = (List<ExEvent>[]) new List[NUM_EXEVENTQUEUES];
 
     private Map<Long, _F> idToF = new HashMap<>();
     private Map<Long, _Ex> idToX = new HashMap<>(); //todo works only single threaded now
@@ -35,7 +34,7 @@ public class Node implements Closeable, Hydrator {
         this.address = address;
         eventLog = new EventLogWriter(getEventLogFileName(address), false);
         top = createTop();
-        for (int i = 0; i < NUM_EXEVENTQUEUES + 1; i++) {
+        for (int i = 0; i < NUM_EXEVENTQUEUES; i++) {
             events[i] = NUM_EXEVENTQUEUES == 1 ? new ArrayList<>(): Collections.synchronizedList(new ArrayList<>());
         }
     }
@@ -110,7 +109,7 @@ public class Node implements Closeable, Hydrator {
     private void handle(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
-            logValueReceived(v);
+            //logValueReceived(v);
             getExEventQueue(e.getEx().getId()).add(e);
             return;
         }
@@ -244,7 +243,7 @@ public class Node implements Closeable, Hydrator {
 
     void start() {
         this.stop.set(false);
-        for (int i = 0; i < NUM_EXEVENTQUEUES + 1; i++) {
+        for (int i = 0; i < NUM_EXEVENTQUEUES ; i++) {
             final List<ExEvent> queue = events[i];
             new Thread(() -> processEvents(queue)).start();
         }
@@ -252,8 +251,7 @@ public class Node implements Closeable, Hydrator {
 
     private List<ExEvent> getExEventQueue(Long exId) {
         long id = exId >= 0 ? exId : 0;
-        List<ExEvent> result = events[Math.toIntExact(id % NUM_EXEVENTQUEUES)];
-        return result;
+        return events[Math.toIntExact(id % NUM_EXEVENTQUEUES)];
     }
 
     void recover() {

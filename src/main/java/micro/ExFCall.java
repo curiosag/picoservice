@@ -20,7 +20,7 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public void perfromValueReceived(Value v) {
+    public void performValueReceived(Value v) {
         Check.isFunctionInputValue(v);
         getBeingCalled().receive(v.withSender(this));
     }

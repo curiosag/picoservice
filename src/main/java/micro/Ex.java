@@ -118,7 +118,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
                 break;
 
             default:
-                perfromValueReceived(v);
+                performValueReceived(v);
         }
 
         raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
@@ -140,7 +140,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
         v.to.receive(v.value);
     }
 
-    protected abstract void perfromValueReceived(Value v);
+    protected abstract void performValueReceived(Value v);
 
     private void createExPropagations(F template) {
         template.getTargetFunctionsToPropagations().forEach(this::createPropagationsForTargetFunc);

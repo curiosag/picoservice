@@ -1,5 +1,8 @@
 package micro;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 import micro.event.ValueReceivedEvent;
 
 import java.util.ArrayList;
@@ -38,7 +41,7 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
-    public void perfromValueReceived(Value v) {
+    public void performValueReceived(Value v) {
         if (v.getName().equals(f.getFunctionalValueParam())) {
             Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
             PartiallyAppliedFunction p = ((PartiallyAppliedFunction) v.get());
@@ -62,4 +65,13 @@ public class ExFCallByFunctionalValue extends Ex {
         return beingCalled;
     }
 
+    @Override
+    public void write(Kryo kryo, Output output) {
+        super.write(kryo, output);
+    }
+
+    @Override
+    public void read(Kryo kryo, Input input) {
+        super.read(kryo, input);
+    }
 }

@@ -12,7 +12,8 @@ public class ExF extends Ex {
         Check.isFunctionInputValue(v);
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
-        propagate(v);
+        getPropagations(v.getName()).forEach(p ->
+                raise(new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
 
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
             if (template.getPrimitive().isSideEffect()) {
@@ -21,11 +22,6 @@ public class ExF extends Ex {
                 applyFunction();
             }
         }
-    }
-
-    private void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p ->
-                raise(new PropagateValueEvent(node.getNextObjectId(),this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
     }
 
     private void applySideEffect() {

@@ -23,6 +23,36 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
+    protected void alterStateFor(ValueReceivedEvent e) {
+        super.alterStateFor(e);
+        Value v = e.value;
+        if (isFunctionInputValue(v)) {
+            if (v.getName().equals(f.getFunctionalValueParam())) {
+                Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
+                PartiallyAppliedFunction p = ((PartiallyAppliedFunction) v.get());
+                baseFunction = p.baseFunction;
+                pendingValues.addAll(p.partialValues);
+            } else {
+                if (baseFunction == null) {
+                    pendingValues.add(v);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void performValueReceived(Value v) {
+        if (v.getName().equals(f.getFunctionalValueParam())) {
+            pendingValues.forEach(pv -> getFunctionBeingCalled().receive(pv.withSender(this)));
+        } else {
+            Check.isFunctionInputValue(v);
+            if (baseFunction != null) {
+                getFunctionBeingCalled().receive(v.withSender(this));
+            }
+        }
+    }
+
+    @Override
     void clear() {
         beingCalled = null;
         baseFunction = null;
@@ -40,25 +70,7 @@ public class ExFCallByFunctionalValue extends Ex {
         return f.returnAs;
     }
 
-    @Override
-    public void performValueReceived(Value v) {
-        if (v.getName().equals(f.getFunctionalValueParam())) {
-            Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
-            PartiallyAppliedFunction p = ((PartiallyAppliedFunction) v.get());
-            baseFunction = p.baseFunction;
-            pendingValues.addAll(p.partialValues);
-            pendingValues.forEach(pv -> raise(new ValueReceivedEvent(node.getNextObjectId(), getBeingCalled(), pv)));
-        } else {
-            Check.isFunctionInputValue(v);
-            if (baseFunction == null) {
-                pendingValues.add(v);
-            } else {
-                getBeingCalled().receive(v.withSender(this));
-            }
-        }
-    }
-
-    private _Ex getBeingCalled() {
+    private _Ex getFunctionBeingCalled() {
         if (beingCalled == null) {
             beingCalled = node.getExecution(notNull(baseFunction), this);
         }

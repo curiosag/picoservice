@@ -86,25 +86,17 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public void recover(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             alterStateFor((ValueReceivedEvent) e);
-            return;
         }
-        if (e instanceof ValueProcessedEvent) {
-            return;
-        }
-        if (e instanceof PropagateValueEvent) {
-            return;
-        }
-        Check.fail("unhandled event " + e.toString());
     }
 
-    private void alterStateFor(ValueReceivedEvent va) {
+    protected void alterStateFor(ValueReceivedEvent va) {
         Value v = va.value;
         if (template.formalParameters.contains(v.getName())) {
             paramsReceived.put(v.getName(), v);
         }
     }
 
-    private void perform(ValueReceivedEvent va) {
+    void perform(ValueReceivedEvent va) {
         Value v = va.value;
         switch (v.getName()) {
             case Names.result:
@@ -114,7 +106,6 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
             case Names.exception:
                 returnTo.receive(v.withSender(this));
-
                 break;
 
             default:
@@ -200,6 +191,10 @@ public abstract class Ex implements _Ex, KryoSerializable {
     @Override
     public void read(Kryo kryo, Input input) {
 
+    }
+
+    boolean isFunctionInputValue(Value v) {
+        return !(Names.result.equals(v.getName()) || Names.exception.equals(v.getName()));
     }
 
 }

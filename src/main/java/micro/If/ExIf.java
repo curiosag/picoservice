@@ -1,7 +1,6 @@
 package micro.If;
 
 import micro.*;
-import micro.event.ExEvent;
 import micro.event.PropagateValueEvent;
 import micro.event.ValueReceivedEvent;
 
@@ -23,29 +22,17 @@ public class ExIf extends Ex {
     }
 
     @Override
-    public void handle(ExEvent e) {
-        alterStateFor(e);
-        super.handle(e); // super depends an local state changed
-    }
-
-    @Override
-    public void recover(ExEvent e) {
-        super.recover(e);
-        alterStateFor(e);
-    }
-
-    private void alterStateFor(ExEvent e) {
-        if (e instanceof ValueReceivedEvent) {
-            Value v = ((ValueReceivedEvent) e).value;
-            if (Names.condition.equals(v.getName())) {
-                Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
-                this.condition = (Boolean) v.get();
-            }
-            if (condition == null) {
-                getPropagations(v.getName()).stream()
-                        .filter(this::isConditioned)
-                        .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
-            }
+    protected void alterStateFor(ValueReceivedEvent e) {
+        super.alterStateFor(e);
+        Value v = e.value;
+        if (Names.condition.equals(v.getName())) {
+            Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
+            this.condition = (Boolean) v.get();
+        }
+        if (condition == null) {
+            getPropagations(v.getName()).stream()
+                    .filter(this::isConditioned)
+                    .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
         }
     }
 

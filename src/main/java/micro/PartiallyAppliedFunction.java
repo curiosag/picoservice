@@ -21,7 +21,7 @@ public class PartiallyAppliedFunction implements KryoSerializable {
 
     @Override
     public void write(Kryo kryo, Output output) {
-
+        output.writeVarLong(baseFunction.getId(), true);
     }
 
     @Override

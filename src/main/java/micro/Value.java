@@ -5,6 +5,8 @@ import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class Value implements Hydratable, KryoSerializable {
@@ -48,8 +50,7 @@ public class Value implements Hydratable, KryoSerializable {
                 '}';
     }
 
-    public Value withSender(Ex sender)
-    {
+    public Value withSender(Ex sender) {
         return new Value(name, value, sender);
     }
 
@@ -68,20 +69,28 @@ public class Value implements Hydratable, KryoSerializable {
         return Objects.hash(sender, name, value);
     }
 
+    private final static int INT = 0;
+    private final static int BOOL = 1;
+    private final static int LIST = 2;
+
     @Override
     public void write(Kryo kryo, Output output) {
         output.writeVarLong(senderId, true);
         output.writeString(name);
 
         if (value instanceof Integer) {
-            output.writeVarInt(0, true);
+            output.writeVarInt(INT, true);
             output.writeVarInt((Integer) value, false);
 
         } else if (value instanceof Boolean) {
-
-            output.writeVarInt(1, true);
+            output.writeVarInt(BOOL, true);
             output.writeBoolean((Boolean) value);
 
+        } else if (value instanceof List) {
+            output.writeVarInt(LIST, true);
+            List<Integer> items = (List<Integer>) value;
+            output.writeVarInt(items.size(), true);
+            items.forEach(i -> output.writeVarInt(i, true));
         } else {
             throw new IllegalArgumentException("value type not handled " + value.getClass().getSimpleName());
         }
@@ -94,11 +103,19 @@ public class Value implements Hydratable, KryoSerializable {
 
         int valType = input.readVarInt(true);
         switch (valType) {
-            case 0:
+            case INT:
                 value = input.readVarInt(false);
                 break;
-            case 1:
+            case BOOL:
                 value = input.readBoolean();
+                break;
+            case LIST:
+                ArrayList<Integer> items = new ArrayList<>();
+                int  size = input.readVarInt(true);
+                for (int i = 0; i < size; i++) {
+                    items.add(input.readVarInt(true));
+                }
+                value = items;
                 break;
             default:
                 throw new IllegalArgumentException("value type not handled " + valType);

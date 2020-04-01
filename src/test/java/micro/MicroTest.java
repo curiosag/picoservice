@@ -4,6 +4,7 @@ import micro.If.If;
 import micro.primitives.*;
 import micro.primitives.Lists.*;
 import nano.ingredients.Name;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -27,12 +28,12 @@ import static org.junit.Assert.assertEquals;
 public class MicroTest {
 
     private final Address address = new Address(new byte[0], 1, 1);
-    private Node node = new Node(address);
+    private Node node;
 
 
     @Test
     public void testLet() {
-
+        node = new Node(address, true);
         /*
 
         func f(){
@@ -92,6 +93,7 @@ public class MicroTest {
 
     @Test
     public void testSimpleFunc() {
+        node = new Node(address, true);
         F main = f(print(), Names.result).label("main");
         F add = f(add(), Names.left, Names.right).label("add");
 
@@ -157,6 +159,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testSimpleFuncs() {
+        node = new Node(address, true);
         F main = f(print(), Names.result).label("main");
 
         F add = f(add(), Names.left, Names.right).label("add").returnAs(Names.result);
@@ -199,6 +202,8 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testFunctionalValue() {
+        node = new Node(address, true);
+
         ResultCollector result = new ResultCollector();
         Action resultListener = new Action(i -> result.set(i.values()));
 
@@ -228,6 +233,8 @@ trisum(a,b,c)   trimul(a,b,c)
 
         Concurrent.await(() -> !result.isEmpty());
         assertEquals(1, result.get().get(0).get());
+
+        node.close();
     }
 
 
@@ -246,7 +253,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testPartialFunctionApplication() {
-
+        node = new Node(address, true);
         ResultCollector result = new ResultCollector();
         Action resultListener = new Action(i -> result.set(i.values()));
 
@@ -274,10 +281,14 @@ trisum(a,b,c)   trimul(a,b,c)
 
         Concurrent.await(() -> !result.isEmpty());
         assertEquals(1, result.get().get(0).get());
+
+        node.close();
     }
 
     @Test
     public void testConst() {
+        node = new Node(address, true);
+
         F main = f(print(), Names.result).label("main");
         F dec = f(nop, Names.a).label("dec");
         F sub = f(subInt(), Names.left, Names.right).label("sub");
@@ -297,6 +308,8 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testIf() {
+        node = new Node(address, true);
+
         F main = f(print(), Names.result).label("main");
         F max = f(nop, Names.left, Names.right).label("max");
         If iff = iff(node).label("if");
@@ -322,23 +335,22 @@ trisum(a,b,c)   trimul(a,b,c)
         ex.receive(Value.of(Names.right, 1, TOP));
     }
 
-    /* function geo(a) =
-
-                         if (a = 0)
+    /* function geo(a) = if (a = 0)
                            0
                          else
                          {
                            let next_a = a - 1
                            a + geo(next_a);
                          }
+
        print(geo(3));
     */
 
     @Test
     public void testSimpleRecursion() {
+        node = new Node(address, true);
         F main = createRecSum();
-
-        node.setDelay(0);
+        node.setDelay(1);
         node.start();
 
         _Ex m1 = node.getExecution(main);
@@ -347,22 +359,16 @@ trisum(a,b,c)   trimul(a,b,c)
         m1.receive(Value.of(Names.a, 100, m1.returnTo()));
         //m2.receive(Value.of(Names.a, 100, m1.returnTo()));
 
-        //Concurrent.sleep(1000);
+        //Concurrent.sleep(1500);
         //node.log("stopping");
         //node.stop();
         Concurrent.sleep(5000);
         node.close();
     }
 
-
     @Test
     public void testResumeSimpleRecursion() {
-        F main = createRecSum();
-        node.setDelay(1);
-        node.recover();
-        node.start();
-        Concurrent.sleep(50000);
-        node.close();
+        resumeComputation(this::createRecSum);
     }
 
     private F createRecSum() {
@@ -400,28 +406,67 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testQuicksort() {
+        node = new Node(address, true);
 
         ResultCollector result = new ResultCollector();
+        F main = createQuicksortCall(result);
+
+        node.start();
+//        testFor(result, main, list(), list());
+//        testFor(result, main, list(1), list(1));
+//        testFor(result, main, list(1, 2), list(1, 2));
+//        testFor(result, main, list(2, 1), list(1, 2));
+        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+//        ArrayList<Integer> randList = randomList(100);
+//        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
+//        randListSorted.sort(Integer::compareTo);
+//        testFor(result, main, randList, randListSorted);
+//        System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
+    }
+
+    @Test
+    public void testSuspendQuicksort() {
+        node = new Node(address, true);
+
+        ResultCollector result = new ResultCollector();
+        F main = createQuicksortCall(result);
+
+        node.start();
+
+        ArrayList<Integer> actual = list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4);
+        _Ex ex = node.getExecution(main, node.getTop());
+        ex.receive(Value.of(Names.list, actual, node.getTop()));
+
+        Concurrent.sleep(250);
+        node.stop();
+        Concurrent.sleep(500);
+        node.close();
+    }
+
+    @Test
+    public void testResumeQuicksort() {
+        node = new Node(address, false);
+
+        ResultCollector result = new ResultCollector();
+        F main = createQuicksortCall(result);
+
+        node.recover();
+        node.start();
+
+        Concurrent.await(() -> ! result.isEmpty());
+        Assert.assertEquals(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), result.get().get(0).get());
+        node.close();
+    }
+
+    private F createQuicksortCall(ResultCollector result) {
         Action resultListener = new Action(i -> result.set(i.values()));
 
         F main = f(resultListener, Names.output).label("main");
         F quicksort = createQuicksort();
         F callQuicksort = new FCall(node, quicksort, list).returnAs(Names.output).label("callQuicksort initially");
-
         main.addPropagation(list, callQuicksort);
-
-        node.start();
-        testFor(result, main, list(), list());
-        testFor(result, main, list(1), list(1));
-        testFor(result, main, list(1, 2), list(1, 2));
-        testFor(result, main, list(2, 1), list(1, 2));
-        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2,3, 4, 5, 6, 7, 8, 9));
-
-        ArrayList<Integer> randList = randomList(100);
-        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
-        randListSorted.sort(Integer::compareTo);
-        testFor(result, main, randList, randListSorted);
-        System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
+        return main;
     }
 
         /*
@@ -504,10 +549,21 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testFilter() {
-
+        node = new Node(address, true);
         ResultCollector result = new ResultCollector();
         Action resultListener = new Action(i -> result.set(i.values()));
 
+        F main = createFilterTest(resultListener);
+
+        node.start();
+        testFor(result, main, list(), list());
+        testFor(result, main, list(1, 2, 3), list());
+        testFor(result, main, list(1, 2, 3, 4, 5), list(4, 5));
+        testFor(result, main, list(5), list(5));
+        node.close();
+    }
+
+    private F createFilterTest(Action resultListener) {
         F main = f(resultListener, Names.output).label("main");
 
         String const3 = "const:3";
@@ -522,12 +578,40 @@ trisum(a,b,c)   trimul(a,b,c)
 
         main.addPropagation(predicate, callFilter);
         main.addPropagation(list, callFilter);
+        return main;
+    }
+
+    @Test
+    public void testSuspendFilterTest() {
+        node = new Node(address, true);
+        ResultCollector result = new ResultCollector();
+        Action resultListener = new Action(i -> result.set(i.values()));
+
+        F main = createFilterTest(resultListener);
 
         node.start();
-        testFor(result, main, list(), list());
-        testFor(result, main, list(1, 2, 3), list());
-        testFor(result, main, list(1, 2, 3, 4, 5), list(4, 5));
-        testFor(result, main, list(5), list(5));
+        node.setDelay(5);
+
+        ArrayList<Integer> source = list(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+
+        _Ex ex = node.getExecution(main, node.getTop());
+        ex.receive(Value.of(Names.list, source, node.getTop()));
+
+        Concurrent.sleep(3000);
+        node.stop();
+        Concurrent.sleep(1000);
+        node.close();
+    }
+
+    @Test
+    public void testResumeFilterTest() {
+        node = new Node(address, false);
+        ResultCollector result = new ResultCollector();
+
+        resumeComputation(() -> {
+            Action resultListener = new Action(i -> result.set(i.values()));
+            return createFilterTest(resultListener);
+        });
     }
 
     private void testFor(ResultCollector resultCollector, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
@@ -621,5 +705,16 @@ trisum(a,b,c)   trimul(a,b,c)
         }
 
         return list;
+    }
+
+
+    private void resumeComputation(Supplier<_F> getF) {
+        node = new Node(address, false);
+        getF.get();
+        node.setDelay(1);
+        node.recover();
+        node.start();
+        Concurrent.sleep(50000);
+        node.close();
     }
 }

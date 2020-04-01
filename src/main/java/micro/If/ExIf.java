@@ -2,7 +2,6 @@ package micro.If;
 
 import micro.*;
 import micro.event.PropagateValueEvent;
-import micro.event.ValueReceivedEvent;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -22,9 +21,9 @@ public class ExIf extends Ex {
     }
 
     @Override
-    protected void alterStateFor(ValueReceivedEvent e) {
-        super.alterStateFor(e);
-        Value v = e.value;
+    protected void alterStateFor(Value v) {
+        super.alterStateFor(v);
+
         if (Names.condition.equals(v.getName())) {
             Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
             this.condition = (Boolean) v.get();

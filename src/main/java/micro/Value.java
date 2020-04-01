@@ -72,6 +72,7 @@ public class Value implements Hydratable, KryoSerializable {
     private final static int INT = 0;
     private final static int BOOL = 1;
     private final static int LIST = 2;
+    private final static int PARTIALLY_APPLIED_F = 3;
 
     @Override
     public void write(Kryo kryo, Output output) {
@@ -91,6 +92,9 @@ public class Value implements Hydratable, KryoSerializable {
             List<Integer> items = (List<Integer>) value;
             output.writeVarInt(items.size(), true);
             items.forEach(i -> output.writeVarInt(i, true));
+        } else if (value instanceof PartiallyAppliedFunction) {
+            output.writeVarInt(PARTIALLY_APPLIED_F, true);
+            ((PartiallyAppliedFunction) value).write(kryo,output);
         } else {
             throw new IllegalArgumentException("value type not handled " + value.getClass().getSimpleName());
         }
@@ -110,12 +114,17 @@ public class Value implements Hydratable, KryoSerializable {
                 value = input.readBoolean();
                 break;
             case LIST:
-                ArrayList<Integer> items = new ArrayList<>();
-                int  size = input.readVarInt(true);
+                ArrayList<Integer> list = new ArrayList<>();
+                int size = input.readVarInt(true);
                 for (int i = 0; i < size; i++) {
-                    items.add(input.readVarInt(true));
+                    list.add(input.readVarInt(true));
                 }
-                value = items;
+                value = list;
+                break;
+            case PARTIALLY_APPLIED_F:
+                PartiallyAppliedFunction p = new PartiallyAppliedFunction();
+                p.read(kryo, input);
+                value = p;
                 break;
             default:
                 throw new IllegalArgumentException("value type not handled " + valType);
@@ -127,5 +136,9 @@ public class Value implements Hydratable, KryoSerializable {
     @Override
     public void hydrate(Hydrator h) {
         sender = h.getExForId(senderId);
+        if(value instanceof PartiallyAppliedFunction)
+        {
+            ((PartiallyAppliedFunction)value).hydrate(h);
+        }
     }
 }

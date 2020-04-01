@@ -1,15 +1,14 @@
 package micro.event;
 
-import micro.Ex;
+import micro.Value;
+import micro._Ex;
 
-public class ValueProcessedEvent extends ExEvent {
-    public String valueName;
-
-    ValueProcessedEvent(){
+public class ValueProcessedEvent extends ValueEvent {
+    public ValueProcessedEvent(){
+        super();
     }
 
-    public ValueProcessedEvent(long eventId, Ex ex, String valueName) {
-        super(eventId, ex);
-        this.valueName = valueName;
+    public ValueProcessedEvent(long exId, _Ex ex, Value value) {
+        super(exId, ex, value);
     }
 }

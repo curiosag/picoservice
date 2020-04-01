@@ -61,14 +61,14 @@ public abstract class Ex implements _Ex, KryoSerializable {
         node.note(e);
     }
 
-    public void handle(ExEvent e) {
+    void handle(ExEvent e) {
         if (done) {
             return;
         }
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent va = (ValueReceivedEvent) e;
             if (!valuesReceived.contains(va.value.getName())) {
-                alterStateFor(va);
+                alterStateFor(va.value);
                 perform(va);
             }
             return;
@@ -83,25 +83,22 @@ public abstract class Ex implements _Ex, KryoSerializable {
         Check.fail("unhandled event " + e.toString());
     }
 
-    public void recover(ExEvent e) {
-        if (e instanceof ValueReceivedEvent) {
-            alterStateFor((ValueReceivedEvent) e);
-        }
+    public void recover(Value v) {
+        alterStateFor(v);
     }
 
-    protected void alterStateFor(ValueReceivedEvent va) {
-        Value v = va.value;
+    protected void alterStateFor(Value v) {
         if (template.formalParameters.contains(v.getName())) {
             paramsReceived.put(v.getName(), v);
         }
     }
 
-    void perform(ValueReceivedEvent va) {
+    private void perform(ValueReceivedEvent va) {
         Value v = va.value;
         switch (v.getName()) {
             case Names.result:
                 returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
-                clear();
+                //clear();
                 break;
 
             case Names.exception:
@@ -112,7 +109,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
                 performValueReceived(v);
         }
 
-        raise(new ValueProcessedEvent(node.getNextObjectId(), this, v.getName()));
+        raise(new ValueProcessedEvent(node.getNextObjectId(), this, v));
     }
 
     void clear() {

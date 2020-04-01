@@ -10,6 +10,9 @@ public class EventLogTest {
 
         Event e0 = new ExecutionCreatedEvent(0, 0, 0);
         Event e1 = new ExecutionCreatedEvent(1, 1, 1);
+        e0.setId(0);
+        e1.setId(1);
+
 
         try (EventLogWriter w = new EventLogWriter("/home/ssmertnig/temp/kryotest.bin", true)) {
             w.put(e0);

@@ -3,18 +3,18 @@ package micro;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.event.ValueReceivedEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static micro.Check.notNull;
 
-public class ExFCallByFunctionalValue extends Ex {
+public class ExFCallByFunctionalValue extends Ex implements Hydratable {
+    long idf;
 
-    private FCallByFunctionalValue f;
-    private F baseFunction;
-    private _Ex beingCalled;
+    FCallByFunctionalValue f;
+    _F baseFunction;
+    _Ex beingCalled;
     private List<Value> pendingValues = new ArrayList<>();
 
     ExFCallByFunctionalValue(Node node, FCallByFunctionalValue f, _Ex returnTo) {
@@ -23,9 +23,8 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
-    protected void alterStateFor(ValueReceivedEvent e) {
-        super.alterStateFor(e);
-        Value v = e.value;
+    protected void alterStateFor(Value v) {
+        super.alterStateFor(v);
         if (isFunctionInputValue(v)) {
             if (v.getName().equals(f.getFunctionalValueParam())) {
                 Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
@@ -80,10 +79,19 @@ public class ExFCallByFunctionalValue extends Ex {
     @Override
     public void write(Kryo kryo, Output output) {
         super.write(kryo, output);
+        output.writeVarLong(f.getId(), true);
     }
 
     @Override
     public void read(Kryo kryo, Input input) {
         super.read(kryo, input);
+        idf = input.readVarLong(true);
+    }
+
+    @Override
+    public void hydrate(Hydrator h) {
+        _F i = h.getFForId(idf);
+        Check.invariant(i instanceof FCallByFunctionalValue, "..?");
+        f = (FCallByFunctionalValue) i;
     }
 }

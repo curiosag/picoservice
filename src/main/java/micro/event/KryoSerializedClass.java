@@ -11,10 +11,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public enum KryoSerializedClass {
-
     QueueRemoveEvent(0, QueueRemoveEvent::new),
     ExecutionCreatedEvent(1, ExecutionCreatedEvent::new),
-
     PropagateValueEvent(5, PropagateValueEvent::new),
     ValueReceivedEvent(6, ValueReceivedEvent::new),
     ValueProcessedEvent(7, ValueProcessedEvent::new);
@@ -44,7 +42,11 @@ public enum KryoSerializedClass {
     }
 
     public static KryoSerializedClass forId(int id) {
-        return Check.notNull(idToSerializedClass.get(id));
+        try {
+            return Check.notNull(idToSerializedClass.get(id));
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     public static KryoSerializedClass forClass(Class c) {

@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Node implements Closeable, Hydrator {
-    private static final int NUM_EXEVENTQUEUES = 4;
+    private static final int NUM_EXEVENTQUEUES = 1;
 
     private final Tracer tracer = new Tracer(false);
     private final EventLogWriter eventLog;
@@ -26,16 +26,16 @@ public class Node implements Closeable, Hydrator {
 
     private Map<Long, _F> idToF = new HashMap<>();
     private Map<Long, _Ex> idToX = new HashMap<>(); //todo works only single threaded now
-    private Map<EnvExMatcher, _Ex> exRecovered = new HashMap<>();
+    private Map<ExFMatcher, _Ex> exRecovered = new HashMap<>();
 
     private final Address address;
 
-    public Node(Address address) {
+    public Node(Address address, boolean clearEventLog) {
         this.address = address;
-        eventLog = new EventLogWriter(getEventLogFileName(address), false);
+        eventLog = new EventLogWriter(getEventLogFileName(address), clearEventLog);
         top = createTop();
         for (int i = 0; i < NUM_EXEVENTQUEUES; i++) {
-            events[i] = NUM_EXEVENTQUEUES == 1 ? new ArrayList<>(): Collections.synchronizedList(new ArrayList<>());
+            events[i] = NUM_EXEVENTQUEUES == 1 ? new ArrayList<>() : Collections.synchronizedList(new ArrayList<>());
         }
     }
 
@@ -56,24 +56,27 @@ public class Node implements Closeable, Hydrator {
                     ExecutionCreatedEvent e = (ExecutionCreatedEvent) h;
                     _F template = getFForId(e.templateId);
                     _Ex retTo = getExForId(e.exIdToReturnTo);
-                    _Ex hydrated = template.createExecution(this, retTo);
-                    hydrated.setId(e.exId);
+                    _Ex ex = template.createExecution(this, retTo);
+                    ex.setId(e.exId);
                     maxOId = Math.max(maxOId, e.exId);
-                    exRecovered.put(new EnvExMatcher(retTo, template), hydrated);
-                    idToX.put(e.exId, hydrated);
+                    exRecovered.put(new ExFMatcher(retTo, template), ex);
+                    idToX.put(e.exId, ex);
                     break;
 
                 case PropagateValueEvent:
                     h.hydrate(this);
-                    handle((PropagateValueEvent) h);
+                    enqueue((PropagateValueEvent) h);
                     break;
                 case ValueReceivedEvent:
                     h.hydrate(this);
-                    handle((ValueReceivedEvent) h);
+                    enqueue((ValueReceivedEvent) h);
                     break;
                 case ValueProcessedEvent:
                     h.hydrate(this);
-                    handle((ValueProcessedEvent) h);
+                    ValueProcessedEvent v = (ValueProcessedEvent) h;
+                    Check.invariant(v.ex instanceof Ex, "no ex");
+                    ((Ex) v.ex).recover(v.value);
+                    enqueue(v);
                     break;
                 default:
                     throw new IllegalStateException("invalid case");
@@ -93,7 +96,7 @@ public class Node implements Closeable, Hydrator {
             e.setId(nextObjectId.getAndIncrement());
         }
         eventLogPut(e);
-        handle(e);
+        enqueue(e);
     }
 
     private void handle(NodeEvent e) {
@@ -106,7 +109,7 @@ public class Node implements Closeable, Hydrator {
     }
 
 
-    private void handle(ExEvent e) {
+    private void enqueue(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
             logValueReceived(v);
@@ -125,13 +128,16 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void logValueReceived(ValueReceivedEvent v) {
-        if(!v.value.getName().startsWith("sorted"))
-        {
-            return;
-        }
 
-        String to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
-        String from = v.value.getSender().toString() + " " + v.value.getSender().getId();
+        String to = null;
+        String from = null;
+        try {
+            to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
+            _Ex sender = v.value.getSender();
+            from = sender == null ? "null" : (v.value.getSender().toString() + " " + v.value.getSender().getId());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         log(Thread.currentThread().getId() + " Rec: " + from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
     }
@@ -162,7 +168,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     _Ex getExecution(_F targetFunc, _Ex returnTo) {
-        _Ex result = exRecovered.get(new EnvExMatcher(returnTo, targetFunc));
+        _Ex result = exRecovered.get(new ExFMatcher(returnTo, targetFunc));
         if (result != null) {
             return result;
         } else {
@@ -181,7 +187,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void eventLogPut(Event e) {
-        //       eventLog.put(e);
+        eventLog.put(e);
     }
 
     _Ex getExecution(_F targetFunc) {
@@ -209,7 +215,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     void addF(_F f) {
-        // todo f's id depend on the sequence of creation, Fs aren't serialized
+        // todo f's id depends on the sequence of creation, Fs aren't serialized
         idToF.put(f.getId(), f);
     }
 
@@ -241,7 +247,7 @@ public class Node implements Closeable, Hydrator {
 
     void start() {
         this.stop.set(false);
-        for (int i = 0; i < NUM_EXEVENTQUEUES ; i++) {
+        for (int i = 0; i < NUM_EXEVENTQUEUES; i++) {
             final List<ExEvent> queue = events[i];
             new Thread(() -> processEvents(queue)).start();
         }

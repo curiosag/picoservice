@@ -38,4 +38,9 @@ public abstract class Event implements Id, Hydratable, KryoSerializable {
     public void read(Kryo kryo, Input input) {
         id = input.readVarLong(true);
     }
+
+    @Override
+    public String toString() {
+        throw new IllegalStateException();
+    }
 }

@@ -10,11 +10,10 @@ import java.util.List;
 import static micro.Check.notNull;
 
 public class ExFCallByFunctionalValue extends Ex implements Hydratable {
-    long idf;
-
+    private long idf;
     FCallByFunctionalValue f;
-    _F baseFunction;
-    _Ex beingCalled;
+    private _F baseFunction;
+    private _Ex beingCalled;
     private List<Value> pendingValues = new ArrayList<>();
 
     ExFCallByFunctionalValue(Node node, FCallByFunctionalValue f, _Ex returnTo) {
@@ -71,7 +70,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
 
     private _Ex getFunctionBeingCalled() {
         if (beingCalled == null) {
-            beingCalled = node.getExecution(notNull(baseFunction), this);
+            beingCalled = node.getExecution(this, notNull(baseFunction));
         }
         return beingCalled;
     }
@@ -92,6 +91,20 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     public void hydrate(Hydrator h) {
         _F i = h.getFForId(idf);
         Check.invariant(i instanceof FCallByFunctionalValue, "..?");
+        //noinspection ConstantConditions
         f = (FCallByFunctionalValue) i;
+    }
+
+    @Override
+    public String toString() {
+        return "{\"ExFCallByFunctionalValue\":{" +
+                "\"f\":" + f.getId() +
+                ", \"baseFunction\":" + (baseFunction == null ? null : baseFunction.getId()) +
+                ", \"beingCalled\":" + (beingCalled == null ? null : beingCalled.getId()) +
+                ", \"pendingValues\":" + pendingValues +
+                ", \"template\":" + template.getId() +
+                ", \"returnTo\":" + returnTo.getId() +
+                ", \"paramsReceived\":" + paramsReceived.values() +
+                "}}";
     }
 }

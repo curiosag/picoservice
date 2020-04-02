@@ -3,8 +3,8 @@ package micro.If;
 import micro.*;
 import micro.event.PropagateValueEvent;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
@@ -14,7 +14,7 @@ public class ExIf extends Ex {
 
     // conditional propagations here don't protect against double propagations
     // its the business of the recipients to guard against that
-    private Set<ValuePropagation> toPropagateOnConditionSet = new HashSet<>();
+    private List<ValuePropagation> toPropagateOnConditionSet = new ArrayList<>();
 
     ExIf(Node node, F template, _Ex returnTo) {
         super(node, template, returnTo);
@@ -62,4 +62,14 @@ public class ExIf extends Ex {
         return new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this));
     }
 
+    @Override
+    public String toString() {
+        return "{\"ExIf\":{" +
+                "\"id\":" + getId() +
+                ", \"condition\":" + condition +
+                ", \"toPropagateOnConditionSet\":" + toPropagateOnConditionSet +
+                ", \"template\":" + template.getId() +
+                ", \"returnTo\":" + returnTo.getId() +
+                "}}";
+    }
 }

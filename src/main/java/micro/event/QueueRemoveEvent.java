@@ -32,4 +32,12 @@ public class QueueRemoveEvent extends NodeEvent {
     public void read(Kryo kryo, Input input) {
         idEventToRemove = input.readVarLong(true);
     }
+
+    @Override
+    public String toString() {
+        return "{\"QueueRemoveEvent\":{" +
+                "\"idEventToRemove\":" + idEventToRemove +
+                ", \"idRelatedExecution\":" + idRelatedExecution +
+                "}}";
+    }
 }

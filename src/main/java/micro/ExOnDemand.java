@@ -14,7 +14,7 @@ public class ExOnDemand implements _Ex {
 
     private _Ex getEx() {
         if (ex == null) {
-            ex = node.getExecution(targetFunc, returnTo);
+            ex = node.getExecution(returnTo, targetFunc);
         }
         return ex;
     }
@@ -49,4 +49,13 @@ public class ExOnDemand implements _Ex {
         getEx().setId(value);
     }
 
+    @Override
+    public String toString() {
+        return "{\"ExOnDemand\":{" +
+                "\"id\":" + getId() +
+                ", \"returnTo\":" + returnTo.getId() +
+                ", \"targetFunc\":" + targetFunc.getId() +
+                ", \"ex\":" + (ex == null ? null : ex.getId()) +
+                "}}";
+    }
 }

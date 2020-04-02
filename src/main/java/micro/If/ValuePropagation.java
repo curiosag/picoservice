@@ -12,4 +12,11 @@ class ValuePropagation {
         this.propagation = propagation;
     }
 
+    @Override
+    public String toString() {
+        return "{\"ValuePropagation\":{" +
+                "\"value\":" + value +
+                ", \"propagation\":" + propagation +
+                "}}";
+    }
 }

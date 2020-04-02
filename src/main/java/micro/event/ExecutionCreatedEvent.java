@@ -62,4 +62,13 @@ public class ExecutionCreatedEvent extends NodeEvent {
         exId = input.readVarLong(true);
         exIdToReturnTo = input.readVarLong(true);
     }
+
+    @Override
+    public String toString() {
+        return "{\"ExecutionCreatedEvent\":{" +
+                "\"exIdToReturnTo\":" + exIdToReturnTo +
+                ", \"exId\":" + exId +
+                ", \"templateId\":" + templateId +
+                "}}";
+    }
 }

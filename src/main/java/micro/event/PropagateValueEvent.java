@@ -45,4 +45,12 @@ public final class PropagateValueEvent extends ExEvent {
         value = new Value();
         value.read(kryo, input);
     }
+
+    @Override
+    public String toString() {
+        return "{\"PropagateValueEvent\":{" +
+                "\"value\":" + value +
+                ", \"to\":" + to +
+                "}}";
+    }
 }

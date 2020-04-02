@@ -12,14 +12,14 @@ import micro.event.ValueReceivedEvent;
 import java.util.*;
 
 public abstract class Ex implements _Ex, KryoSerializable {
-    boolean done = false;
+    private boolean done = false;
     protected final Node node;
     private long id = -1;
     public F template;
     protected _Ex returnTo;
 
-    private final HashMap<String, List<ExPropagation>> paramNameToPropagations = new HashMap<>();
-    private final HashSet<String> valuesReceived = new HashSet<>();
+    private final Map<String, List<ExPropagation>> paramNameToPropagations = new HashMap<>();
+    private final List<String> valuesReceived = new ArrayList<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
     public Ex(Node node) {
@@ -83,7 +83,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
         Check.fail("unhandled event " + e.toString());
     }
 
-    public void recover(Value v) {
+    void recover(Value v) {
         alterStateFor(v);
     }
 
@@ -171,12 +171,8 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
     @Override
     public int hashCode() {
+        Check.invariant(id > 0, "nö!");
         return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s", template.getLabel());
     }
 
     @Override
@@ -193,5 +189,6 @@ public abstract class Ex implements _Ex, KryoSerializable {
     boolean isFunctionInputValue(Value v) {
         return !(Names.result.equals(v.getName()) || Names.exception.equals(v.getName()));
     }
+
 
 }

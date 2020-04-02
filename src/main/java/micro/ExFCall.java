@@ -27,7 +27,7 @@ public class ExFCall extends Ex {
 
     private _Ex getBeingCalled() {
         if (beingCalled == null) {
-            beingCalled = node.getExecution(callTemplate.called, this);
+            beingCalled = node.getExecution(this, callTemplate.called);
         }
         return beingCalled;
     }
@@ -39,4 +39,15 @@ public class ExFCall extends Ex {
         super.clear();
     }
 
+    @Override
+    public String toString() {
+        return "{\"ExFCall\":{" +
+                "\"id\":" + getId() +
+                ", \"template\":" + template.getId() +
+                ", \"returnTo\":" + returnTo.getId() +
+                ", \"paramsReceived\":" + paramsReceived.values() +
+                ", \"callTemplate\":" + callTemplate.getId() +
+                ", \"beingCalled\":" + (beingCalled == null ? null : beingCalled.getId()) +
+                "}}";
+    }
 }

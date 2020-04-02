@@ -45,4 +45,10 @@ public abstract class ExEvent extends Event {
     public void hydrate(Hydrator h) {
         ex = h.getExForId(exId);
     }
+
+    @Override
+    public String toString() {
+        throw new IllegalStateException();
+    }
+
 }

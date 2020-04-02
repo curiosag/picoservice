@@ -48,4 +48,12 @@ public class PartiallyAppliedFunction implements Hydratable, KryoSerializable {
             partialValues.forEach(v -> v.hydrate(h));
         }
     }
+
+    @Override
+    public String toString() {
+        return "{\"PartiallyAppliedFunction\":{" +
+                "\"baseFunction\":" + baseFunction.getId() +
+                ", \"partialValues\":" + partialValues +
+                "}}";
+    }
 }

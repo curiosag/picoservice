@@ -3,7 +3,7 @@ package micro;
 import micro.event.PropagateValueEvent;
 
 public class ExF extends Ex {
-    public ExF(Node node, F template, _Ex returnTo) {
+    ExF(Node node, F template, _Ex returnTo) {
         super(node, template, returnTo);
     }
 
@@ -41,4 +41,13 @@ public class ExF extends Ex {
         }
     }
 
+    @Override
+    public String toString() {
+        return "{\"ExF\":{" +
+                "\"id\":" + getId() +
+                ", \"template\":" + template.getId() +
+                ", \"returnTo\":" + returnTo.getId() +
+                ", \"paramsReceived\":" + paramsReceived.values() +
+                "}}";
+    }
 }

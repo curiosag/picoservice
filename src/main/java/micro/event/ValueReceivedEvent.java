@@ -12,4 +12,12 @@ public class ValueReceivedEvent extends ValueEvent {
     public ValueReceivedEvent(long exId, _Ex ex, Value value) {
         super(exId, ex, value);
     }
+
+    @Override
+    public String toString() {
+        return "{\"ValueReceivedEvent\":{" +
+                "\"value\":" + value +
+                ", \"ex\":" + ex.getId() +
+                "}}";
+    }
 }

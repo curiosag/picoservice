@@ -112,7 +112,7 @@ public class Node implements Closeable, Hydrator {
     private void enqueue(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
-            logValueReceived(v);
+      logValueReceived(v);
             getExEventQueue(e.getEx().getId()).add(e);
             return;
         }
@@ -144,11 +144,7 @@ public class Node implements Closeable, Hydrator {
 
     private void processEvents(List<ExEvent> events) {
 
-        while (true) {
-            if (stop.get()) {
-                Concurrent.sleep(200);
-                continue;
-            }
+        while (! stop.get()) {
             Concurrent.sleep(delay.get());
             if (events.size() > 0) {
                 ExEvent e = events.get(0);
@@ -167,12 +163,12 @@ public class Node implements Closeable, Hydrator {
         eventLog.close();
     }
 
-    _Ex getExecution(_F targetFunc, _Ex returnTo) {
-        _Ex result = exRecovered.get(new ExFMatcher(returnTo, targetFunc));
+    _Ex getExecution(_Ex caller, _F targetFunc) {
+        _Ex result = exRecovered.get(new ExFMatcher(caller, targetFunc));
         if (result != null) {
             return result;
         } else {
-            return createExecution(targetFunc, returnTo);
+            return createExecution(targetFunc, caller);
         }
     }
 
@@ -191,7 +187,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     _Ex getExecution(_F targetFunc) {
-        return getExecution(targetFunc, top);
+        return getExecution(top, targetFunc);
     }
 
     public Address getAddress() {
@@ -246,7 +242,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     void start() {
-        this.stop.set(false);
+        stop.set(false);
         for (int i = 0; i < NUM_EXEVENTQUEUES; i++) {
             final List<ExEvent> queue = events[i];
             new Thread(() -> processEvents(queue)).start();
@@ -260,5 +256,14 @@ public class Node implements Closeable, Hydrator {
 
     void recover() {
         recover(address);
+    }
+
+    @Override
+    public String toString() {
+        Collection<_Ex> x = new TreeMap<>(idToX).values();
+        return "{\"Node\":{" +
+                "\"events\":" + events[0] +
+                ", \"executions\":" + x +
+                "}}";
     }
 }

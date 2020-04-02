@@ -4,9 +4,11 @@ import micro.If.If;
 import micro.primitives.*;
 import micro.primitives.Lists.*;
 import nano.ingredients.Name;
-import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
@@ -414,9 +416,10 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
 //        testFor(result, main, list(), list());
 //        testFor(result, main, list(1), list(1));
-//        testFor(result, main, list(1, 2), list(1, 2));
+        testFor(result, main, list(1, 2), list(1, 2));
+
 //        testFor(result, main, list(2, 1), list(1, 2));
-        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
+//        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
 
 //        ArrayList<Integer> randList = randomList(100);
 //        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
@@ -435,12 +438,13 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
 
         ArrayList<Integer> actual = list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4);
-        _Ex ex = node.getExecution(main, node.getTop());
+        _Ex ex = node.getExecution(node.getTop(), main);
         ex.receive(Value.of(Names.list, actual, node.getTop()));
 
-        Concurrent.sleep(250);
+        Concurrent.sleep(250); // seems around 250-300 chance for stuck resume is bigger
+
         node.stop();
-        Concurrent.sleep(500);
+        writeToFile("/home/ssmertnig/temp/run.json", node.toString());
         node.close();
     }
 
@@ -452,11 +456,12 @@ trisum(a,b,c)   trimul(a,b,c)
         F main = createQuicksortCall(result);
 
         node.recover();
-        node.start();
+        writeToFile("/home/ssmertnig/temp/reco.json", node.toString());
+        //node.start();
 
-        Concurrent.await(() -> ! result.isEmpty());
-        Assert.assertEquals(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), result.get().get(0).get());
-        node.close();
+        //Concurrent.await(() -> ! result.isEmpty());
+        //Assert.assertEquals(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), result.get().get(0).get());
+        //node.close();
     }
 
     private F createQuicksortCall(ResultCollector result) {
@@ -594,7 +599,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         ArrayList<Integer> source = list(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
-        _Ex ex = node.getExecution(main, node.getTop());
+        _Ex ex = node.getExecution(node.getTop(), main);
         ex.receive(Value.of(Names.list, source, node.getTop()));
 
         Concurrent.sleep(3000);
@@ -616,7 +621,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
     private void testFor(ResultCollector resultCollector, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         resultCollector.clear();
-        _Ex ex = node.getExecution(main, node.getTop());
+        _Ex ex = node.getExecution(node.getTop(), main);
         ex.receive(Value.of(Names.list, source, node.getTop()));
         Concurrent.await(() -> !resultCollector.isEmpty());
         assertEquals(expected, resultCollector.get().get(0).get());
@@ -716,5 +721,13 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
         Concurrent.sleep(50000);
         node.close();
+    }
+
+    private void writeToFile(String path, String value){
+        try {
+            Files.write(Paths.get(path), value.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

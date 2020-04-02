@@ -3,17 +3,15 @@ package micro;
 import micro.primitives.Primitive;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 import static micro.PropagationType.INDISCRIMINATE;
 
 
 public class F implements _F, Id {
 
-    private final Supplier<Long> nextPropagationId;
     private final long id;
     private String label;
-    public String returnAs = Names.result;
+    String returnAs = Names.result;
     private Primitive primitive;
 
     private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();
@@ -23,7 +21,6 @@ public class F implements _F, Id {
     private F(Node node, Primitive primitive) {
         this.id = node.getNextFId();
         node.addF(this);
-        this.nextPropagationId = node::getNextObjectId;
         this.primitive = primitive;
     }
 
@@ -82,7 +79,7 @@ public class F implements _F, Id {
 
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
-        FPropagation p = new FPropagation(nextPropagationId.get(), type, nameExpected, namePropagated, to);
+        FPropagation p = new FPropagation(type, nameExpected, namePropagated, to);
         targetsToPropagations
                 .computeIfAbsent(p.target, k -> new ArrayList<>())
                 .add(p);
@@ -106,11 +103,6 @@ public class F implements _F, Id {
         return targetsToPropagations;
     }
 
-    @Override
-    public String toString() {
-        return label != null ? label : "no name";
-    }
-
     public static F f(Node node, Primitive primitive, String... params) {
         if (primitive == null) {
             throw new IllegalArgumentException();
@@ -129,5 +121,13 @@ public class F implements _F, Id {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "F:{" +
+                "id:" + id +
+                ", label:'" + label + '\'' +
+                '}';
     }
 }

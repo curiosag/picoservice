@@ -39,7 +39,7 @@ public class ExTop implements  _Ex, Id {
 
     @Override
     public String toString() {
-        return "TOP";
+        return "{\"TOP\":\"TOP\"}";
     }
 
     @Override

@@ -8,7 +8,7 @@ public class Print extends Action {
     public Print() {
         super(values -> {
         Check.notNull(values);
-        for(Value v: values.values())
+        for(Value v: values)
         {
             System.out.println(v.getName() + " " + v.get());
         }

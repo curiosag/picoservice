@@ -104,7 +104,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
                 ", \"pendingValues\":" + pendingValues +
                 ", \"template\":" + template.getId() +
                 ", \"returnTo\":" + returnTo.getId() +
-                ", \"paramsReceived\":" + paramsReceived.values() +
+                ", \"paramsReceived\":" + paramsReceived +
                 "}}";
     }
 }

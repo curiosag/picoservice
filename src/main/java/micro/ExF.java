@@ -47,7 +47,7 @@ public class ExF extends Ex {
                 "\"id\":" + getId() +
                 ", \"template\":" + template.getId() +
                 ", \"returnTo\":" + returnTo.getId() +
-                ", \"paramsReceived\":" + paramsReceived.values() +
+                ", \"paramsReceived\":" + paramsReceived +
                 "}}";
     }
 }

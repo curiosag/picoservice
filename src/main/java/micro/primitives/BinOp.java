@@ -3,7 +3,7 @@ package micro.primitives;
 import micro.Names;
 import micro.Value;
 
-import java.util.Map;
+import java.util.List;
 import java.util.function.BiFunction;
 
 public abstract class BinOp implements Primitive {
@@ -15,7 +15,7 @@ public abstract class BinOp implements Primitive {
     }
 
     @Override
-    public Object execute(Map<String, Value> params) {
+    public Object execute(List<Value> params) {
         return binOp.apply(As.Integer(params, Names.left), As.Integer(params, Names.right));
     }
 

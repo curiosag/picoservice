@@ -7,20 +7,13 @@ import micro.primitives.Primitive;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class Cons implements Primitive {
     @SuppressWarnings({"unchecked", "ConstantConditions"})
     @Override
-    public Object execute(Map<String, Value> params) {
-        Value vl = params.get(Names.list);
-        Value ve = params.get(Names.element);
-
-        Check.invariant(vl != null, "List expected");
-        Check.invariant(ve != null, "Element expected");
-
-        Object l = vl.get();
-        Object e = ve.get();
+    public Object execute(List<Value> params) {
+        Object l = getValue(Names.list, params);
+        Object e = getValue(Names.element, params);
 
         Check.invariant(l instanceof List, "List expected");
         Check.invariant(l != null, "Element expected");

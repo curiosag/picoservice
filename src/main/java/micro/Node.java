@@ -10,6 +10,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Node implements Closeable, Hydrator {
+
+    /*
+
+    external    node    execution
+
+
+
+    ex' -> CALL receive -> ex -> RECEIVE -> node -> ProcessValueEvent -> ex -> ...
+           ...
+
+
+    * */
+
+
     private static final int NUM_EXEVENTQUEUES = 1;
 
     private final Tracer tracer = new Tracer(false);

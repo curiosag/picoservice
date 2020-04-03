@@ -51,7 +51,7 @@ public class MicroTest {
         */
 
         ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Action resultListener = new Action(i -> result.set(i));
 
         F f = f(nop, Names.a).returnAs(Names.output).label("f");
         F mul = f(mul(), Names.left, Names.right).label("mul").returnAs(Names.b);
@@ -207,7 +207,7 @@ trisum(a,b,c)   trimul(a,b,c)
         node = new Node(address, true);
 
         ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Action resultListener = new Action(i -> result.set(i));
 
         F main = f(resultListener, Names.output).label("main");
 
@@ -257,7 +257,7 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testPartialFunctionApplication() {
         node = new Node(address, true);
         ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Action resultListener = new Action(i -> result.set(i));
 
         F main = f(resultListener, Names.output).label("main");
 
@@ -465,7 +465,7 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
     private F createQuicksortCall(ResultCollector result) {
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Action resultListener = new Action(i -> result.set(i));
 
         F main = f(resultListener, Names.output).label("main");
         F quicksort = createQuicksort();
@@ -556,7 +556,7 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testFilter() {
         node = new Node(address, true);
         ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Action resultListener = new Action(i -> result.set(i));
 
         F main = createFilterTest(resultListener);
 
@@ -590,7 +590,7 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testSuspendFilterTest() {
         node = new Node(address, true);
         ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Action resultListener = new Action(i -> result.set(i));
 
         F main = createFilterTest(resultListener);
 
@@ -614,7 +614,7 @@ trisum(a,b,c)   trimul(a,b,c)
         ResultCollector result = new ResultCollector();
 
         resumeComputation(() -> {
-            Action resultListener = new Action(i -> result.set(i.values()));
+            Action resultListener = new Action(i -> result.set(i));
             return createFilterTest(resultListener);
         });
     }

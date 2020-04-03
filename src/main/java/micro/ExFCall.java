@@ -45,7 +45,7 @@ public class ExFCall extends Ex {
                 "\"id\":" + getId() +
                 ", \"template\":" + template.getId() +
                 ", \"returnTo\":" + returnTo.getId() +
-                ", \"paramsReceived\":" + paramsReceived.values() +
+                ", \"paramsReceived\":" + paramsReceived +
                 ", \"callTemplate\":" + callTemplate.getId() +
                 ", \"beingCalled\":" + (beingCalled == null ? null : beingCalled.getId()) +
                 "}}";

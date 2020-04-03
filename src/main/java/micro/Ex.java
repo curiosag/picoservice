@@ -10,6 +10,7 @@ import micro.event.ValueProcessedEvent;
 import micro.event.ValueReceivedEvent;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public abstract class Ex implements _Ex, KryoSerializable {
     private boolean done = false;
@@ -18,9 +19,9 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public F template;
     protected _Ex returnTo;
 
-    private final Map<String, List<ExPropagation>> paramNameToPropagations = new HashMap<>();
+    private final List<ExPropagation> paramNameToPropagations = new ArrayList<>();
     private final List<String> valuesReceived = new ArrayList<>();
-    final Map<String, Value> paramsReceived = new HashMap<>();
+    final List<Value> paramsReceived = new ArrayList<>();
 
     public Ex(Node node) {
         this.node = node;
@@ -89,7 +90,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
     protected void alterStateFor(Value v) {
         if (template.formalParameters.contains(v.getName())) {
-            paramsReceived.put(v.getName(), v);
+            paramsReceived.add(v);
         }
     }
 
@@ -138,14 +139,13 @@ public abstract class Ex implements _Ex, KryoSerializable {
         ExOnDemand to = new ExOnDemand(node, targetFunc, this);
         templateProps.stream()
                 .map(t -> new ExPropagation(t, to))
-                .forEach(p -> paramNameToPropagations
-                        .computeIfAbsent(p.getNameReceived(), k -> new ArrayList<>())
-                        .add(p));
+                .forEach(paramNameToPropagations::add);
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
-        List<ExPropagation> ps = paramNameToPropagations.get(paramName);
-        return ps != null ? ps : Collections.emptyList();
+        return paramNameToPropagations.stream()
+                .filter(p -> p.getNameReceived().equals(paramName))
+                .collect(Collectors.toList());
     }
 
     public String getLabel() {

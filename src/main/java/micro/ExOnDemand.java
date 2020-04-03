@@ -49,13 +49,17 @@ public class ExOnDemand implements _Ex {
         getEx().setId(value);
     }
 
+    public boolean isExecutionSet(){
+        return ex != null;
+    }
+
     @Override
     public String toString() {
         return "{\"ExOnDemand\":{" +
                 "\"id\":" + getId() +
                 ", \"returnTo\":" + returnTo.getId() +
                 ", \"targetFunc\":" + targetFunc.getId() +
-                ", \"ex\":" + (ex == null ? null : ex.getId()) +
+                ", \"exa\":" + (ex == null ? null : ex.getId()) +
                 "}}";
     }
 }

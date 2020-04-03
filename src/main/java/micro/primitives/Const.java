@@ -2,7 +2,7 @@ package micro.primitives;
 
 import micro.Value;
 
-import java.util.Map;
+import java.util.List;
 
 public class Const implements Primitive {
 
@@ -13,7 +13,7 @@ public class Const implements Primitive {
     }
 
     @Override
-    public Object execute(Map<String, Value> values) {
+    public Object execute(List<Value> values) {
         return value;
     }
 

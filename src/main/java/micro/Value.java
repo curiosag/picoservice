@@ -141,4 +141,14 @@ public class Value implements Hydratable, KryoSerializable {
                 ", \"value\":" + value +
                 "}}";
     }
+
+    @Override
+    public long getId() {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public void setId(long value) {
+        throw new IllegalStateException();
+    }
 }

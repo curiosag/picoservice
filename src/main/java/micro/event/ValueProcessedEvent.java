@@ -8,8 +8,8 @@ public class ValueProcessedEvent extends ValueEvent {
         super();
     }
 
-    public ValueProcessedEvent(long exId, _Ex ex, Value value) {
-        super(exId, ex, value);
+    public ValueProcessedEvent( _Ex ex, Value value) {
+        super( ex, value);
     }
 
     @Override

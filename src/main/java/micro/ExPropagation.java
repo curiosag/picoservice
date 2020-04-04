@@ -22,7 +22,7 @@ public class ExPropagation {
         this.to = to;
     }
 
-    public _Ex getTo() {
+    public ExOnDemand getTo() {
         return to;
     }
 

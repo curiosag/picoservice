@@ -13,7 +13,7 @@ public class ExF extends Ex {
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
         getPropagations(v.getName()).forEach(p ->
-                raise(new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
+                raise(new PropagateValueEvent( this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
 
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
             if (template.getPrimitive().isSideEffect()) {

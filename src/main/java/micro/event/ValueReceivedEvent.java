@@ -5,12 +5,12 @@ import micro._Ex;
 
 public class ValueReceivedEvent extends ValueEvent {
 
-    public ValueReceivedEvent(){
+    public ValueReceivedEvent() {
         super();
     }
 
-    public ValueReceivedEvent(long exId, _Ex ex, Value value) {
-        super(exId, ex, value);
+    public ValueReceivedEvent(_Ex ex, Value value) {
+        super(ex, value);
     }
 
     @Override

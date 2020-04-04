@@ -7,7 +7,6 @@ import java.io.Closeable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class Node implements Closeable, Hydrator {
 
@@ -23,16 +22,12 @@ public class Node implements Closeable, Hydrator {
 
     * */
 
-
     private static final int NUM_EXEVENTQUEUES = 1;
 
     private final Tracer tracer = new Tracer(false);
     private final EventLogWriter eventLog;
 
     private final _Ex top;
-
-    private long nextFId = ExTop.TOP_ID + 1;
-    private final AtomicLong nextObjectId = new AtomicLong(ExTop.TOP_ID + 1);
 
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean stop = new AtomicBoolean(true);
@@ -45,6 +40,7 @@ public class Node implements Closeable, Hydrator {
     private final Address address;
 
     public Node(Address address, boolean clearEventLog) {
+        IdType.F.next(); // 0 is reserved for TOP
         this.address = address;
         eventLog = new EventLogWriter(getEventLogFileName(address), clearEventLog);
         top = createTop();
@@ -58,9 +54,11 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void recover(Address address) {
-        long maxOId = 0;
+        long maxEventId = 0;
+        long maxExId = 0;
         for (Hydratable h : new EventLogReader(getEventLogFileName(address))) {
             KryoSerializedClass k = KryoSerializedClass.forClass(h.getClass());
+            maxEventId = Math.max(maxEventId, h.getId());
             switch (k) {
                 case QueueRemoveEvent:
                     handle((QueueRemoveEvent) h);
@@ -72,7 +70,7 @@ public class Node implements Closeable, Hydrator {
                     _Ex retTo = getExForId(e.exIdToReturnTo);
                     _Ex ex = template.createExecution(this, retTo);
                     ex.setId(e.exId);
-                    maxOId = Math.max(maxOId, e.exId);
+                    maxExId = Math.max(maxExId, e.exId);
                     exRecovered.put(new ExFMatcher(retTo, template), ex);
                     idToX.put(e.exId, ex);
                     break;
@@ -96,7 +94,8 @@ public class Node implements Closeable, Hydrator {
                     throw new IllegalStateException("invalid case");
             }
         }
-        nextObjectId.set(maxOId + 1);
+        IdType.EX.setNext(maxExId + 1);
+        IdType.EVENT.setNext(maxEventId + 1);
     }
 
     private void raise(NodeEvent e) {
@@ -106,9 +105,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     void note(ExEvent e) {
-        if (e.getId() < 0) {
-            e.setId(nextObjectId.getAndIncrement());
-        }
+        Check.invariant (e.getId() >= 0, "Id not set");
         eventLogPut(e);
         enqueue(e);
     }
@@ -126,7 +123,7 @@ public class Node implements Closeable, Hydrator {
     private void enqueue(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
-      logValueReceived(v);
+      //logValueReceived(v);
             getExEventQueue(e.getEx().getId()).add(e);
             return;
         }
@@ -178,7 +175,12 @@ public class Node implements Closeable, Hydrator {
     }
 
     _Ex getExecution(_Ex caller, _F targetFunc) {
-        _Ex result = exRecovered.get(new ExFMatcher(caller, targetFunc));
+        _Ex result = null;
+        try {
+            result = exRecovered.get(new ExFMatcher(caller, targetFunc));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (result != null) {
             return result;
         } else {
@@ -188,7 +190,7 @@ public class Node implements Closeable, Hydrator {
 
     private _Ex createExecution(_F targetFunc, _Ex returnTo) {
         _Ex result = targetFunc.createExecution(this, returnTo);
-        result.setId(nextObjectId.getAndIncrement());
+        result.setId(IdType.EX.next());
         idToX.put(result.getId(), result);
         if (result.getAddress().nodeEqual(getAddress())) {
             eventLogPut(new ExecutionCreatedEvent(result));
@@ -214,14 +216,6 @@ public class Node implements Closeable, Hydrator {
 
     _Ex getTop() {
         return top;
-    }
-
-    long getNextFId() {
-        return nextFId++;
-    }
-
-    public long getNextObjectId() {
-        return nextObjectId.getAndIncrement();
     }
 
     void addF(_F f) {

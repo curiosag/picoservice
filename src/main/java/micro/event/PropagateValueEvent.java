@@ -3,21 +3,18 @@ package micro.event;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.Ex;
-import micro.Hydrator;
-import micro.Value;
-import micro._Ex;
+import micro.*;
 
 public final class PropagateValueEvent extends ExEvent {
     public Value value;
-    public _Ex to;
+    public ExOnDemand to;
     private long exIdTo;
 
     public PropagateValueEvent() {
     }
 
-    public PropagateValueEvent(long eventId, Ex from, _Ex to, Value value) {
-        super(eventId, from);
+    public PropagateValueEvent(Ex from, ExOnDemand to, Value value) {
+        super(from);
         this.value = value;
         this.to = to;
         this.exIdTo = to.getId();
@@ -25,10 +22,7 @@ public final class PropagateValueEvent extends ExEvent {
 
     @Override
     public void hydrate(Hydrator h) {
-        super.hydrate(h);
-        if (to == null){
-            to = h.getExForId(exIdTo);
-        }
+        Check.fail("shouldn't ever be persisted");
     }
 
     @Override

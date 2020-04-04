@@ -5,14 +5,15 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import micro.Check;
 import micro.Hydrator;
+import micro.IdType;
 import micro._Ex;
 
 public abstract class ExEvent extends Event {
     public _Ex ex;
     long exId;
 
-    public ExEvent(long id, _Ex ex) {
-        super(id);
+    public ExEvent(_Ex ex) {
+        super(IdType.EX.next());
         this.ex = ex;
         this.exId = ex.getId();
     }

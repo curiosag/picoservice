@@ -19,7 +19,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
     public F template;
     protected _Ex returnTo;
 
-    private final List<ExPropagation> paramNameToPropagations = new ArrayList<>();
+    private final List<ExPropagation> propagations = new ArrayList<>();
     private final List<String> valuesReceived = new ArrayList<>();
     final List<Value> paramsReceived = new ArrayList<>();
 
@@ -54,11 +54,10 @@ public abstract class Ex implements _Ex, KryoSerializable {
         if (done) {
             return;
         }
-        raise(new ValueReceivedEvent(node.getNextObjectId(), this, v));
+        raise(new ValueReceivedEvent(this, v));
     }
 
     protected void raise(ExEvent e) {
-        e.setId(node.getNextObjectId());
         node.note(e);
     }
 
@@ -78,6 +77,14 @@ public abstract class Ex implements _Ex, KryoSerializable {
             return;
         }
         if (e instanceof PropagateValueEvent) {
+            propagations.forEach(p -> {
+                if (!p.getTo().isExecutionSet()) {
+
+                    //raise();
+                }
+                ;
+            });
+
             perform((PropagateValueEvent) e);
             return;
         }
@@ -110,12 +117,12 @@ public abstract class Ex implements _Ex, KryoSerializable {
                 performValueReceived(v);
         }
 
-        raise(new ValueProcessedEvent(node.getNextObjectId(), this, v));
+        raise(new ValueProcessedEvent(this, v));
     }
 
     void clear() {
         returnTo = null;
-        paramNameToPropagations.clear();
+        propagations.clear();
         valuesReceived.clear();
         paramsReceived.clear();
         done = true;
@@ -139,11 +146,11 @@ public abstract class Ex implements _Ex, KryoSerializable {
         ExOnDemand to = new ExOnDemand(node, targetFunc, this);
         templateProps.stream()
                 .map(t -> new ExPropagation(t, to))
-                .forEach(paramNameToPropagations::add);
+                .forEach(propagations::add);
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
-        return paramNameToPropagations.stream()
+        return propagations.stream()
                 .filter(p -> p.getNameReceived().equals(paramName))
                 .collect(Collectors.toList());
     }
@@ -171,7 +178,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
 
     @Override
     public int hashCode() {
-        Check.invariant(id > 0, "nö!");
+        Check.invariant(id >= 0, "nö!");
         return Objects.hash(id);
     }
 

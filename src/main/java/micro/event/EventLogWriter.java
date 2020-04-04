@@ -26,11 +26,7 @@ public class EventLogWriter implements Closeable {
 
     public void put(Event e) {
         Check.invariant(e.getId() >= 0, "eventid not set");
-        try {
-            KryoSerializedClass.writeObject(kryo, output, e);
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
+        KryoSerializedClass.writeObject(kryo, output, e);
     }
 
     public void flush() {

@@ -19,7 +19,7 @@ public class F implements _F, Id {
     List<String> formalParameters = new ArrayList<>();
 
     private F(Node node, Primitive primitive) {
-        this.id = node.getNextFId();
+        this.id = IdType.F.next();
         node.addF(this);
         this.primitive = primitive;
     }

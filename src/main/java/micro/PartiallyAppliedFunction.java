@@ -56,4 +56,14 @@ public class PartiallyAppliedFunction implements Hydratable, KryoSerializable {
                 ", \"partialValues\":" + partialValues +
                 "}}";
     }
+
+    @Override
+    public long getId() {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public void setId(long value) {
+        throw new IllegalStateException();
+    }
 }

@@ -416,16 +416,16 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
 //        testFor(result, main, list(), list());
 //        testFor(result, main, list(1), list(1));
-        testFor(result, main, list(1, 2), list(1, 2));
+//        testFor(result, main, list(1, 2), list(1, 2));
 
 //        testFor(result, main, list(2, 1), list(1, 2));
 //        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
 
-//        ArrayList<Integer> randList = randomList(100);
-//        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
-//        randListSorted.sort(Integer::compareTo);
-//        testFor(result, main, randList, randListSorted);
-//        System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
+        ArrayList<Integer> randList = randomList(100);
+        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
+        randListSorted.sort(Integer::compareTo);
+        testFor(result, main, randList, randListSorted);
+        System.out.println("Max exid used: " + (IdType.EX.next() - 1));
     }
 
     @Test

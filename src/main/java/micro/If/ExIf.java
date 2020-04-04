@@ -59,7 +59,7 @@ public class ExIf extends Ex {
     }
 
     private PropagateValueEvent newPropagateValueEvent(Value v, ExPropagation p) {
-        return new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this));
+        return new PropagateValueEvent(this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this));
     }
 
     @Override

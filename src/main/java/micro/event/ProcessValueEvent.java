@@ -9,8 +9,8 @@ public class ProcessValueEvent extends ValueEvent {
         super();
     }
 
-    public ProcessValueEvent(long exId, _Ex ex, Value value) {
-        super(exId, ex, value);
+    public ProcessValueEvent(_Ex ex, Value value) {
+        super( ex, value);
     }
 
     @Override

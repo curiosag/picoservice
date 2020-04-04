@@ -11,8 +11,8 @@ import micro._Ex;
 public class ValueEvent extends ExEvent {
     public Value value;
 
-    public ValueEvent(long eventId, _Ex ex, Value value) {
-        super(eventId, ex);
+    public ValueEvent(_Ex ex, Value value) {
+        super(ex);
         this.value = value;
     }
 

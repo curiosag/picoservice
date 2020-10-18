@@ -15,7 +15,8 @@ public enum KryoSerializedClass {
     ExecutionCreatedEvent(1, ExecutionCreatedEvent::new),
     PropagateValueEvent(5, PropagateValueEvent::new),
     ValueReceivedEvent(6, ValueReceivedEvent::new),
-    ValueProcessedEvent(7, ValueProcessedEvent::new);
+    ValueProcessedEvent(7, ValueProcessedEvent::new),
+    ProvideExecutionEvent(8, ProvideExecutionEvent::new);
 
     static Map<Integer, KryoSerializedClass> idToSerializedClass = new HashMap<>();
     static Map<Class, KryoSerializedClass> classToSerializedClass = new HashMap<>();
@@ -64,12 +65,15 @@ public enum KryoSerializedClass {
         idToSerializedClass.put(5, PropagateValueEvent);
         idToSerializedClass.put(6, ValueReceivedEvent);
         idToSerializedClass.put(7, ValueProcessedEvent);
+        idToSerializedClass.put(8, ProvideExecutionEvent);
 
         classToSerializedClass.put(QueueRemoveEvent.class, QueueRemoveEvent);
         classToSerializedClass.put(ExecutionCreatedEvent.class, ExecutionCreatedEvent);
         classToSerializedClass.put(PropagateValueEvent.class, PropagateValueEvent);
         classToSerializedClass.put(ValueReceivedEvent.class, ValueReceivedEvent);
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
+        classToSerializedClass.put(ProvideExecutionEvent.class,ProvideExecutionEvent);
+
     }
 
 }

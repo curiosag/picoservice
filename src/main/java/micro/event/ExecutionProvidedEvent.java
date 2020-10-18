@@ -3,45 +3,34 @@ package micro.event;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.Check;
 import micro.Ex;
 import micro.Hydrator;
-import micro.Value;
+import micro._Ex;
 
-public class ValueEvent extends ExEvent {
-    public Value value;
+public class ExecutionProvidedEvent extends ExEvent {
+    private long providedId;
+    public _Ex provided;
 
-    public ValueEvent(Ex ex, Value value) {
-        super(ex);
-        this.value = value;
-    }
-
-    public ValueEvent() {
+    public ExecutionProvidedEvent(Ex requestedBy, _Ex provided) {
+        super(requestedBy);
+        this.provided = provided;
     }
 
     @Override
     public void write(Kryo kryo, Output output) {
         super.write(kryo, output);
-        value.write(kryo, output);
+        output.writeVarLong(providedId, true);
     }
 
     @Override
     public void read(Kryo kryo, Input input) {
         super.read(kryo, input);
-        value = new Value();
-        value.read(kryo, input);
+        providedId = input.readVarLong(true);
     }
 
     @Override
     public void hydrate(Hydrator h) {
-        Check.notNull(value);
         super.hydrate(h);
-        value.hydrate(h);
+        provided = h.getExForId(providedId);
     }
-
-    @Override
-    public String toString() {
-        throw new IllegalStateException();
-    }
-
 }

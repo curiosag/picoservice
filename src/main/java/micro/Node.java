@@ -104,7 +104,7 @@ public class Node implements Closeable, Hydrator {
         handle(e);
     }
 
-    void note(ExEvent e) {
+    void enQ(ExEvent e) {
         Check.invariant (e.getId() >= 0, "Id not set");
         eventLogPut(e);
         enqueue(e);
@@ -123,11 +123,15 @@ public class Node implements Closeable, Hydrator {
     private void enqueue(ExEvent e) {
         if (e instanceof ValueReceivedEvent) {
             ValueReceivedEvent v = (ValueReceivedEvent) e;
-      //logValueReceived(v);
-            getExEventQueue(e.getEx().getId()).add(e);
+      logValueReceived(v);
+            getExEventQueue(e.getEx().getId()).add(new ProcessValueEvent(v));
             return;
         }
         if (e instanceof PropagateValueEvent) {
+            getExEventQueue(e.getEx().getId()).add(0, e);
+            return;
+        }
+        if (e instanceof ProvideExecutionEvent) {
             getExEventQueue(e.getEx().getId()).add(0, e);
             return;
         }
@@ -154,7 +158,6 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void processEvents(List<ExEvent> events) {
-
         while (! stop.get()) {
             Concurrent.sleep(delay.get());
             if (events.size() > 0) {

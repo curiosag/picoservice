@@ -3,6 +3,7 @@ package micro;
 import micro.primitives.Primitive;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static micro.PropagationType.INDISCRIMINATE;
 
@@ -13,8 +14,7 @@ public class F implements _F, Id {
     private String label;
     String returnAs = Names.result;
     private Primitive primitive;
-
-    private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();
+    private List<FPropagation> propagations = new ArrayList<>();
 
     List<String> formalParameters = new ArrayList<>();
 
@@ -80,9 +80,7 @@ public class F implements _F, Id {
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
         FPropagation p = new FPropagation(type, nameExpected, namePropagated, to);
-        targetsToPropagations
-                .computeIfAbsent(p.target, k -> new ArrayList<>())
-                .add(p);
+        propagations.add(p);
     }
 
     @Override
@@ -99,8 +97,8 @@ public class F implements _F, Id {
         return this;
     }
 
-    Map<_F, List<FPropagation>> getTargetFunctionsToPropagations() {
-        return targetsToPropagations;
+    public List<FPropagation> getPropagations(String nameReceived) {
+        return propagations.stream().filter(p -> p.nameReceived.equals(nameReceived)).collect(Collectors.toList());
     }
 
     public static F f(Node node, Primitive primitive, String... params) {

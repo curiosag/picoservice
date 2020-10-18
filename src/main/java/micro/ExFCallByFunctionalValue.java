@@ -7,8 +7,6 @@ import com.esotericsoftware.kryo.io.Output;
 import java.util.ArrayList;
 import java.util.List;
 
-import static micro.Check.notNull;
-
 public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     private long idf;
     FCallByFunctionalValue f;
@@ -39,7 +37,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     }
 
     @Override
-    protected void performValueReceived(Value v) {
+    protected void processInputValue(Value v) {
         if (v.getName().equals(f.getFunctionalValueParam())) {
             pendingValues.forEach(pv -> getFunctionBeingCalled().receive(pv.withSender(this)));
         } else {
@@ -69,10 +67,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     }
 
     private _Ex getFunctionBeingCalled() {
-        if (beingCalled == null) {
-            beingCalled = node.getExecution(this, notNull(baseFunction));
-        }
-        return beingCalled;
+        return Check.notNull(beingCalled);
     }
 
     @Override
@@ -91,7 +86,6 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     public void hydrate(Hydrator h) {
         _F i = h.getFForId(idf);
         Check.invariant(i instanceof FCallByFunctionalValue, "..?");
-        //noinspection ConstantConditions
         f = (FCallByFunctionalValue) i;
     }
 

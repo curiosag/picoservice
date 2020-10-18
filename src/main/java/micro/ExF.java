@@ -1,19 +1,15 @@
 package micro;
 
-import micro.event.PropagateValueEvent;
-
 public class ExF extends Ex {
     ExF(Node node, F template, _Ex returnTo) {
         super(node, template, returnTo);
     }
 
     @Override
-    public void performValueReceived(Value v) {
+    public void processInputValue(Value v) {
         Check.isFunctionInputValue(v);
-        Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
-        getPropagations(v.getName()).forEach(p ->
-                raise(new PropagateValueEvent( this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
+        initiatePropagations(v, template.getPropagations(v.getName()));
 
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
             if (template.getPrimitive().isSideEffect()) {

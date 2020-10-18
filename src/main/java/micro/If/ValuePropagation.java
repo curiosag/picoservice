@@ -1,13 +1,13 @@
 package micro.If;
 
-import micro.ExPropagation;
+import micro.FPropagation;
 import micro.Value;
 
 class ValuePropagation {
     final Value value;
-    final ExPropagation propagation;
+    final FPropagation propagation;
 
-    ValuePropagation(Value value, ExPropagation propagation) {
+    ValuePropagation(Value value, FPropagation propagation) {
         this.value = value;
         this.propagation = propagation;
     }
@@ -16,7 +16,7 @@ class ValuePropagation {
     public String toString() {
         return "{\"ValuePropagation\":{" +
                 "\"value\":" + value +
-                ", \"propagation\":" + propagation +
+                ", \"fPropagation\":" + propagation +
                 "}}";
     }
 }

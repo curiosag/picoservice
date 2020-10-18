@@ -5,9 +5,9 @@ import com.esotericsoftware.kryo.io.Output;
 
 import java.io.*;
 
-public class KryoStuff {
+class KryoStuff {
 
-    public static Output createOutput(String filename) {
+    static Output createOutput(String filename) {
         try {
             assertFile(filename);
             return new Output(new FileOutputStream(filename, true));
@@ -16,7 +16,7 @@ public class KryoStuff {
         }
     }
 
-    public static Input createInput(String filename) {
+    static Input createInput(String filename) {
         try {
             assertFile(filename);
             return new Input(new FileInputStream(filename));

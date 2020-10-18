@@ -3,29 +3,26 @@ package micro.event;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import micro.Check;
-import micro.Hydrator;
-import micro.IdType;
-import micro._Ex;
+import micro.*;
 
 public abstract class ExEvent extends Event {
-    public _Ex ex;
-    long exId;
+    public Ex ex;
+    private long exId;
 
-    public ExEvent(_Ex ex) {
+    ExEvent(Ex ex) {
         super(IdType.EX.next());
         this.ex = ex;
         this.exId = ex.getId();
     }
 
-    protected ExEvent() {
+    ExEvent() {
     }
 
-    public void setEx(_Ex ex) {
+    public void setEx(Ex ex) {
         this.ex = ex;
     }
 
-    public _Ex getEx() {
+    public Ex getEx() {
         Check.notNull(ex);
         return ex;
     }
@@ -44,7 +41,9 @@ public abstract class ExEvent extends Event {
 
     @Override
     public void hydrate(Hydrator h) {
-        ex = h.getExForId(exId);
+        _Ex _ex = h.getExForId(exId);
+        Check.invariant(_ex instanceof Ex, "..?");
+        ex = (Ex) _ex;
     }
 
     @Override

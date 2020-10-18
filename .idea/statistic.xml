@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Statistic">
+    <option name="excludedDirectories">
+      <list>
+        <option value="$PROJECT_DIR$/src/test" />
+        <option value="$PROJECT_DIR$/src/main/scala" />
+        <option value="$PROJECT_DIR$/src/main/java/nano" />
+        <option value="$PROJECT_DIR$/src/main/java/micro/event" />
+        <option value="$PROJECT_DIR$/src/main/java/micro/atoms" />
+      </list>
+    </option>
+  </component>
+</project>

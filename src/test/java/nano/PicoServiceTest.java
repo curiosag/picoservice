@@ -918,19 +918,19 @@ public class PicoServiceTest {
         resultMonitor.param(Name.result);
 
         Function<Boolean> gt = BinOps.gt().returnTo(_if, Name.condition);
-        Function subT = BinOps.sub().returnTo(_if, Name.onTrue);
-        Function subF = BinOps.sub().returnTo(_if, Name.onFalse);
-        subT.label("subT");
-        subF.label("subF");
+        Function subTrueBranch = BinOps.sub().returnTo(_if, Name.onTrue);
+        Function subFalseBranch = BinOps.sub().returnTo(_if, Name.onFalse);
+        subTrueBranch.label("subT");
+        subFalseBranch.label("subF");
 
         _if.returnTo(resultMonitor, Name.result);
-        _if.propagate(Name.b, Name.leftArg, subF);
-        _if.propagate(Name.a, Name.rightArg, subF);
+        _if.propagate(Name.b, Name.leftArg, subFalseBranch);
+        _if.propagate(Name.a, Name.rightArg, subFalseBranch);
 
         _if.propagate(Name.a, Name.leftArg, gt);
-        _if.propagate(Name.a, Name.leftArg, subT);
+        _if.propagate(Name.a, Name.leftArg, subTrueBranch);
         _if.propagate(Name.b, Name.rightArg, gt);
-        _if.propagate(Name.b, Name.rightArg, subT);
+        _if.propagate(Name.b, Name.rightArg, subTrueBranch);
 
         resultMonitor.propagate(Name.a, Name.a, _if);
         resultMonitor.propagate(Name.b, Name.b, _if);

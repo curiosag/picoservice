@@ -4,13 +4,14 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import micro.Hydrator;
+import micro.IdType;
 
 public class QueueRemoveEvent extends NodeEvent {
     public long idEventToRemove;
     public long idRelatedExecution;
 
-    public QueueRemoveEvent() {
-        super(0);
+    QueueRemoveEvent() {
+        super(IdType.EVENT.next());
     }
 
     public QueueRemoveEvent(long idEventToRemove, long idRelatedExecution) {
@@ -20,7 +21,6 @@ public class QueueRemoveEvent extends NodeEvent {
 
     @Override
     public void hydrate(Hydrator h) {
-
     }
 
     @Override

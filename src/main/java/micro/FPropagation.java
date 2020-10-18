@@ -1,10 +1,10 @@
 package micro;
 
-class FPropagation {
-    final PropagationType propagationType;
+public class FPropagation {
+    public final PropagationType propagationType;
     final String nameReceived;
-    final String nameToPropagate;
-    final _F target;
+    public String nameToPropagate;
+    public final _F target;
 
     FPropagation(PropagationType propagationType, String nameReceived, String nameToPropagate, _F target) {
         this.propagationType = propagationType;

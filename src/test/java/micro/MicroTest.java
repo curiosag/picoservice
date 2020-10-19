@@ -10,6 +10,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import static java.util.Arrays.asList;
@@ -75,17 +76,16 @@ public class MicroTest {
         _Ex ex = main.createExecution(node.getTop());
 
         node.start();
-
-        ex.receive(Value.of(ping, 0, node.getTop()));
-
-        Concurrent.await(() -> !result.isEmpty());
-        assertEquals(6, result.get().get(0).get());
+        try {
+            ex.receive(Value.of(ping, 0, node.getTop()));
+            Concurrent.await(() -> !result.isEmpty());
+            assertEquals(6, result.get().get(0).get());
+        } finally {
+            node.close();
+        }
     }
 
-
-    @Test
-    public void testSimpleFunc() {
-/*
+/* testSimpleFunc
     a   b
     \   /
       +
@@ -97,31 +97,63 @@ public class MicroTest {
       |
     main
 
-
 */
 
+
+    @Test
+    public void testSimpleFunc_useAddDirectly() {
+
         node = new Node(address, true);
-        node.start();
-        F main = f(print(), Names.result).label("main");
-        F add = f(add(), Names.left, Names.right).label("add");
+        try {
+            node.start();
+            F main = f(print(), Names.result).label("main");
+            F add = f(add(), Names.left, Names.right).label("add");
 
-        // FCall is redundant here, main could interact with add directly
-        F callAdd = new FCall(node, add).returnAs(result).label("callAdd");
+            main.addPropagation(Names.a, Names.left, add);
+            main.addPropagation(Names.b, Names.right, add);
 
-        main.addPropagation(Names.a, Names.left, callAdd);
-        main.addPropagation(Names.b, Names.right, callAdd);
+            CallSync<Integer> sync = CallSync.of(Integer.class, main);
+            sync.param(Names.a, 1);
+            sync.param(Names.b, 2);
 
-        Gateway<Integer> g = Gateway.of(Integer.class, main);
-        g.param(Names.a, 1);
-        g.param(Names.b, 2);
+            assertEquals(_3, sync.call());
+        } finally {
+            node.close();
+        }
 
-        assertEquals(_3, g.call());
     }
 
+    @Test
+    public void testSimpleFunc_usingFCall() {
+        node = new Node(address, true);
+        try {
+            node.start();
+            F main = f(print(), Names.result).label("main");
+            F add = f(add(), Names.left, Names.right).label("add");
+
+            // FCall is redundant here, main could interact with add directly
+            F callAdd = new FCall(node, add).returnAs(result).label("callAdd");
+
+            main.addPropagation(Names.a, Names.left, callAdd);
+            main.addPropagation(Names.b, Names.right, callAdd);
+
+            CallSync<Integer> sync = CallSync.of(Integer.class, main);
+            sync.param(Names.a, 1);
+            sync.param(Names.b, 2);
+
+            assertEquals(_3, sync.call());
+        } finally {
+            node.close();
+        }
+    }
+
+
     /*
-        function trisum (a,b,c) = a + b + c
-        function trimul (a,b,c) = a * b * c
-        print(sum(trisum(1,2,3), trimul(1,2,3))
+        function add(left,right)=left+right
+        function mul(left,right)=left*right
+        function trisum (a,b,c) = add(add(a, b), c)
+        function trimul (a,b,c) = mul(mul(a, b), c)
+        function calc(a,b,c= sum(trisum(1,2,3), trimul(1,2,3))
 
         a   b
          \ /
@@ -145,15 +177,15 @@ trisum(a,b,c)   trimul(a,b,c)
            \   /
              + (add)
              |
-            main   (a,b,c)
+            calc   (a,b,c)
 
 
 
     * */
 
-    private F createTriOp(Supplier<Primitive> getBinOp, String resultName, String label) {
-        F op1 = f(getBinOp.get(), Names.left, Names.right).label(label + "_1");
-        F op2 = f(getBinOp.get(), Names.left, Names.right).label(label + "_2");
+    private F createTriOp(F binOp, String label) {
+        F op1 = new FCall(node, binOp, Names.left, Names.right).label(label + "_1");
+        F op2 = new FCall(node, binOp, Names.left, Names.right).label(label + "_2");
         F triOp = f(nop, Names.a, Names.b, Names.c).label(label + "_triop");
 
         triOp.addPropagation(Names.a, op1);
@@ -166,39 +198,81 @@ trisum(a,b,c)   trimul(a,b,c)
         op2.returnAs(Names.left);
         op1.returnAs(Names.result);
 
-        triOp.returnAs(resultName);
         return triOp;
     }
 
-    @Test
-    public void testSimpleFuncs() {
-        node = new Node(address, true);
-        F main = f(print(), Names.result).label("main");
+    private F createCalc() {
+        F calc = f(nop, Names.result).label("calc");
 
+        // single instances of add and mul, accessed via FCalls
         F add = f(add(), Names.left, Names.right).label("add").returnAs(Names.result);
-        F triSum = createTriOp(Add::new, Names.left, "tsum").returnAs(Names.left);
-        F triMul = createTriOp(MulInt::new, Names.right, "tmul").returnAs(Names.right);
+        F mul = f(mul(), Names.left, Names.right).label("mul").returnAs(Names.result);
+        F triSum = createTriOp(add, "triSum").returnAs(Names.left);
+        F triMul = createTriOp(mul, "triMul").returnAs(Names.right);
 
-        main.addPropagation(Names.a, add);
-        main.addPropagation(Names.b, add);
-        main.addPropagation(Names.c, add);
+        F callAdd = new FCall(node, add, Names.left, Names.right).returnAs(Names.result);
+        calc.addPropagation(Names.a, callAdd);
+        calc.addPropagation(Names.b, callAdd);
+        calc.addPropagation(Names.c, callAdd);
 
-        add.addPropagation(Names.a, triSum);
-        add.addPropagation(Names.b, triSum);
-        add.addPropagation(Names.c, triSum);
+        callAdd.addPropagation(Names.a, triSum);
+        callAdd.addPropagation(Names.b, triSum);
+        callAdd.addPropagation(Names.c, triSum);
 
-        add.addPropagation(Names.a, triMul);
-        add.addPropagation(Names.b, triMul);
-        add.addPropagation(Names.c, triMul);
-
-        _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(TOP);
-        ex.receive(Value.of(Names.a, 1, TOP));
-        ex.receive(Value.of(Names.c, 3, TOP));
-        ex.receive(Value.of(Names.b, 2, TOP));
+        callAdd.addPropagation(Names.a, triMul);
+        callAdd.addPropagation(Names.b, triMul);
+        callAdd.addPropagation(Names.c, triMul);
+        return calc;
     }
 
+    @Test
+    public void testCalcSync() {
+        node = new Node(address, true);
+        F calc = createCalc();
 
+        node.start();
+        try {
+            CallSync<Integer> sync = CallSync.of(Integer.class, calc);
+            sync.param(Names.a, 1);
+            sync.param(Names.c, 2);
+            sync.param(Names.b, 3);
+
+            assertEquals(Integer.valueOf(12), sync.call());
+        } finally {
+            node.close();
+        }
+    }
+
+    @Test
+    public void testCalcAsync() {
+        node = new Node(address, true);
+        F calc = createCalc();
+        final AtomicInteger i1 = new AtomicInteger(0);
+        final AtomicInteger i2 = new AtomicInteger(0);
+
+        node.start();
+        try {
+
+            CallAsync<Integer> call1 = CallAsync.of(Integer.class, calc, i1::addAndGet);
+            CallAsync<Integer> call2 = CallAsync.of(Integer.class, calc, i2::addAndGet);
+
+            call1.param(Names.a, 1);
+            call1.param(Names.c, 2);
+            call1.param(Names.b, 3);
+
+            call2.param(Names.a, 2);
+            call2.param(Names.c, 4);
+            call2.param(Names.b, 3);
+
+            call1.call();
+            call2.call();
+            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0);
+            assertEquals(Integer.valueOf(12), Integer.valueOf(i1.get()));
+            assertEquals(Integer.valueOf(33), Integer.valueOf(i2.get()));
+        } finally {
+            node.close();
+        }
+    }
 
     /*
 
@@ -241,13 +315,16 @@ trisum(a,b,c)   trimul(a,b,c)
 
         node.start();
 
-        ex.receive(Value.of(Names.a, 2, node.getTop()));
-        ex.receive(Value.of(Names.b, 1, node.getTop()));
+        try {
+            ex.receive(Value.of(Names.a, 2, node.getTop()));
+            ex.receive(Value.of(Names.b, 1, node.getTop()));
 
-        Concurrent.await(() -> !result.isEmpty());
-        assertEquals(1, result.get().get(0).get());
+            Concurrent.await(() -> !result.isEmpty());
+            assertEquals(1, result.get().get(0).get());
+        } finally {
+            node.close();
+        }
 
-        node.close();
     }
 
 

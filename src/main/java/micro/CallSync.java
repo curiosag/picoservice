@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Gateway<T extends Serializable> implements _Ex {
+public class CallSync<T extends Serializable> implements _Ex {
 
     private final F f;
     private final Class<T> resultType;
@@ -15,16 +15,16 @@ public class Gateway<T extends Serializable> implements _Ex {
     private final Map<String, Integer> params = new HashMap<>();
     private Value result;
 
-    private Gateway(Class<T> resultType, F f) {
+    private CallSync(Class<T> resultType, F f) {
         this.f = f;
         this.resultType = resultType;
     }
 
-    public static <T extends Serializable> Gateway<T> of(Class<T> resultType, F f) {
-        return new Gateway<>(resultType, f);
+    public static <T extends Serializable> CallSync<T> of(Class<T> resultType, F f) {
+        return new CallSync<>(resultType, f);
     }
 
-    public Gateway<T> param(String key, Integer value) {
+    public CallSync<T> param(String key, Integer value) {
         params.put(key, value);
         return this;
     }
@@ -87,5 +87,10 @@ public class Gateway<T extends Serializable> implements _Ex {
     @Override
     public void setId(long value) {
         throw new RuntimeException("no call expected");
+    }
+
+    @Override
+    public String toString() {
+        return "SyncCall{f:" + f.getLabel() + "}";
     }
 }

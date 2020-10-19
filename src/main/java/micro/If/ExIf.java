@@ -37,7 +37,7 @@ public class ExIf extends Ex {
 
     @Override
     public void performValueReceived(Value v) {
-        Check.isFunctionInputValue(v);
+        Check.isLegitInputValue(v);
 
         if (Names.condition.equals(v.getName())) {
             toPropagateOnConditionSet.stream()

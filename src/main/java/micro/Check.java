@@ -25,7 +25,7 @@ public class Check {
         throw new IllegalStateException(msg);
     }
 
-    public static void isFunctionInputValue(Value v){
+    public static void isLegitInputValue(Value v){
         Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
     }
 

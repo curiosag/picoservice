@@ -132,14 +132,14 @@ public class Node implements Closeable, Hydrator {
         String to = null;
         String from = null;
         try {
-            to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
             _Ex sender = v.value.getSender();
             from = sender == null ? "null" : (v.value.getSender().toString() + " " + v.value.getSender().getId());
+            to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        log(Thread.currentThread().getId() + " Rec: " + from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
+        log(from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
     }
 
     private void processEvents(List<ExEvent> events) {

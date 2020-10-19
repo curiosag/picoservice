@@ -44,7 +44,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
         if (v.getName().equals(f.getFunctionalValueParam())) {
             pendingValues.forEach(pv -> getFunctionBeingCalled().receive(pv.withSender(this)));
         } else {
-            Check.isFunctionInputValue(v);
+            Check.isLegitInputValue(v);
             if (baseFunction != null) {
                 getFunctionBeingCalled().receive(v.withSender(this));
             }

@@ -4,7 +4,7 @@ import micro.primitives.Primitive;
 
 public class FCall extends F {
 
-    protected final F called;
+    private final F called;
 
     public FCall(Node node, F called, String... formalParams) {
         super(node, Primitive.nop, formalParams);
@@ -16,5 +16,13 @@ public class FCall extends F {
         return new ExFCall(this.node, this, returnTo);
     }
 
+    public F getCalled() {
+        return called;
+    }
+
+    @Override
+    public String getLabel() {
+        return "call:" + called.getLabel();
+    }
 }
 

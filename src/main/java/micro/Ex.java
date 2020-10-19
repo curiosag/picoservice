@@ -103,7 +103,7 @@ public abstract class Ex implements _Ex, KryoSerializable {
         switch (v.getName()) {
             case Names.result:
                 returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
-                //clear();
+                //clear(); TODO?
                 break;
 
             case Names.exception:
@@ -199,4 +199,8 @@ public abstract class Ex implements _Ex, KryoSerializable {
         return !(Names.result.equals(v.getName()) || Names.exception.equals(v.getName()));
     }
 
+    protected void propagate(Value v) {
+        getPropagations(v.getName()).forEach(p ->
+                raise(new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this))));
+    }
 }

@@ -21,13 +21,16 @@ public class ExFCall extends Ex {
 
     @Override
     public void performValueReceived(Value v) {
-        Check.isFunctionInputValue(v);
-        getBeingCalled().receive(v.withSender(this));
+        Check.isLegitInputValue(v);
+        propagate(v);
+        if (callTemplate.formalParameters.contains(v.getName())) {
+            getBeingCalled().receive(v.withSender(this));
+        }
     }
 
     private _Ex getBeingCalled() {
         if (beingCalled == null) {
-            beingCalled = node.getExecution(callTemplate.called, this);
+            beingCalled = node.getExecution(callTemplate.getCalled(), this);
         }
         return beingCalled;
     }

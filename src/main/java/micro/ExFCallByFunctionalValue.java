@@ -15,7 +15,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     FCallByFunctionalValue f;
     _F baseFunction;
     _Ex beingCalled;
-    private List<Value> pendingValues = new ArrayList<>();
+    private final List<Value> pendingValues = new ArrayList<>();
 
     ExFCallByFunctionalValue(Node node, FCallByFunctionalValue f, _Ex returnTo) {
         super(node, f, returnTo);

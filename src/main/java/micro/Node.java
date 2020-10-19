@@ -56,7 +56,7 @@ public class Node implements Closeable, Hydrator {
                     ExecutionCreatedEvent e = (ExecutionCreatedEvent) h;
                     _F template = getFForId(e.templateId);
                     _Ex retTo = getExForId(e.exIdToReturnTo);
-                    _Ex ex = template.createExecution(this, retTo);
+                    _Ex ex = template.createExecution(retTo);
                     ex.setId(e.exId);
                     maxOId = Math.max(maxOId, e.exId);
                     exRecovered.put(new ExFMatcher(retTo, template), ex);
@@ -177,7 +177,7 @@ public class Node implements Closeable, Hydrator {
     }
 
     private _Ex createExecution(_F targetFunc, _Ex returnTo) {
-        _Ex result = targetFunc.createExecution(this, returnTo);
+        _Ex result = targetFunc.createExecution(returnTo);
         result.setId(nextObjectId.getAndIncrement());
         idToX.put(result.getId(), result);
         if (result.getAddress().nodeEqual(getAddress())) {

@@ -16,8 +16,8 @@ public class FCallByFunctionalValue extends F {
     }
 
     @Override
-    public _Ex createExecution(Node node, _Ex returnTo) {
-        return new ExFCallByFunctionalValue(node, this, returnTo);
+    public _Ex createExecution(_Ex returnTo) {
+        return new ExFCallByFunctionalValue(this.node, this, returnTo);
     }
 
 }

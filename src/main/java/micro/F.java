@@ -12,6 +12,7 @@ public class F implements _F, Id {
 
     private final Supplier<Long> nextPropagationId;
     private final long id;
+    protected final Node node;
     private String label;
     public String returnAs = Names.result;
     private Primitive primitive;
@@ -21,6 +22,7 @@ public class F implements _F, Id {
     List<String> formalParameters = new ArrayList<>();
 
     private F(Node node, Primitive primitive) {
+        this.node = node;
         this.id = node.getNextFId();
         node.addF(this);
         this.nextPropagationId = node::getNextObjectId;
@@ -89,8 +91,8 @@ public class F implements _F, Id {
     }
 
     @Override
-    public _Ex createExecution(Node node, _Ex returnTo) {
-        return new ExF(node, this, returnTo);
+    public _Ex createExecution(_Ex returnTo) {
+        return new ExF(this.node, this, returnTo);
     }
 
     public String getLabel() {

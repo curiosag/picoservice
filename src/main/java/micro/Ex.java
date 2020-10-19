@@ -8,6 +8,7 @@ import micro.event.ExEvent;
 import micro.event.PropagateValueEvent;
 import micro.event.ValueProcessedEvent;
 import micro.event.ValueReceivedEvent;
+import nano.ingredients.guards.Guards;
 
 import java.util.*;
 
@@ -23,11 +24,15 @@ public abstract class Ex implements _Ex, KryoSerializable {
     final Map<String, Value> paramsReceived = new HashMap<>();
 
     public Ex(Node node) {
+        Guards.notNull(node);
         this.node = node;
     }
 
     public Ex(Node node, F template, _Ex returnTo) {
         this(node);
+        Guards.notNull(template);
+        Guards.notNull(returnTo);
+
         this.returnTo = returnTo;
         this.template = template;
         createExPropagations(template);

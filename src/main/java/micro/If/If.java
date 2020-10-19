@@ -26,8 +26,8 @@ public class If extends F {
     }
 
     @Override
-    public _Ex createExecution(Node node, _Ex returnTo) {
-        return new ExIf(node, this, returnTo);
+    public _Ex createExecution(_Ex returnTo) {
+        return new ExIf(this.node, this, returnTo);
     }
 
     public static If iff(Node node){

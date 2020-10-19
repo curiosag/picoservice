@@ -12,8 +12,8 @@ public class FCall extends F {
     }
 
     @Override
-    public _Ex createExecution(Node node, _Ex returnTo) {
-        return new ExFCall(node, this, returnTo);
+    public _Ex createExecution(_Ex returnTo) {
+        return new ExFCall(this.node, this, returnTo);
     }
 
 }

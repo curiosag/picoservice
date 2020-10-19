@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import nano.ingredients.guards.Guards;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,6 +17,8 @@ public class PartiallyAppliedFunction implements Hydratable, KryoSerializable {
     List<Value> partialValues = new ArrayList<>();
 
     PartiallyAppliedFunction(F baseFunction, Collection<Value> partialValues) {
+        Guards.notNull(baseFunction);
+        Guards.notNull(partialValues);
         this.baseFunction = baseFunction;
         this.partialValues.addAll(partialValues);
     }

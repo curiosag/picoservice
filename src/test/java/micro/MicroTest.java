@@ -26,6 +26,13 @@ import static micro.primitives.Sub.subInt;
 import static org.junit.Assert.assertEquals;
 
 public class MicroTest {
+    private static final Integer _6 = 6;
+    private static final Integer _5 = 5;
+    private static final Integer _4 = 4;
+    private static final Integer _3 = 3;
+    private static final Integer _2 = 2;
+    private static final Integer _1 = 1;
+    private static final Integer _0 = 0;
 
     private final Address address = new Address(new byte[0], 1, 1);
     private Node node;
@@ -65,7 +72,7 @@ public class MicroTest {
         F main = f(resultListener, Names.output).label("main");
         main.addPropagation(ping, f);
 
-        _Ex ex = main.createExecution(node, node.getTop());
+        _Ex ex = main.createExecution(node.getTop());
 
         node.start();
 
@@ -76,33 +83,39 @@ public class MicroTest {
     }
 
 
+    @Test
+    public void testSimpleFunc() {
 /*
     a   b
     \   /
-      + 
+      +
       |
     add(a,b)
-    
-    
+
+
     add(a,b)
       |
     main
-            
+
 
 */
 
-    @Test
-    public void testSimpleFunc() {
         node = new Node(address, true);
+        node.start();
         F main = f(print(), Names.result).label("main");
         F add = f(add(), Names.left, Names.right).label("add");
 
-        main.addPropagation(Names.a, Names.left, add);
-        main.addPropagation(Names.b, Names.right, add);
+        // FCall is redundant here, main could interact with add directly
+        F callAdd = new FCall(node, add).returnAs(result).label("callAdd");
 
-        _Ex ex = main.createExecution(node, node.getTop());
-        ex.receive(Value.of(Names.a, 1, node.getTop()));
-        ex.receive(Value.of(Names.b, 2, node.getTop()));
+        main.addPropagation(Names.a, Names.left, callAdd);
+        main.addPropagation(Names.b, Names.right, callAdd);
+
+        Gateway<Integer> g = Gateway.of(Integer.class, main);
+        g.param(Names.a, 1);
+        g.param(Names.b, 2);
+
+        assertEquals(_3, g.call());
     }
 
     /*
@@ -179,7 +192,7 @@ trisum(a,b,c)   trimul(a,b,c)
         add.addPropagation(Names.c, triMul);
 
         _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(node, TOP);
+        _Ex ex = main.createExecution(TOP);
         ex.receive(Value.of(Names.a, 1, TOP));
         ex.receive(Value.of(Names.c, 3, TOP));
         ex.receive(Value.of(Names.b, 2, TOP));
@@ -224,7 +237,7 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, useFVar);
         main.addPropagation(Names.b, useFVar);
 
-        _Ex ex = main.createExecution(node, node.getTop());
+        _Ex ex = main.createExecution(node.getTop());
 
         node.start();
 
@@ -272,7 +285,7 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, usePartial);
         main.addPropagation(Names.b, usePartial);
 
-        _Ex ex = main.createExecution(node, node.getTop());
+        _Ex ex = main.createExecution(node.getTop());
 
         node.start();
 
@@ -301,7 +314,7 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
         _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(node, TOP);
+        _Ex ex = main.createExecution(TOP);
         ex.receive(Value.of(ping, null, TOP));
         ex.receive(Value.of(Names.a, 1, TOP));
     }
@@ -309,6 +322,7 @@ trisum(a,b,c)   trimul(a,b,c)
     @Test
     public void testIf() {
         node = new Node(address, true);
+        node.start();
 
         F main = f(print(), Names.result).label("main");
         F max = f(nop, Names.left, Names.right).label("max");
@@ -326,13 +340,16 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
         iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
         _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(node, TOP);
+        _Ex ex = main.createExecution(TOP);
         ex.receive(Value.of(Names.left, 1, TOP));
         ex.receive(Value.of(Names.right, 2, TOP));
 
-        ex = main.createExecution(node, TOP);
+        ex = main.createExecution(TOP);
         ex.receive(Value.of(Names.left, 2, TOP));
         ex.receive(Value.of(Names.right, 1, TOP));
+
+        Concurrent.sleep(5000);
+        node.close();
     }
 
     /* function geo(a) = if (a = 0)
@@ -417,7 +434,8 @@ trisum(a,b,c)   trimul(a,b,c)
 //        testFor(result, main, list(1, 2), list(1, 2));
 //        testFor(result, main, list(2, 1), list(1, 2));
         testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
-
+        Concurrent.sleep(5000);
+        node.close();
 //        ArrayList<Integer> randList = randomList(100);
 //        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
 //        randListSorted.sort(Integer::compareTo);
@@ -437,6 +455,8 @@ trisum(a,b,c)   trimul(a,b,c)
         ArrayList<Integer> actual = list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4);
         _Ex ex = node.getExecution(main, node.getTop());
         ex.receive(Value.of(Names.list, actual, node.getTop()));
+        Concurrent.sleep(5000);
+        node.close();
 
         Concurrent.sleep(250);
         node.stop();
@@ -454,9 +474,15 @@ trisum(a,b,c)   trimul(a,b,c)
         node.recover();
         node.start();
 
-        Concurrent.await(() -> ! result.isEmpty());
+        Concurrent.await(() -> !result.isEmpty());
         Assert.assertEquals(list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), result.get().get(0).get());
         node.close();
+    }
+
+    @Test
+    public void testSuspendResumeQuicksort() {
+        testSuspendQuicksort();
+        testResumeQuicksort();
     }
 
     private F createQuicksortCall(ResultCollector result) {

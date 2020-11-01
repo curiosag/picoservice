@@ -184,8 +184,8 @@ trisum(a,b,c)   trimul(a,b,c)
     * */
 
     private F createTriOp(F binOp, String label) {
-        F op1 = new FCall(node, binOp, Names.left, Names.right).label(label + "_1");
-        F op2 = new FCall(node, binOp, Names.left, Names.right).label(label + "_2");
+        F op1 = new FCall(node, binOp).label(label + "_1");
+        F op2 = new FCall(node, binOp).label(label + "_2");
         F triOp = f(nop, Names.a, Names.b, Names.c).label(label + "_triop");
 
         triOp.addPropagation(Names.a, op1);
@@ -210,7 +210,7 @@ trisum(a,b,c)   trimul(a,b,c)
         F triSum = createTriOp(add, "triSum").returnAs(Names.left);
         F triMul = createTriOp(mul, "triMul").returnAs(Names.right);
 
-        F callAdd = new FCall(node, add, Names.left, Names.right).returnAs(Names.result);
+        F callAdd = new FCall(node, add).returnAs(Names.result);
         calc.addPropagation(Names.a, callAdd);
         calc.addPropagation(Names.b, callAdd);
         calc.addPropagation(Names.c, callAdd);
@@ -392,41 +392,45 @@ trisum(a,b,c)   trimul(a,b,c)
         dec.addPropagation(Names.a, Names.left, sub);
         _Ex TOP = node.getTop();
         _Ex ex = main.createExecution(TOP);
-        ex.receive(Value.of(ping, null, TOP));
+        ex.receive(Value.of(ping, 0, TOP));
         ex.receive(Value.of(Names.a, 1, TOP));
     }
 
     @Test
     public void testIf() {
         node = new Node(address, true);
-        node.start();
+        try {
+            node.start();
+            F main = f(print(), Names.result).label("main");
+            F max = f(nop, Names.left, Names.right).label("max");
+            If iff = iff(node).label("if");
+            F gt = f(gt(), Names.left, Names.right).returnAs(Names.condition).label("gt");
 
-        F main = f(print(), Names.result).label("main");
-        F max = f(nop, Names.left, Names.right).label("max");
-        If iff = iff(node).label("if");
-        F gt = f(gt(), Names.left, Names.right).returnAs(Names.condition).label("gt");
+            main.addPropagation(Names.left, max);
+            main.addPropagation(Names.right, max);
 
-        main.addPropagation(Names.left, max);
-        main.addPropagation(Names.right, max);
+            max.addPropagation(Names.left, iff);
+            max.addPropagation(Names.right, iff);
 
-        max.addPropagation(Names.left, iff);
-        max.addPropagation(Names.right, iff);
+            iff.addPropagation(CONDITION, Names.left, gt);
+            iff.addPropagation(CONDITION, Names.right, gt);
+            iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
+            iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
 
-        iff.addPropagation(CONDITION, Names.left, gt);
-        iff.addPropagation(CONDITION, Names.right, gt);
-        iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
-        iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
-        _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(TOP);
-        ex.receive(Value.of(Names.left, 1, TOP));
-        ex.receive(Value.of(Names.right, 2, TOP));
 
-        ex = main.createExecution(TOP);
-        ex.receive(Value.of(Names.left, 2, TOP));
-        ex.receive(Value.of(Names.right, 1, TOP));
+            _Ex TOP = node.getTop();
+            _Ex ex = main.createExecution(TOP);
+            ex.receive(Value.of(Names.left, 1, TOP));
+            ex.receive(Value.of(Names.right, 2, TOP));
 
-        Concurrent.sleep(5000);
-        node.close();
+            CallSync<Integer> sync = CallSync.of(Integer.class, main);
+            sync.param(Names.left, 2);
+            sync.param(right, 1);
+
+            assertEquals(Integer.valueOf(2), sync.call());
+        } finally {
+            node.close();
+        }
     }
 
     /* function geo(a) = if (a = 0)
@@ -448,15 +452,12 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
 
         _Ex m1 = node.getExecution(main);
-        //  _Ex m2 = env.getExecution(main);
+        _Ex m2 = node.getExecution(main);
 
-        m1.receive(Value.of(Names.a, 100, m1.returnTo()));
-        //m2.receive(Value.of(Names.a, 100, m1.returnTo()));
+        m1.receive(Value.of(Names.a, 50, m1.returnTo()));
+        m2.receive(Value.of(Names.a, 50, m1.returnTo()));
 
-        //Concurrent.sleep(1500);
-        //node.log("stopping");
-        //node.stop();
-        Concurrent.sleep(5000);
+        Concurrent.sleep(8000);
         node.close();
     }
 
@@ -506,18 +507,21 @@ trisum(a,b,c)   trimul(a,b,c)
         F main = createQuicksortCall(result);
 
         node.start();
-//        testFor(result, main, list(), list());
-//        testFor(result, main, list(1), list(1));
-//        testFor(result, main, list(1, 2), list(1, 2));
-//        testFor(result, main, list(2, 1), list(1, 2));
-        testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
-        Concurrent.sleep(5000);
-        node.close();
-//        ArrayList<Integer> randList = randomList(100);
-//        ArrayList<Integer> randListSorted = new ArrayList<>(randList);
-//        randListSorted.sort(Integer::compareTo);
-//        testFor(result, main, randList, randListSorted);
-//        System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
+        try {
+            testFor(result, main, list(), list());
+            testFor(result, main, list(1), list(1));
+            testFor(result, main, list(1, 2), list(1, 2));
+            testFor(result, main, list(2, 1), list(1, 2));
+            testFor(result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+            ArrayList<Integer> randList = randomList(100);
+            ArrayList<Integer> randListSorted = new ArrayList<>(randList);
+            randListSorted.sort(Integer::compareTo);
+            testFor(result, main, randList, randListSorted);
+            System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
+        } finally {
+            node.close();
+        }
     }
 
     @Test
@@ -567,7 +571,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         F main = f(resultListener, Names.output).label("main");
         F quicksort = createQuicksort();
-        F callQuicksort = new FCall(node, quicksort, list).returnAs(Names.output).label("callQuicksort initially");
+        F callQuicksort = new FCall(node, quicksort).returnAs(Names.output).label("callQuicksort initially");
         main.addPropagation(list, callQuicksort);
         return main;
     }
@@ -602,7 +606,9 @@ trisum(a,b,c)   trimul(a,b,c)
         String sortedLteq = "sortedLteq";
         String consed = "consed";
 
+        F quicksort = new F(node, nop, list).label("QUICKSORT(list)");
         If if_listEmpty = iff(node).label("if:listEmpty");
+        quicksort.addPropagation(list, if_listEmpty);
 
         F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
@@ -625,17 +631,17 @@ trisum(a,b,c)   trimul(a,b,c)
         F createTestLteq = new FCreatePartiallyAppliedFunction(node, lteq, Names.right).returnAs(predicateTestLteq).label("createTestLteq");
         block_else.addPropagation(Names.head, right, createTestLteq);
 
-        F filter = filter();
-        F filterCallGt = new FCall(node, filter, Names.list, predicate).returnAs(filteredGt).label("filterCallGt");
-        F filterCallLteq = new FCall(node, filter, Names.list, predicate).returnAs(filteredLteq).label("filterCallLteq");
+        F filter = createFilter();
+        F filterCallGt = new FCall(node, filter).returnAs(filteredGt).label("filterCallGt");
+        F filterCallLteq = new FCall(node, filter).returnAs(filteredLteq).label("filterCallLteq");
 
         block_else.addPropagation(predicateTestGt, predicate, filterCallGt);
         block_else.addPropagation(predicateTestLteq, predicate, filterCallLteq);
         block_else.addPropagation(Names.tail, list, filterCallGt);
         block_else.addPropagation(Names.tail, list, filterCallLteq);
 
-        F qsortRecallGt = new FCall(node, if_listEmpty, Names.list).returnAs(sortedGt).label("qsortRecallGt");
-        F qsortRecallLteq = new FCall(node, if_listEmpty, Names.list).returnAs(sortedLteq).label("qsortRecallLteq");
+        F qsortRecallGt = new FCall(node, quicksort).returnAs(sortedGt).label("qsortRecallGt");
+        F qsortRecallLteq = new FCall(node, quicksort).returnAs(sortedLteq).label("qsortRecallLteq");
         block_else.addPropagation(filteredGt, Names.list, qsortRecallGt);
         block_else.addPropagation(filteredLteq, Names.list, qsortRecallLteq);
 
@@ -647,7 +653,8 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(consed, right, concat);
         block_else.addPropagation(sortedLteq, Names.left, concat);
 
-        return if_listEmpty;
+
+        return quicksort;
     }
 
     @Test
@@ -660,6 +667,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         node.start();
         testFor(result, main, list(), list());
+        testFor(result, main, list(1), list());
         testFor(result, main, list(1, 2, 3), list());
         testFor(result, main, list(1, 2, 3, 4, 5), list(4, 5));
         testFor(result, main, list(5), list(5));
@@ -676,8 +684,8 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(list, ping, createPredicate);
         createPredicate.addPropagation(ping, CONST(3).returnAs(Names.right).label(const3));
 
-        F filter = filter();
-        F callFilter = new FCall(node, filter, predicate, list).returnAs(Names.output).label("callFilter initially");
+        F filter = createFilter();
+        F callFilter = new FCall(node, filter).returnAs(Names.output).label("callFilter initially");
 
         main.addPropagation(predicate, callFilter);
         main.addPropagation(list, callFilter);
@@ -743,10 +751,13 @@ trisum(a,b,c)   trimul(a,b,c)
         }
         */
 
-    private F filter() {
+    private F createFilter() {
         String tailFiltered = "tailFiltered";
 
+        F filter = new F(node, nop, predicate, list);
         If if_listEmpty = iff(node).label("**if:listEmpty");
+        filter.addPropagation(list, if_listEmpty);
+        filter.addPropagation(predicate, if_listEmpty);
 
         F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("**isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
@@ -759,7 +770,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         F head = new F(node, new Head(), list).returnAs(Names.head).label("**head()");
         F tail = new F(node, new Tail(), list).returnAs(Names.tail).label("**tail()");
-        F filterReCall = new FCall(node, if_listEmpty, Names.list, predicate).returnAs(tailFiltered).label("**filterReCall");
+        F filterReCall = new FCall(node, filter).returnAs(tailFiltered).label("**filterReCall");
 
         If if_predicate = iff(node).label("**if:predicate");
         block_else.addPropagation(list, head);
@@ -784,7 +795,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         if_predicate.addPropagation(FALSE_BRANCH, tailFiltered, new F(node, new Val(), tailFiltered).label("**VAL:tailFiltered"));
 
-        return if_listEmpty;
+        return filter;
     }
 
     private F CONST(Object i) {
@@ -809,7 +820,6 @@ trisum(a,b,c)   trimul(a,b,c)
 
         return list;
     }
-
 
     private void resumeComputation(Supplier<_F> getF) {
         node = new Node(address, false);

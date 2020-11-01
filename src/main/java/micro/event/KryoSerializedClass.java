@@ -30,8 +30,12 @@ public enum KryoSerializedClass {
 
     static void writeObject(Kryo kryo, Output output, KryoSerializable s) {
         KryoSerializedClass c = forClass(s.getClass());
-        output.writeVarInt(c.id, true);
-        s.write(kryo, output);
+        try {
+            output.writeVarInt(c.id, true);
+            s.write(kryo, output);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     static KryoSerializable readObject(Kryo kryo, Input input) {

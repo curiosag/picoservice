@@ -3,18 +3,18 @@ package micro;
 public class ExOnDemand implements _Ex {
     Node node;
     Ex returnTo;
-    _F targetFunc;
+    _F template;
     _Ex ex;
 
-    public ExOnDemand(Node node, _F targetFunc, Ex returnTo) {
+    public ExOnDemand(Node node, _F template, Ex returnTo) {
         this.node = node;
         this.returnTo = returnTo;
-        this.targetFunc = targetFunc;
+        this.template = template;
     }
 
     private _Ex getEx() {
         if (ex == null) {
-            ex = node.getExecution(targetFunc, returnTo);
+            ex = node.getExecution(template, returnTo);
         }
         return ex;
     }
@@ -26,7 +26,7 @@ public class ExOnDemand implements _Ex {
 
     @Override
     public _F getTemplate() {
-        return targetFunc;
+        return template;
     }
 
     @Override

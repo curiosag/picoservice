@@ -6,8 +6,8 @@ public class FCall extends F {
 
     private final F called;
 
-    public FCall(Node node, F called, String... formalParams) {
-        super(node, Primitive.nop, formalParams);
+    public FCall(Node node, F called) {
+        super(node, Primitive.nop, called.formalParameters);
         this.called = called;
     }
 

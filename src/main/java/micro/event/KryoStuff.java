@@ -26,6 +26,7 @@ public class KryoStuff {
     }
 
     private static void assertFile(String filename) throws IOException {
+        //noinspection ResultOfMethodCallIgnored
         new File(filename).createNewFile();
     }
 

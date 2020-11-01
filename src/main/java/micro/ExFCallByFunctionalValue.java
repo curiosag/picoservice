@@ -92,6 +92,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     public void hydrate(Hydrator h) {
         _F i = h.getFForId(idf);
         Check.invariant(i instanceof FCallByFunctionalValue, "..?");
+        //noinspection ConstantConditions
         f = (FCallByFunctionalValue) i;
     }
 }

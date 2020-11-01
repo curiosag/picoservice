@@ -44,10 +44,7 @@ public class Value implements Hydratable, KryoSerializable {
 
     @Override
     public String toString() {
-        return "Value{" +
-                "name='" + name + '\'' +
-                ", value=" + value +
-                '}';
+        return "Value{" + "name='" + name + ", value=" + value + '}';
     }
 
     public Value withSender(Ex sender) {
@@ -94,9 +91,9 @@ public class Value implements Hydratable, KryoSerializable {
             items.forEach(i -> output.writeVarInt(i, true));
         } else if (value instanceof PartiallyAppliedFunction) {
             output.writeVarInt(PARTIALLY_APPLIED_F, true);
-            ((PartiallyAppliedFunction) value).write(kryo,output);
+            ((PartiallyAppliedFunction) value).write(kryo, output);
         } else {
-            throw new IllegalArgumentException("value type not handled " + value.getClass().getSimpleName());
+            throw new IllegalArgumentException("value type not handled: " + (value == null ? "NULL" : value.getClass().getSimpleName()));
         }
     }
 
@@ -136,9 +133,8 @@ public class Value implements Hydratable, KryoSerializable {
     @Override
     public void hydrate(Hydrator h) {
         sender = h.getExForId(senderId);
-        if(value instanceof PartiallyAppliedFunction)
-        {
-            ((PartiallyAppliedFunction)value).hydrate(h);
+        if (value instanceof PartiallyAppliedFunction) {
+            ((PartiallyAppliedFunction) value).hydrate(h);
         }
     }
 }

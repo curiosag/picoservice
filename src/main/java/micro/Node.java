@@ -152,6 +152,8 @@ public class Node implements Closeable, Hydrator {
             Concurrent.sleep(delay.get());
             if (events.size() > 0) {
                 ExEvent e = events.get(0);
+                if(e == null)
+                    System.out.println("E IS NULL");
                 Check.invariant(e.getEx() instanceof Ex, "öh");
                 ((Ex) e.getEx()).handle(e);
                 raise(new QueueRemoveEvent(e.getId(), e.ex.getId()));

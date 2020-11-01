@@ -11,8 +11,8 @@ import java.io.File;
 import static micro.event.KryoStuff.createOutput;
 
 public class EventLogWriter implements Closeable {
-    private Kryo kryo = new Kryo();
-    private Output output;
+    private final Kryo kryo = new Kryo();
+    private final Output output;
 
     private final String filename;
 
@@ -29,7 +29,7 @@ public class EventLogWriter implements Closeable {
         try {
             KryoSerializedClass.writeObject(kryo, output, e);
         } catch (Exception e1) {
-            e1.printStackTrace();
+            throw new RuntimeException(e1);
         }
     }
 
@@ -38,6 +38,7 @@ public class EventLogWriter implements Closeable {
     }
 
     private void deleteFile() {
+        //noinspection ResultOfMethodCallIgnored
         new File(filename).delete();
     }
 

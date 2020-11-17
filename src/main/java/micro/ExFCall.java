@@ -5,8 +5,8 @@ public class ExFCall extends Ex {
     private FCall callTemplate;
     private _Ex beingCalled;
 
-    ExFCall(Node node, FCall callTemplate, _Ex returnTo) {
-        super(node, callTemplate, returnTo);
+    ExFCall(Node node, long exId, FCall callTemplate, _Ex returnTo) {
+        super(node, exId, callTemplate, returnTo);
         this.callTemplate = callTemplate;
     }
 
@@ -20,8 +20,13 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public void performValueReceived(Value v) {
-        Check.isLegitInputValue(v);
+    protected int getNumberCustomIdsNeeded() {
+        return 1; // for one Ex of callTemplate
+    }
+
+    @Override
+    public void processDownstreamValue(Value v) {
+        Check.preCondition(isLegitDownstreamValue(v));
         propagate(v);
         if (callTemplate.formalParameters.contains(v.getName())) {
             getBeingCalled().receive(v.withSender(this));
@@ -30,7 +35,7 @@ public class ExFCall extends Ex {
 
     private _Ex getBeingCalled() {
         if (beingCalled == null) {
-            beingCalled = node.getExecution(callTemplate.getCalled(), this);
+            beingCalled = callTemplate.getCalled().createExecution(getNextExId(), this);
         }
         return beingCalled;
     }

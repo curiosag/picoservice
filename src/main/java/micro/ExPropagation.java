@@ -3,7 +3,7 @@ package micro;
 public class ExPropagation {
 
     private final FPropagation template;
-    private final ExOnDemand to;
+    private final _Ex to;
 
     public PropagationType getPropagationType(){
         return template.propagationType;
@@ -17,7 +17,7 @@ public class ExPropagation {
         return template.nameReceived;
     }
 
-    ExPropagation(FPropagation template, ExOnDemand to) {
+    ExPropagation(FPropagation template, _Ex to) {
         this.template = template;
         this.to = to;
     }

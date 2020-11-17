@@ -3,7 +3,6 @@ package micro.event;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
-import micro.Check;
 
 import java.io.Closeable;
 import java.io.File;
@@ -24,8 +23,7 @@ public class EventLogWriter implements Closeable {
         output = createOutput(filename);
     }
 
-    public void put(Event e) {
-        Check.invariant(e.getId() >= 0, "eventid not set");
+    public synchronized void put(Event e) {
         try {
             KryoSerializedClass.writeObject(kryo, output, e);
         } catch (Exception e1) {
@@ -33,7 +31,7 @@ public class EventLogWriter implements Closeable {
         }
     }
 
-    public void flush() {
+    public synchronized void flush() {
         output.flush();
     }
 

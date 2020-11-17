@@ -1,5 +1,4 @@
 
-
 Closures und Namensraum für Werte? Lambdas funktionieren so, daß richtig benannte werte bis zu lambda L durchgereicht werden,
 L muß dann das als formalen parameter haben
 

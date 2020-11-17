@@ -1,5 +1,6 @@
 package micro;
 
+import micro.event.ExEvent;
 import nano.ingredients.Err;
 import nano.ingredients.Name;
 
@@ -11,17 +12,19 @@ public class CallSync<T extends Serializable> implements _Ex {
 
     private final F f;
     private final Class<T> resultType;
+    private final Node node;
 
     private final Map<String, Integer> params = new HashMap<>();
     private Value result;
 
-    private CallSync(Class<T> resultType, F f) {
+    private CallSync(Class<T> resultType, F f, Node node) {
         this.f = f;
         this.resultType = resultType;
+        this.node = node;
     }
 
-    public static <T extends Serializable> CallSync<T> of(Class<T> resultType, F f) {
-        return new CallSync<>(resultType, f);
+    public static <T extends Serializable> CallSync<T> of(Class<T> resultType, F f, Node node) {
+        return new CallSync<>(resultType, f, node);
     }
 
     public CallSync<T> param(String key, Integer value) {
@@ -31,7 +34,7 @@ public class CallSync<T extends Serializable> implements _Ex {
 
     @SuppressWarnings("unchecked")
     public T call() {
-        _Ex ex = f.createExecution(this);
+        _Ex ex = node.createExecution(f, this);
 
         if (params.size() == 0) {
             ex.receive(Value.of(Name.kickOff, 0, this));
@@ -72,6 +75,11 @@ public class CallSync<T extends Serializable> implements _Ex {
     @Override
     public void receive(Value v) {
         result = v;
+    }
+
+    @Override
+    public void recover(ExEvent e) {
+
     }
 
     @Override

@@ -9,6 +9,18 @@ public class Check {
         return o;
     }
 
+    public static void invariant(boolean invariant) {
+        if (!invariant) {
+            fail("eh...");
+        }
+    }
+
+    public static void preCondition(boolean condition) {
+        if (!condition) {
+            fail("eh...");
+        }
+    }
+
     public static void invariant(boolean invariant, String msg) {
         if (!invariant) {
             fail(msg);
@@ -23,10 +35,6 @@ public class Check {
 
     public static void fail(String msg) {
         throw new IllegalStateException(msg);
-    }
-
-    public static void isLegitInputValue(Value v){
-        Check.invariant(!(Names.result.equals(v.getName()) || Names.exception.equals(v.getName())), "result and exception expected to be processed in base class");
     }
 
 }

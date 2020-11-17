@@ -11,5 +11,4 @@ class ValuePropagation {
         this.value = value;
         this.propagation = propagation;
     }
-
 }

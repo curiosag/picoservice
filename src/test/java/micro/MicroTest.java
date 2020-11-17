@@ -73,7 +73,7 @@ public class MicroTest {
         F main = f(resultListener, Names.output).label("main");
         main.addPropagation(ping, f);
 
-        _Ex ex = main.createExecution(node.getTop());
+        _Ex ex = node.createExecution(main);
 
         node.start();
         try {
@@ -112,7 +112,7 @@ public class MicroTest {
             main.addPropagation(Names.a, Names.left, add);
             main.addPropagation(Names.b, Names.right, add);
 
-            CallSync<Integer> sync = CallSync.of(Integer.class, main);
+            CallSync<Integer> sync = CallSync.of(Integer.class, main, node);
             sync.param(Names.a, 1);
             sync.param(Names.b, 2);
 
@@ -137,7 +137,7 @@ public class MicroTest {
             main.addPropagation(Names.a, Names.left, callAdd);
             main.addPropagation(Names.b, Names.right, callAdd);
 
-            CallSync<Integer> sync = CallSync.of(Integer.class, main);
+            CallSync<Integer> sync = CallSync.of(Integer.class, main, node);
             sync.param(Names.a, 1);
             sync.param(Names.b, 2);
 
@@ -232,7 +232,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         node.start();
         try {
-            CallSync<Integer> sync = CallSync.of(Integer.class, calc);
+            CallSync<Integer> sync = CallSync.of(Integer.class, calc, node);
             sync.param(Names.a, 1);
             sync.param(Names.c, 2);
             sync.param(Names.b, 3);
@@ -253,8 +253,8 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
         try {
 
-            CallAsync<Integer> call1 = CallAsync.of(Integer.class, calc, i1::addAndGet);
-            CallAsync<Integer> call2 = CallAsync.of(Integer.class, calc, i2::addAndGet);
+            CallAsync<Integer> call1 = CallAsync.of(Integer.class, calc, i1::addAndGet, node);
+            CallAsync<Integer> call2 = CallAsync.of(Integer.class, calc, i2::addAndGet, node);
 
             call1.param(Names.a, 1);
             call1.param(Names.c, 2);
@@ -311,7 +311,7 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, useFVar);
         main.addPropagation(Names.b, useFVar);
 
-        _Ex ex = main.createExecution(node.getTop());
+        _Ex ex = node.createExecution(main);
 
         node.start();
 
@@ -362,7 +362,7 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, usePartial);
         main.addPropagation(Names.b, usePartial);
 
-        _Ex ex = main.createExecution(node.getTop());
+        _Ex ex = node.createExecution(main);
 
         node.start();
 
@@ -391,13 +391,19 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, dec);
         dec.addPropagation(Names.a, Names.left, sub);
         _Ex TOP = node.getTop();
-        _Ex ex = main.createExecution(TOP);
+        _Ex ex = node.createExecution(main);
         ex.receive(Value.of(ping, 0, TOP));
         ex.receive(Value.of(Names.a, 1, TOP));
     }
 
     @Test
     public void testIf() {
+
+        /*
+        * max(left, right) = if(left > right) left else right
+        *
+        * */
+
         node = new Node(address, true);
         try {
             node.start();
@@ -418,12 +424,12 @@ trisum(a,b,c)   trimul(a,b,c)
             iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
 
 
-            _Ex TOP = node.getTop();
-            _Ex ex = main.createExecution(TOP);
-            ex.receive(Value.of(Names.left, 1, TOP));
-            ex.receive(Value.of(Names.right, 2, TOP));
+//            _Ex TOP = node.getTop();
+//            _Ex ex = node.createExecution(main);
+//            ex.receive(Value.of(Names.left, 1, TOP));
+//            ex.receive(Value.of(Names.right, 2, TOP));
 
-            CallSync<Integer> sync = CallSync.of(Integer.class, main);
+            CallSync<Integer> sync = CallSync.of(Integer.class, main, node);
             sync.param(Names.left, 2);
             sync.param(right, 1);
 
@@ -448,13 +454,13 @@ trisum(a,b,c)   trimul(a,b,c)
     public void testSimpleRecursion() {
         node = new Node(address, true);
         F main = createRecSum();
-        node.setDelay(1);
+        //node.setDelay(1);
         node.start();
 
-        _Ex m1 = node.getExecution(main);
-        _Ex m2 = node.getExecution(main);
+        _Ex m1 = node.createExecution(main);
+        _Ex m2 = node.createExecution(main);
 
-        m1.receive(Value.of(Names.a, 50, m1.returnTo()));
+        m1.receive(Value.of(Names.a, 3, m1.returnTo()));
         m2.receive(Value.of(Names.a, 50, m1.returnTo()));
 
         Concurrent.sleep(8000);
@@ -518,7 +524,7 @@ trisum(a,b,c)   trimul(a,b,c)
             ArrayList<Integer> randListSorted = new ArrayList<>(randList);
             randListSorted.sort(Integer::compareTo);
             testFor(result, main, randList, randListSorted);
-            System.out.println("Max exid used: " + (node.getNextObjectId() - 1));
+            System.out.println("Max exid used: " + (node.getNextExId() - 1));
         } finally {
             node.close();
         }
@@ -534,7 +540,7 @@ trisum(a,b,c)   trimul(a,b,c)
         node.start();
 
         ArrayList<Integer> actual = list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4);
-        _Ex ex = node.getExecution(main, node.getTop());
+        _Ex ex = node.createExecution(main);
         ex.receive(Value.of(Names.list, actual, node.getTop()));
         Concurrent.sleep(5000);
         node.close();
@@ -705,7 +711,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         ArrayList<Integer> source = list(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
-        _Ex ex = node.getExecution(main, node.getTop());
+        _Ex ex = node.createExecution(main);
         ex.receive(Value.of(Names.list, source, node.getTop()));
 
         Concurrent.sleep(3000);
@@ -727,7 +733,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
     private void testFor(ResultCollector resultCollector, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         resultCollector.clear();
-        _Ex ex = node.getExecution(main, node.getTop());
+        _Ex ex = node.createExecution(main);
         ex.receive(Value.of(Names.list, source, node.getTop()));
         Concurrent.await(() -> !resultCollector.isEmpty());
         assertEquals(expected, resultCollector.get().get(0).get());

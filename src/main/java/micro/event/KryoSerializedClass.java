@@ -11,11 +11,11 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public enum KryoSerializedClass {
-    QueueRemoveEvent(0, QueueRemoveEvent::new),
-    ExecutionCreatedEvent(1, ExecutionCreatedEvent::new),
-    PropagateValueEvent(5, PropagateValueEvent::new),
-    ValueReceivedEvent(6, ValueReceivedEvent::new),
-    ValueProcessedEvent(7, ValueProcessedEvent::new);
+    IdsReservedEvent(0, IdsReservedEvent::new),
+    InitialExecutionCreatedEvent(1, InitialExecutionCreatedEvent::new),
+    ValueReceivedEvent(2, ValueReceivedEvent::new),
+    ValueProcessedEvent(3, ValueProcessedEvent::new),
+    EndOfSequenceEvent(4, EndOfSequenceEvent::new);
 
     static Map<Integer, KryoSerializedClass> idToSerializedClass = new HashMap<>();
     static Map<Class, KryoSerializedClass> classToSerializedClass = new HashMap<>();
@@ -29,7 +29,7 @@ public enum KryoSerializedClass {
     }
 
     static void writeObject(Kryo kryo, Output output, KryoSerializable s) {
-        KryoSerializedClass c = forClass(s.getClass());
+        KryoSerializedClass c = of(s.getClass());
         try {
             output.writeVarInt(c.id, true);
             s.write(kryo, output);
@@ -46,14 +46,10 @@ public enum KryoSerializedClass {
     }
 
     public static KryoSerializedClass forId(int id) {
-        try {
-            return Check.notNull(idToSerializedClass.get(id));
-        } catch (Exception e) {
-            throw e;
-        }
+        return Check.notNull(idToSerializedClass.get(id));
     }
 
-    public static KryoSerializedClass forClass(Class c) {
+    public static KryoSerializedClass of(Class c) {
         KryoSerializedClass result = classToSerializedClass.get(c);
         if(result == null)
         {
@@ -63,17 +59,17 @@ public enum KryoSerializedClass {
     }
 
     static {
-        idToSerializedClass.put(0, QueueRemoveEvent);
-        idToSerializedClass.put(1, ExecutionCreatedEvent);
-        idToSerializedClass.put(5, PropagateValueEvent);
-        idToSerializedClass.put(6, ValueReceivedEvent);
-        idToSerializedClass.put(7, ValueProcessedEvent);
+        idToSerializedClass.put(0, IdsReservedEvent);
+        idToSerializedClass.put(1, InitialExecutionCreatedEvent);
+        idToSerializedClass.put(2, ValueReceivedEvent);
+        idToSerializedClass.put(3, ValueProcessedEvent);
+        idToSerializedClass.put(4, EndOfSequenceEvent);
 
-        classToSerializedClass.put(QueueRemoveEvent.class, QueueRemoveEvent);
-        classToSerializedClass.put(ExecutionCreatedEvent.class, ExecutionCreatedEvent);
-        classToSerializedClass.put(PropagateValueEvent.class, PropagateValueEvent);
+        classToSerializedClass.put(IdsReservedEvent.class, IdsReservedEvent);
+        classToSerializedClass.put(InitialExecutionCreatedEvent.class, InitialExecutionCreatedEvent);
         classToSerializedClass.put(ValueReceivedEvent.class, ValueReceivedEvent);
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
+        classToSerializedClass.put(EndOfSequenceEvent.class, EndOfSequenceEvent);
     }
 
 }

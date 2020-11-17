@@ -4,7 +4,7 @@ import micro.primitives.Primitive;
 
 public class FCallByFunctionalValue extends F {
 
-    private String functionalValueParam;
+    private final String functionalValueParam;
 
     public FCallByFunctionalValue(Node node, String functionalValueParam, String ... formalParams) {
         super(node, Primitive.nop, formalParams);
@@ -16,8 +16,8 @@ public class FCallByFunctionalValue extends F {
     }
 
     @Override
-    public _Ex createExecution(_Ex returnTo) {
-        return new ExFCallByFunctionalValue(this.node, this, returnTo);
+    public Ex createExecution(long id, _Ex returnTo) {
+        return new ExFCallByFunctionalValue(this.node, id,this, returnTo);
     }
 
 }

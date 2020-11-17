@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import micro.Check;
+import micro.Ex;
 import micro.Hydrator;
 import micro._Ex;
 
@@ -11,8 +12,8 @@ public abstract class ExEvent extends Event {
     public _Ex ex;
     long exId;
 
-    public ExEvent(long id, _Ex ex) {
-        super(id);
+    public ExEvent(Ex ex) {
+        super();
         this.ex = ex;
         this.exId = ex.getId();
     }
@@ -27,6 +28,10 @@ public abstract class ExEvent extends Event {
     public _Ex getEx() {
         Check.notNull(ex);
         return ex;
+    }
+
+    public long getExId() {
+        return exId;
     }
 
     @Override

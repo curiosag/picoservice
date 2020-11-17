@@ -25,7 +25,7 @@ public class F implements _F, Id {
         this.node = node;
         this.id = node.getNextFId();
         node.addF(this);
-        this.nextPropagationId = node::getNextObjectId;
+        this.nextPropagationId = node::getNextExId;
         this.primitive = primitive;
     }
 
@@ -51,6 +51,10 @@ public class F implements _F, Id {
 
     int numParams() {
         return formalParameters.size();
+    }
+
+    public boolean isParam(String name){
+        return formalParameters.contains(name);
     }
 
     void setPrimitive(Primitive primitive) {
@@ -91,8 +95,8 @@ public class F implements _F, Id {
     }
 
     @Override
-    public _Ex createExecution(_Ex returnTo) {
-        return new ExF(this.node, this, returnTo);
+    public Ex createExecution(long id, _Ex returnTo) {
+        return new ExF(this.node, id,this, returnTo);
     }
 
     public String getLabel() {
@@ -106,6 +110,10 @@ public class F implements _F, Id {
 
     Map<_F, List<FPropagation>> getTargetFunctionsToPropagations() {
         return targetsToPropagations;
+    }
+
+    public int getTargetCount(){
+        return targetsToPropagations.keySet().size();
     }
 
     @Override

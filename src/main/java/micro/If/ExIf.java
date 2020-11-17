@@ -1,10 +1,11 @@
 package micro.If;
 
 import micro.*;
-import micro.event.PropagateValueEvent;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
@@ -16,13 +17,18 @@ public class ExIf extends Ex {
     // its the business of the recipients to guard against that
     private Set<ValuePropagation> toPropagateOnConditionSet = new HashSet<>();
 
-    ExIf(Node node, F template, _Ex returnTo) {
-        super(node, template, returnTo);
+    ExIf(Node node, long id, F template, _Ex returnTo) {
+        super(node, id, template, returnTo);
     }
 
     @Override
-    protected void alterStateFor(Value v) {
-        super.alterStateFor(v);
+    protected int getNumberCustomIdsNeeded() {
+        return 0; // TODO: enough to return count of functions behind condition + behind the branch with higher function count than the other
+    }
+
+    @Override
+    public void processDownstreamValue(Value v) {
+        Check.preCondition(isLegitDownstreamValue(v));
 
         if (Names.condition.equals(v.getName())) {
             Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
@@ -33,20 +39,16 @@ public class ExIf extends Ex {
                     .filter(this::isConditioned)
                     .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
         }
-    }
-
-    @Override
-    public void performValueReceived(Value v) {
-        Check.isLegitInputValue(v);
 
         if (Names.condition.equals(v.getName())) {
-            toPropagateOnConditionSet.stream()
-                    .filter(p -> canPerformConditionalPropagation(p.propagation.getPropagationType()))
-                    .forEach(p -> raise(newPropagateValueEvent(p.value, p.propagation)));
+            List<ValuePropagation> sel = toPropagateOnConditionSet.stream()
+                    .filter(p -> canPerformConditionalPropagation(p.propagation.getPropagationType())).collect(Collectors.toList());
+            sel.forEach(p -> p.propagation.getTo().receive(new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
         } else {
-            getPropagations(v.getName()).stream()
+            List<ExPropagation> sel = getPropagations(v.getName()).stream()
                     .filter(p -> !isConditioned(p) || canPerformConditionalPropagation(p.getPropagationType()))
-                    .forEach(p -> raise(newPropagateValueEvent(v, p)));
+                    .collect(Collectors.toList());
+            sel.forEach(p -> p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
         }
     }
 
@@ -58,8 +60,5 @@ public class ExIf extends Ex {
         return condition != null && ((condition && pType == TRUE_BRANCH) || (!condition && pType == FALSE_BRANCH));
     }
 
-    private PropagateValueEvent newPropagateValueEvent(Value v, ExPropagation p) {
-        return new PropagateValueEvent(node.getNextObjectId(), this, p.getTo(), new Value(p.getNameToPropagate(), v.get(), this));
-    }
 
 }

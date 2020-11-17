@@ -1,5 +1,6 @@
 package micro;
 
+import micro.event.ExEvent;
 import nano.ingredients.Name;
 
 import java.io.Serializable;
@@ -12,17 +13,19 @@ public class CallAsync<T extends Serializable> implements _Ex {
     private final F f;
     private final Class<T> resultType;
     Consumer<T> consumer;
+    private final Node node;
 
     private final Map<String, Integer> params = new HashMap<>();
 
-    private CallAsync(Class<T> resultType, F f, Consumer<T> consumer) {
+    private CallAsync(Class<T> resultType, F f, Consumer<T> consumer, Node node) {
         this.f = f;
         this.resultType = resultType;
         this.consumer = consumer;
+        this.node = node;
     }
 
-    public static <T extends Serializable> CallAsync<T> of(Class<T> resultType, F f, Consumer<T> consumer) {
-        return new CallAsync<>(resultType, f, consumer);
+    public static <T extends Serializable> CallAsync<T> of(Class<T> resultType, F f, Consumer<T> consumer, Node node) {
+        return new CallAsync<>(resultType, f, consumer, node);
     }
 
     public CallAsync<T> param(String key, Integer value) {
@@ -31,7 +34,7 @@ public class CallAsync<T extends Serializable> implements _Ex {
     }
 
     public void call() {
-        _Ex ex = f.createExecution(this);
+        _Ex ex = node.createExecution(f,this);
 
         if (params.size() == 0) {
             ex.receive(Value.of(Name.kickOff, 0, this));
@@ -57,6 +60,11 @@ public class CallAsync<T extends Serializable> implements _Ex {
             throw new RuntimeException("inconsistent result type");
         }
         consumer.accept((T) v.get());
+    }
+
+    @Override
+    public void recover(ExEvent e) {
+
     }
 
     @Override

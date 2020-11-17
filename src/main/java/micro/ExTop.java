@@ -1,5 +1,7 @@
 package micro;
 
+import micro.event.ExEvent;
+
 public class ExTop implements  _Ex, Id {
 
     public final static long TOP_ID = 0;
@@ -30,7 +32,7 @@ public class ExTop implements  _Ex, Id {
             }
 
             @Override
-            public _Ex createExecution(_Ex returnTo) {
+            public _Ex createExecution(long id, _Ex returnTo) {
                 throw new IllegalStateException();
             }
 
@@ -54,6 +56,11 @@ public class ExTop implements  _Ex, Id {
 
     @Override
     public void receive(Value v) {
+
+    }
+
+    @Override
+    public void recover(ExEvent e) {
 
     }
 

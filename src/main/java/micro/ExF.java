@@ -1,13 +1,13 @@
 package micro;
 
 public class ExF extends Ex {
-    public ExF(Node node, F template, _Ex returnTo) {
-        super(node, template, returnTo);
+    public ExF(Node node, long id, F template, _Ex returnTo) {
+        super(node, id, template, returnTo);
     }
 
     @Override
-    public void performValueReceived(Value v) {
-        Check.isLegitInputValue(v);
+    public void processDownstreamValue(Value v) {
+        Check.preCondition(isLegitDownstreamValue(v));
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
         propagate(v);

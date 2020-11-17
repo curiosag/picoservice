@@ -1,14 +1,14 @@
 package micro.event;
 
+import micro.Ex;
 import micro.Value;
-import micro._Ex;
 
 public class ValueProcessedEvent extends ValueEvent {
     public ValueProcessedEvent(){
         super();
     }
 
-    public ValueProcessedEvent(long exId, _Ex ex, Value value) {
-        super(exId, ex, value);
+    public ValueProcessedEvent(Ex ex, Value value) {
+        super(ex, value);
     }
 }

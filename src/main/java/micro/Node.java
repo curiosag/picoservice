@@ -2,41 +2,40 @@ package micro;
 
 import micro.event.*;
 import micro.trace.Tracer;
+import nano.ingredients.tuples.Tuple;
 
 import java.io.Closeable;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class Node implements Closeable, Hydrator {
-    private static final int NUM_EXEVENTQUEUES = 1;
-
+public class Node implements Closeable, Hydrator, EventProcessor {
     private final Tracer tracer = new Tracer(false);
     private final EventLogWriter eventLog;
 
-    private final _Ex top;
+    private final _Ex top; // the ultimate begin of every chain of executions
 
-    private long nextFId = ExTop.TOP_ID + 1;
-    private final AtomicLong nextObjectId = new AtomicLong(ExTop.TOP_ID + 1);
+    private long maxFId = ExTop.TOP_ID;
+    private final AtomicLong maxExId = new AtomicLong(ExTop.TOP_ID);
+    private final AtomicLong maxEventSequenceNr = new AtomicLong(0);
 
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean stop = new AtomicBoolean(true);
-    private final List<ExEvent>[] events = (List<ExEvent>[]) new List[NUM_EXEVENTQUEUES];
 
-    private Map<Long, _F> idToF = new HashMap<>();
-    private Map<Long, _Ex> idToX = new HashMap<>(); //todo works only single threaded now
-    private Map<ExFMatcher, _Ex> exRecovered = new HashMap<>();
+    private final Map<Long, _F> idToF = new HashMap<>();
+    private final Map<Long, _Ex> idToX = new HashMap<>(); //todo works only single threaded now
+    private final Map<Long, _Ex> exRecovered = new HashMap<>();
+    private final ConcurrentLinkedQueue<EventDriven> eventDriven = new ConcurrentLinkedQueue<>();
 
     private final Address address;
+    private boolean isRecovery;
 
     public Node(Address address, boolean clearEventLog) {
         this.address = address;
         eventLog = new EventLogWriter(getEventLogFileName(address), clearEventLog);
         top = createTop();
-        for (int i = 0; i < NUM_EXEVENTQUEUES; i++) {
-            events[i] = NUM_EXEVENTQUEUES == 1 ? new ArrayList<>() : Collections.synchronizedList(new ArrayList<>());
-        }
     }
 
     private String getEventLogFileName(Address address) {
@@ -44,91 +43,48 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void recover(Address address) {
+        isRecovery = true;
         long maxOId = 0;
         for (Hydratable h : new EventLogReader(getEventLogFileName(address))) {
-            KryoSerializedClass k = KryoSerializedClass.forClass(h.getClass());
+            KryoSerializedClass k = KryoSerializedClass.of(h.getClass());
             switch (k) {
-                case QueueRemoveEvent:
-                    handle((QueueRemoveEvent) h);
+                case InitialExecutionCreatedEvent:
+                    InitialExecutionCreatedEvent e = (InitialExecutionCreatedEvent) h;
+
+                    _Ex ex = getFForId(e.getFId()).createExecution(e.getExId(), top);
+                    maxOId = Math.max(maxOId, e.getExId());
+                    exRecovered.put(e.getExId(), ex);
+                    idToX.put(e.getExId(), ex);
                     break;
 
-                case ExecutionCreatedEvent:
-                    ExecutionCreatedEvent e = (ExecutionCreatedEvent) h;
-                    _F template = getFForId(e.templateId);
-                    _Ex retTo = getExForId(e.exIdToReturnTo);
-                    _Ex ex = template.createExecution(retTo);
-                    ex.setId(e.exId);
-                    maxOId = Math.max(maxOId, e.exId);
-                    exRecovered.put(new ExFMatcher(retTo, template), ex);
-                    idToX.put(e.exId, ex);
-                    break;
-
-                case PropagateValueEvent:
-                    h.hydrate(this);
-                    enqueue((PropagateValueEvent) h);
-                    break;
                 case ValueReceivedEvent:
                     h.hydrate(this);
-                    enqueue((ValueReceivedEvent) h);
+                    ValueReceivedEvent r = (ValueReceivedEvent) h;
                     break;
+
                 case ValueProcessedEvent:
                     h.hydrate(this);
                     ValueProcessedEvent v = (ValueProcessedEvent) h;
                     Check.invariant(v.ex instanceof Ex, "no ex");
-                    ((Ex) v.ex).recover(v.value);
-                    enqueue(v);
+                    v.ex.recover(v);
                     break;
+
+                case EndOfSequenceEvent:
+                    break;
+
                 default:
                     throw new IllegalStateException("invalid case");
             }
         }
-        nextObjectId.set(maxOId + 1);
-    }
-
-    private void raise(NodeEvent e) {
-        e.setId(0);
-        eventLogPut(e);
-        handle(e);
+        maxExId.set(maxOId);
+        isRecovery = false;
     }
 
     void note(ExEvent e) {
-        if (e.getId() < 0) {
-            e.setId(nextObjectId.getAndIncrement());
-        }
-        eventLogPut(e);
-        enqueue(e);
+        log(e);
     }
 
-    private void handle(NodeEvent e) {
-        if (e instanceof QueueRemoveEvent) {
-            QueueRemoveEvent r = (QueueRemoveEvent) e;
-            getExEventQueue(r.idRelatedExecution).removeIf(i -> i.getId() == r.idEventToRemove);
-            return;
-        }
-        Check.fail("unknown event type " + e.toString());
-    }
-
-
-    private void enqueue(ExEvent e) {
-        if (e instanceof ValueReceivedEvent) {
-            ValueReceivedEvent v = (ValueReceivedEvent) e;
-            logValueReceived(v);
-            getExEventQueue(e.getEx().getId()).add(e);
-            return;
-        }
-        if (e instanceof PropagateValueEvent) {
-            getExEventQueue(e.getEx().getId()).add(0, e);
-            return;
-        }
-        if (e instanceof ValueProcessedEvent) {
-            getExEventQueue(e.getEx().getId()).add(e);
-            return;
-        }
-        Check.fail("unknown event type " + e.toString());
-    }
-
-    private void logValueReceived(ValueReceivedEvent v) {
-
+    public void debugValueReceived(ValueReceivedEvent v) {
         String to = null;
         String from = null;
         try {
@@ -142,7 +98,7 @@ public class Node implements Closeable, Hydrator {
         log(from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
     }
 
-    private void processEvents(List<ExEvent> events) {
+    private void processEvents(ConcurrentLinkedQueue<EventDriven> sources) {
 
         while (true) {
             if (stop.get()) {
@@ -150,13 +106,11 @@ public class Node implements Closeable, Hydrator {
                 continue;
             }
             Concurrent.sleep(delay.get());
-            if (events.size() > 0) {
-                ExEvent e = events.get(0);
-                if(e == null)
-                    System.out.println("E IS NULL");
-                Check.invariant(e.getEx() instanceof Ex, "öh");
-                ((Ex) e.getEx()).handle(e);
-                raise(new QueueRemoveEvent(e.getId(), e.ex.getId()));
+            if (sources.size() > 0) {
+                EventDriven source = sources.poll();
+                while (source.hasNextEvent())
+                    source.processNextEvent();
+                sources.add(source);
             } else {
                 Thread.yield();
             }
@@ -169,31 +123,8 @@ public class Node implements Closeable, Hydrator {
         eventLog.close();
     }
 
-    _Ex getExecution(_F targetFunc, _Ex returnTo) {
-        _Ex result = exRecovered.get(new ExFMatcher(returnTo, targetFunc));
-        if (result != null) {
-            return result;
-        } else {
-            return createExecution(targetFunc, returnTo);
-        }
-    }
-
-    private _Ex createExecution(_F targetFunc, _Ex returnTo) {
-        _Ex result = targetFunc.createExecution(returnTo);
-        result.setId(nextObjectId.getAndIncrement());
-        idToX.put(result.getId(), result);
-        if (result.getAddress().nodeEqual(getAddress())) {
-            eventLogPut(new ExecutionCreatedEvent(result));
-        }
-        return result;
-    }
-
-    private void eventLogPut(Event e) {
+    private void log(Event e) {
         eventLog.put(e);
-    }
-
-    _Ex getExecution(_F targetFunc) {
-        return getExecution(targetFunc, top);
     }
 
     public Address getAddress() {
@@ -209,11 +140,11 @@ public class Node implements Closeable, Hydrator {
     }
 
     long getNextFId() {
-        return nextFId++;
+        return ++maxFId;
     }
 
-    public long getNextObjectId() {
-        return nextObjectId.getAndIncrement();
+    public long getNextExId() {
+        return maxExId.incrementAndGet();
     }
 
     void addF(_F f) {
@@ -249,18 +180,47 @@ public class Node implements Closeable, Hydrator {
 
     void start() {
         this.stop.set(false);
-        for (int i = 0; i < NUM_EXEVENTQUEUES; i++) {
-            final List<ExEvent> queue = events[i];
-            new Thread(() -> processEvents(queue)).start();
-        }
-    }
-
-    private List<ExEvent> getExEventQueue(Long exId) {
-        long id = exId >= 0 ? exId : 0;
-        return events[Math.toIntExact(id % NUM_EXEVENTQUEUES)];
+        new Thread(() -> processEvents(eventDriven)).start();
     }
 
     void recover() {
         recover(address);
+    }
+
+    public Tuple<Long, Long> reserveIds(int count) {
+        long n = maxExId.addAndGet(count);
+        return new Tuple<>(n - (count - 1), n);
+    }
+
+    public Long getNextEventSequenceNr() {
+        return maxEventSequenceNr.incrementAndGet();
+    }
+
+    public boolean isRecovery() {
+        return isRecovery;
+    }
+
+    public _Ex createExecution(F f){
+        return createExecution(f, top);
+    }
+
+    public _Ex createExecution(F f, _Ex returnTo) {
+        InitialExecutionCreatedEvent e = new InitialExecutionCreatedEvent(f.createExecution(maxExId.addAndGet(1), returnTo));
+        eventLog.put(e);
+        return e.ex;
+    }
+
+    @Override
+    public synchronized void processEvents(EventDriven e) {
+        eventDriven.add(e);
+    }
+
+    @Override
+    public synchronized void stopProcessingEvents(EventDriven e) {
+        eventDriven.remove(e);
+    }
+
+    public void registerEx(Ex ex) {
+        idToX.put(ex.getId(), ex);
     }
 }

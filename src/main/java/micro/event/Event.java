@@ -5,37 +5,19 @@ import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import micro.Hydratable;
-import micro.Id;
 
-public abstract class Event implements Id, Hydratable, KryoSerializable {
+public abstract class Event implements Hydratable, KryoSerializable {
 
-    private long id = -1;
-
-    Event(long id)
+    Event()
     {
-        this.id = id;
-    }
-
-    protected Event() {
-    }
-
-    @Override
-    public long getId() {
-        return id;
-    }
-
-    @Override
-    public void setId(long id) {
-        this.id = id;
     }
 
     @Override
     public void write(Kryo kryo, Output output) {
-        output.writeVarLong(id, true);
     }
 
     @Override
     public void read(Kryo kryo, Input input) {
-        id = input.readVarLong(true);
+
     }
 }

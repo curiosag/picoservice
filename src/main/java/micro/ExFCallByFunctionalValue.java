@@ -7,44 +7,43 @@ import com.esotericsoftware.kryo.io.Output;
 import java.util.ArrayList;
 import java.util.List;
 
-import static micro.Check.notNull;
-
 public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     long idf;
 
     FCallByFunctionalValue f;
     _F baseFunction;
     _Ex beingCalled;
+
     private final List<Value> pendingValues = new ArrayList<>();
 
-    ExFCallByFunctionalValue(Node node, FCallByFunctionalValue f, _Ex returnTo) {
-        super(node, f, returnTo);
+    ExFCallByFunctionalValue(Node node, long id, FCallByFunctionalValue f, _Ex returnTo) {
+        super(node, id, f, returnTo);
         this.f = f;
     }
 
     @Override
-    protected void alterStateFor(Value v) {
-        super.alterStateFor(v);
-        if (isFunctionInputValue(v)) {
-            if (v.getName().equals(f.getFunctionalValueParam())) {
-                Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
-                PartiallyAppliedFunction p = ((PartiallyAppliedFunction) v.get());
-                baseFunction = p.baseFunction;
-                pendingValues.addAll(p.partialValues);
-            } else {
-                if (baseFunction == null) {
-                    pendingValues.add(v);
-                }
-            }
-        }
+    protected int getNumberCustomIdsNeeded() {
+        return 1; // for one Ex of f
     }
 
     @Override
-    protected void performValueReceived(Value v) {
+    protected void processDownstreamValue(Value v) {
+        Check.preCondition(isLegitDownstreamValue(v));
+
+        if (v.getName().equals(f.getFunctionalValueParam())) {
+            Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
+            PartiallyAppliedFunction p = ((PartiallyAppliedFunction) v.get());
+            baseFunction = p.baseFunction;
+            pendingValues.addAll(p.partialValues);
+        } else {
+            if (baseFunction == null) {
+                pendingValues.add(v);
+            }
+        }
+
         if (v.getName().equals(f.getFunctionalValueParam())) {
             pendingValues.forEach(pv -> getFunctionBeingCalled().receive(pv.withSender(this)));
         } else {
-            Check.isLegitInputValue(v);
             if (baseFunction != null) {
                 getFunctionBeingCalled().receive(v.withSender(this));
             }
@@ -71,7 +70,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
 
     private _Ex getFunctionBeingCalled() {
         if (beingCalled == null) {
-            beingCalled = node.getExecution(notNull(baseFunction), this);
+            beingCalled = baseFunction.createExecution(getNextExId(), this);
         }
         return beingCalled;
     }

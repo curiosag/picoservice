@@ -1,0 +1,42 @@
+@startuml
+'https://plantuml.com/state-diagram
+
+
+
+state Node {
+  [*] --> InstantiateExecution : **user request**
+  InstantiateExecution --> [*] 
+}
+
+
+[*] --> Receiving
+state Receiving {
+  [*] --> ReceiverIdle
+  ReceiverIdle --> inBoxed : **EValueReceived**
+  inBoxed --> ReceiverIdle : Epsilon
+}
+
+state ExProcessingEvents {
+  [*] --> Idle
+  Idle --> ProbingInbox : (/)
+  ProbingInbox --> Idle : empty
+  ProbingInbox --> ValueEnqd : nonEmpty\n** EValueEnqd **
+  ValueEnqd: check val
+
+  ValueEnqd --> Done: returnVal,\n errorVal
+  Done --> [*]
+
+  ValueEnqd --> InitialValEnqd : isInitial
+  ValueEnqd --> Propagating : isNotInitial
+  
+  InitialValEnqd -> TargetsCreated : ** ETargetsCreated **
+  TargetsCreated: [(ExId, FId)]
+  
+  TargetsCreated -> Propagating : (/))
+  Propagating -> Propagated : ** EPropagated **
+    
+  Propagated: on EPropagated:\nremove E from inBox,\nEventQueue
+  Propagated -> ProbingInbox
+}
+ExProcessingEvents: ExF (id) 
+@enduml

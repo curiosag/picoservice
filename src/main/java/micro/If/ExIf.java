@@ -3,9 +3,7 @@ package micro.If;
 import micro.*;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
@@ -13,9 +11,7 @@ import static micro.PropagationType.TRUE_BRANCH;
 public class ExIf extends Ex {
     private Boolean condition;
 
-    // conditional propagations here don't protect against double propagations
-    // its the business of the recipients to guard against that
-    private Set<ValuePropagation> toPropagateOnConditionSet = new HashSet<>();
+    private final Set<ValuePropagation> toPropagateOnConditionSet = new HashSet<>();
 
     ExIf(Node node, long id, F template, _Ex returnTo) {
         super(node, id, template, returnTo);
@@ -27,29 +23,40 @@ public class ExIf extends Ex {
     }
 
     @Override
-    public void processDownstreamValue(Value v) {
+    public void processValueDownstream(Value v) {
         Check.preCondition(isLegitDownstreamValue(v));
 
         if (Names.condition.equals(v.getName())) {
+            Check.preCondition(condition == null);
             Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
             this.condition = (Boolean) v.get();
-        }
-        if (condition == null) {
-            getPropagations(v.getName()).stream()
-                    .filter(this::isConditioned)
-                    .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
-        }
-
-        if (Names.condition.equals(v.getName())) {
-            List<ValuePropagation> sel = toPropagateOnConditionSet.stream()
-                    .filter(p -> canPerformConditionalPropagation(p.propagation.getPropagationType())).collect(Collectors.toList());
-            sel.forEach(p -> p.propagation.getTo().receive(new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
+            propagateStashedValues();
         } else {
-            List<ExPropagation> sel = getPropagations(v.getName()).stream()
-                    .filter(p -> !isConditioned(p) || canPerformConditionalPropagation(p.getPropagationType()))
-                    .collect(Collectors.toList());
-            sel.forEach(p -> p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
+            if (condition == null) {
+                stashValuePropagations(v);
+            }
+            if (!Names.condition.equals(v.getName())) {
+                propagateValueOnCondition(v);
+            }
         }
+    }
+
+    private void propagateValueOnCondition(Value v) {
+        getPropagations(v.getName()).stream()
+                .filter(p1 -> !isConditioned(p1) || canPerformConditionalPropagation(p1.getPropagationType()))
+                .forEach(p -> p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
+    }
+
+    private void propagateStashedValues() {
+        toPropagateOnConditionSet.stream()
+                .filter(p1 -> canPerformConditionalPropagation(p1.propagation.getPropagationType()))
+                .forEach(p -> p.propagation.getTo().receive(new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
+    }
+
+    private void stashValuePropagations(Value v) {
+        getPropagations(v.getName()).stream()
+                .filter(this::isConditioned)
+                .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
     }
 
     private boolean isConditioned(ExPropagation p) {

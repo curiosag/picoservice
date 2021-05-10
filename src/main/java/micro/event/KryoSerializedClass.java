@@ -11,11 +11,14 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public enum KryoSerializedClass {
-    IdsReservedEvent(0, IdsReservedEvent::new),
-    InitialExecutionCreatedEvent(1, InitialExecutionCreatedEvent::new),
+    InitialExecutionCreatedEvent(0, ExecutionCreatedEvent::new),
+    ExecutionCreatedEvent(1, ExecutionCreatedEvent::new),
+
     ValueReceivedEvent(2, ValueReceivedEvent::new),
-    ValueProcessedEvent(3, ValueProcessedEvent::new),
-    EndOfSequenceEvent(4, EndOfSequenceEvent::new);
+    ValueEnqueuedEvent(3, ValueEnqueuedEvent::new),
+    IdsAllocatedEvent(4, IdsAllocatedEvent::new),
+    ValueProcessedEvent(5, ValueProcessedEvent::new),
+    ExDoneEvent(6, ExDoneEvent::new);
 
     static Map<Integer, KryoSerializedClass> idToSerializedClass = new HashMap<>();
     static Map<Class, KryoSerializedClass> classToSerializedClass = new HashMap<>();
@@ -59,17 +62,23 @@ public enum KryoSerializedClass {
     }
 
     static {
-        idToSerializedClass.put(0, IdsReservedEvent);
-        idToSerializedClass.put(1, InitialExecutionCreatedEvent);
-        idToSerializedClass.put(2, ValueReceivedEvent);
-        idToSerializedClass.put(3, ValueProcessedEvent);
-        idToSerializedClass.put(4, EndOfSequenceEvent);
+        idToSerializedClass.put(0, InitialExecutionCreatedEvent);
+        idToSerializedClass.put(1, ExecutionCreatedEvent);
 
-        classToSerializedClass.put(IdsReservedEvent.class, IdsReservedEvent);
+        idToSerializedClass.put(3, ValueReceivedEvent);
+        idToSerializedClass.put(4, ValueEnqueuedEvent);
+        idToSerializedClass.put(5, IdsAllocatedEvent);
+        idToSerializedClass.put(6, ValueProcessedEvent);
+        idToSerializedClass.put(7, ExDoneEvent);
+
         classToSerializedClass.put(InitialExecutionCreatedEvent.class, InitialExecutionCreatedEvent);
+        classToSerializedClass.put(ExecutionCreatedEvent.class, ExecutionCreatedEvent);
+
         classToSerializedClass.put(ValueReceivedEvent.class, ValueReceivedEvent);
+        classToSerializedClass.put(ValueEnqueuedEvent.class, ValueEnqueuedEvent);
+        classToSerializedClass.put(IdsAllocatedEvent.class, IdsAllocatedEvent);
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
-        classToSerializedClass.put(EndOfSequenceEvent.class, EndOfSequenceEvent);
+        classToSerializedClass.put(ExDoneEvent.class, ExDoneEvent);
     }
 
 }

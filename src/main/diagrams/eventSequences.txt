@@ -1,0 +1,27 @@
+Process: Ex.receive, asynchronous to crank
+Event                   action                  inBox                   exStack
+------------------------------------------------------------------------------
+ValueReceivedEvent(v1)  run: --                 v1
+                        rec:inBox.append
+ValueReceivedEvent(v2)  run: --                 v2 (APPEND), v1
+                        rec:inBox.append
+
+
+
+Process: Crank, asynchronous to receive
+Event                   action                  inBox                   exStack
+------------------------------------------------------------------------------
+ -----                  crank, add
+                        to eventq               v2, v1                  ValueEnqueuedEvent(v1) (APPEND)
+
+ValueEnqueuedEvent      hdlEvent. Ids there?
+                        y: processValue         -"-                     ValueEnqueuedEvent(v1), ValueProcessedEvent (PUSH)
+                        n: allocateIds          -"-                     ValueEnqueuedEvent(v1), IdsAllocatedEvent (PUSH)
+
+
+IdsAllocatedEvent       hdlEvent. add Ids
+                        POP IdsAllocatedEvent   -"-                     ValueEnqueuedEvent(v1)
+
+ValueProcessedEvent     hdlEvent. clear Queues  v2                      (empty)
+
+

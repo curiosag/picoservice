@@ -132,7 +132,7 @@ public class MicroTest {
             F add = f(add(), Names.left, Names.right).label("add");
 
             // FCall is redundant here, main could interact with add directly
-            F callAdd = new FCall(node, add).returnAs(result).label("callAdd");
+            F callAdd = new FCall(node, add).returnAs(result);
 
             main.addPropagation(Names.a, Names.left, callAdd);
             main.addPropagation(Names.b, Names.right, callAdd);
@@ -382,7 +382,7 @@ trisum(a,b,c)   trimul(a,b,c)
         F main = f(print(), Names.result).label("main");
         F dec = f(nop, Names.a).label("dec");
         F sub = f(subInt(), Names.left, Names.right).label("sub");
-        F one = f(new Const(1)).returnAs(Names.right).label("const:one");
+        F one = f(new Constant(1)).returnAs(Names.right).label("const:one");
 
         main.addPropagation(ping, dec);
         dec.addPropagation(ping, sub);
@@ -618,7 +618,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
-        F constEmptyList = new F(node, new Const(Collections.emptyList()), ping).label("const:emptylist()");
+        F constEmptyList = new F(node, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
         if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(nop).label("block_else");
@@ -767,7 +767,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         F isEmpty = new F(node, new IsEmpty(), list).returnAs(condition).label("**isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
-        F constEmptyList = new F(node, new Const(Collections.emptyList()), ping).label("**const:emptylist()");
+        F constEmptyList = new F(node, new Constant(Collections.emptyList()), ping).label("**const:emptylist()");
         if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(nop).label("**block_else");
@@ -805,7 +805,7 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
     private F CONST(Object i) {
-        return F.f(node, new Const(i), ping);
+        return F.f(node, new Constant(i), ping);
     }
 
     private F f(Primitive primitive, String... params) {

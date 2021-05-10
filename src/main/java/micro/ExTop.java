@@ -78,4 +78,14 @@ public class ExTop implements  _Ex, Id {
     public void setId(long value) {
 
     }
+
+    @Override
+    public boolean isMoreToDo() {
+        return false;
+    }
+
+    @Override
+    public void crank() {
+
+    }
 }

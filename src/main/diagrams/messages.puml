@@ -20,23 +20,26 @@ state ExProcessingEvents {
   [*] --> Idle
   Idle --> ProbingInbox : (/)
   ProbingInbox --> Idle : empty
-  ProbingInbox --> ValueEnqd : nonEmpty\n** EValueEnqd **
-  ValueEnqd: check val
+  ProbingInbox --> CheckIsInitialValue : nonEmpty\n
 
-  ValueEnqd --> Done: returnVal,\n errorVal
+
+  TargetsCreated: [(ExId, FId)]
+
+  CheckIsInitialValue --> TargetsCreated: initial, create targets\n ** ETargetsCreated **
+  CheckIsInitialValue --> ValueEnqd : not initial, enq \n** EValueEnqd **
+
+  TargetsCreated -> ValueEnqd : enq \n** EValueEnqd **
+
+  ValueEnqd: enq
+  ValueEnqd --> Propagating : isToPropagate
+  ValueEnqd --> Done : is returnVal\n or errorVal
+
   Done --> [*]
 
-  ValueEnqd --> InitialValEnqd : isInitial
-  ValueEnqd --> Propagating : isNotInitial
-  
-  InitialValEnqd -> TargetsCreated : ** ETargetsCreated **
-  TargetsCreated: [(ExId, FId)]
-  
-  TargetsCreated -> Propagating : (/))
-  Propagating -> Propagated : ** EPropagated **
-    
-  Propagated: on EPropagated:\nremove E from inBox,\nEventQueue
-  Propagated -> ProbingInbox
+  Propagating -> Processed : ** EProcessed **
+
+  Processed: on EPropagated:\nremove E from inBox,\nEventQueue
+  Processed -> ProbingInbox
 }
 ExProcessingEvents: ExF (id) 
 @enduml

@@ -86,4 +86,14 @@ public class CallAsync<T extends Serializable> implements _Ex {
     public String toString() {
         return "AsyncCall{f:" + f.getLabel() + "}";
     }
+
+    @Override
+    public boolean isMoreToDo() {
+        return false;
+    }
+
+    @Override
+    public void crank() {
+
+    }
 }

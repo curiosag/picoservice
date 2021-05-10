@@ -25,7 +25,7 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    public void processDownstreamValue(Value v) {
+    public void processValueDownstream(Value v) {
         Check.preCondition(isLegitDownstreamValue(v));
         propagate(v);
         if (callTemplate.formalParameters.contains(v.getName())) {

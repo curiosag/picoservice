@@ -1,8 +1,9 @@
 package micro;
 
+import micro.event.Crank;
 import micro.event.ExEvent;
 
-public interface _Ex extends Id {
+public interface _Ex extends Id, Crank {
 
     _Ex returnTo();
 

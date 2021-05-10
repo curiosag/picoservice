@@ -101,4 +101,14 @@ public class CallSync<T extends Serializable> implements _Ex {
     public String toString() {
         return "SyncCall{f:" + f.getLabel() + "}";
     }
+
+    @Override
+    public boolean isMoreToDo() {
+        return false;
+    }
+
+    @Override
+    public void crank() {
+
+    }
 }

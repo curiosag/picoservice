@@ -27,7 +27,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     }
 
     @Override
-    protected void processDownstreamValue(Value v) {
+    protected void processValueDownstream(Value v) {
         Check.preCondition(isLegitDownstreamValue(v));
 
         if (v.getName().equals(f.getFunctionalValueParam())) {

@@ -8,31 +8,32 @@ import micro.event.*;
 import nano.ingredients.guards.Guards;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
+public abstract class Ex implements _Ex, Crank, KryoSerializable {
     boolean done = false;
     protected final Node node;
     private final long id;
     public F template;
     protected _Ex returnTo;
 
-    private boolean idsReserved;
-    Stack<Long> idsReservedToAssign = new Stack<>(); // lowest pops first
+    private boolean idsAllocated;
+    Stack<Long> idsToAssign = new Stack<>(); // lowest pops first
 
-    private final HashMap<String, List<ExPropagation>> paramNameToPropagations = new HashMap<>();
-    private final HashMap<_F, _Ex> propagationTargetsCreated = new HashMap<>();
-    private final HashSet<String> valuesReceived = new HashSet<>();
+    private final HashMap<String, List<ExPropagation>> nameToPropagations = new HashMap<>();
+    private final HashMap<_F, _Ex> functionTargetsToFunctionExecutions = new HashMap<>();
+    private final HashSet<String> namesReceived = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
-    protected ConcurrentLinkedDeque<ExEvent> eventsPendingProcessing = new ConcurrentLinkedDeque<>();
+    protected Queue<Value> inBox = new ConcurrentLinkedQueue<>();
+    protected Stack<ExEvent> exStack = new Stack<>();
+    private boolean isRecovery;
 
     public Ex(Node node, long id) {
         Guards.notNull(node);
         this.node = node;
         this.id = id;
-        node.registerEx(this);
-        node.processEvents(this);
+        node.register(this);
     }
 
     public Ex(Node node, long id, F template, _Ex returnTo) {
@@ -61,20 +62,14 @@ public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
 
     @Override
     public void receive(Value v) {
-        if (done || node.isRecovery()) {
+        if (done) {
             return;
         }
-
-        if (!idsReserved) {
-            announce(new IdsReservedEvent(this, node.reserveIds(getDefaultNumberIdsNeeded() + getNumberCustomIdsNeeded())));
-            idsReserved = true;
-        }
-        ValueReceivedEvent event = new ValueReceivedEvent(this, v);
-        announce(event);
-        //node.debugValueReceived(event);
+        node.note(new ValueReceivedEvent(this, v));
+        inBox.add(v);
     }
 
-    protected int getDefaultNumberIdsNeeded() {
+    protected int getNumberOfIdsNeededForPropagationTargets() {
         return template.getTargetCount();
     }
 
@@ -82,84 +77,138 @@ public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
         return 0;
     }
 
-    public void recover(ExEvent e) {
-        handle(e);
-    }
-
-    protected void announce(ExEvent e) {
-        node.note(e);
-        eventsPendingProcessing.add(e);
-    }
-
-    void handle(ExEvent e) {
+    void proceed() {
         if (done) {
             return;
         }
-        if (e instanceof ValueReceivedEvent) {
-            processValue(((ValueReceivedEvent) e).value);
-            return;
-        }
-        if (e instanceof IdsReservedEvent) {
-            IdsReservedEvent ide = (IdsReservedEvent) e;
-            for (long i = ide.rangeTo; i >= ide.rangeFrom; i--) {
-                idsReservedToAssign.push(i);
-            }
-            return;
-        }
-        if(e instanceof ValueProcessedEvent)
-        {
-            Value value = ((ValueProcessedEvent) e).value;
-            //TODO: still need to log processed values
+
+        ExEvent current = exStack.peek();
+        if (current instanceof IdsAllocatedEvent) {
+            initializePropagationTargets((IdsAllocatedEvent) current, template);
+            exStack.pop();
             return;
         }
 
-        Check.fail("unhandled event " + e.toString());
+        if (current instanceof ValueEnqueuedEvent) {
+            if (!idsAllocated) {
+                int idsNeeded = getNumberOfIdsNeededForPropagationTargets() + getNumberCustomIdsNeeded();
+                push(new IdsAllocatedEvent(this, node.allocateIds(idsNeeded)));
+            } else {
+                Value value = ((ValueEnqueuedEvent) current).value;
+                processValue(value);
+                push(new ValueProcessedEvent(this, value));
+            }
+            return;
+        }
+
+        if (current instanceof ValueProcessedEvent) {
+            ValueProcessedEvent c = (ValueProcessedEvent) current;
+            clearValue(c);
+            return;
+        }
+
+        if (current instanceof ExDoneEvent) {
+            done = true;
+            return;
+        }
+
+        Check.fail("unhandled event " + current.toString());
     }
 
     protected void processValue(Value v) {
-        if (valuesReceived.size() == 0) {
-            createPropagationTargets(template);
+        if (namesReceived.contains(v.getName())) {
+            // propagations may re-send values in case of a recovery after an unexpected halt (out of memory, power cut...)
+            // where the propagation may even have been complete, but the ValueProcessedEvent not been persisted.
+            // so receiving/processValue needs to be idempotent
+            node.log("skipping already received value " + v);
+            return;
         }
 
-        if (!valuesReceived.contains(v.getName())) {
-            valuesReceived.add(v.getName());
-            switch (v.getName()) {
-                case Names.result:
-                    returnTo.receive(new Value(getNameForReturnValue(), v.get(), this));
-                    node.stopProcessingEvents(this);
-                    break;
+        namesReceived.add(v.getName());
 
-                case Names.exception:
-                    returnTo.receive(v.withSender(this));
-                    node.stopProcessingEvents(this);
-                    break;
-
-                default: {
-                    if (template.formalParameters.contains(v.getName())) {
-                        paramsReceived.put(v.getName(), v);
-                    }
-                    processDownstreamValue(v);
-                }
-
+        if (v.getName().equals(Names.result) || v.getName().equals(Names.exception)) {
+            Value retVal = v.getName().equals(Names.result) ?
+                    new Value(getNameForReturnValue(), v.get(), this) :
+                    v.withSender(this);
+            returnTo.receive(retVal);
+            push(new ExDoneEvent(this));
+        } else {
+            namesReceived.add(v.getName());
+            if (template.formalParameters.contains(v.getName())) {
+                paramsReceived.put(v.getName(), v);
             }
+            processValueDownstream(v);
         }
-        announce(new ValueProcessedEvent(this, v));
     }
 
-    protected abstract void processDownstreamValue(Value v);
+    public void recover(ExEvent e) {
+        isRecovery = true;
+        if (e instanceof ValueReceivedEvent) {
+            inBox.add(((ValueReceivedEvent) e).value);
+            return;
+        }
 
-    public boolean hasNextEvent(){
-        return eventsPendingProcessing.size() > 0;
+        if (e instanceof IdsAllocatedEvent) {
+            initializePropagationTargets((IdsAllocatedEvent) e, template);
+            return;
+        }
+
+        if (e instanceof ValueEnqueuedEvent) {
+            exStack.push(e);
+            return;
+        }
+
+        if (e instanceof ValueProcessedEvent) {
+            clearValue((ValueProcessedEvent) e);
+            return;
+        }
+
+        if (e instanceof ExDoneEvent) {
+            done = true;
+            return;
+        }
+
+        isRecovery = false;
     }
 
-    public void processNextEvent(){
-        handle(eventsPendingProcessing.pop());
+    protected abstract void processValueDownstream(Value v);
+
+    @Override
+    public void crank() {
+        Check.invariant(!isRecovery);
+        Check.invariant(exStack.isEmpty());
+
+        Value value = inBox.peek();
+        Check.invariant(value != null);
+
+        push(new ValueEnqueuedEvent(this, value));
+        while (!exStack.isEmpty()) {
+            proceed();
+        }
+    }
+
+    @Override
+    public boolean isMoreToDo() {
+        return !inBox.isEmpty();
+    }
+
+    protected void push(ExEvent e) {
+        if (isRecovery) {
+            return;
+        }
+        node.note(e);
+        exStack.push(e);
+    }
+
+    private void clearValue(ValueProcessedEvent e) {
+        Check.condition(e.value.equals(inBox.poll()));
+        exStack.clear();
     }
 
     void clear() {
         returnTo = null;
-        paramNameToPropagations.clear();
-        valuesReceived.clear();
+        nameToPropagations.clear();
+        namesReceived.clear();
         paramsReceived.clear();
         done = true;
     }
@@ -168,30 +217,34 @@ public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
         return template.returnAs;
     }
 
-    private void createPropagationTargets(F template) {
+    private void initializePropagationTargets(IdsAllocatedEvent e, F template) {
+        for (long i = e.rangeTo; i >= e.rangeFrom; i--) {
+            idsToAssign.push(i);
+        }
+        idsAllocated = true;
         template.getTargetFunctionsToPropagations().forEach(this::createPropagationsForTargetFunc);
     }
 
-    private void createPropagationsForTargetFunc(_F targetFunc, List<FPropagation> templateProps) {
-        templateProps.stream()
+    private void createPropagationsForTargetFunc(_F targetFunc, List<FPropagation> propagationTemplates) {
+        propagationTemplates.stream()
                 .map(t -> getOrCreateExPropagation(targetFunc, t))
-                .forEach(p -> paramNameToPropagations
+                .forEach(p -> nameToPropagations
                         .computeIfAbsent(p.getNameReceived(), k -> new ArrayList<>())
                         .add(p));
     }
 
     private ExPropagation getOrCreateExPropagation(_F targetFunc, FPropagation t) {
-        _Ex ex = propagationTargetsCreated.computeIfAbsent(targetFunc, i-> i.createExecution(getNextExId(), this));
+        _Ex ex = functionTargetsToFunctionExecutions.computeIfAbsent(targetFunc, i -> i.createExecution(getNextExId(), this));
         return new ExPropagation(t, ex);
     }
 
     protected Long getNextExId() {
-        Check.preCondition(!idsReservedToAssign.isEmpty());
-        return idsReservedToAssign.pop();
+        Check.preCondition(!idsToAssign.isEmpty());
+        return idsToAssign.pop();
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
-        List<ExPropagation> ps = paramNameToPropagations.get(paramName);
+        List<ExPropagation> ps = nameToPropagations.get(paramName);
 
         return ps != null ? ps : Collections.emptyList();
     }
@@ -207,7 +260,7 @@ public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
 
     @Override
     public void setId(long value) {
-        throw new IllegalStateException("noooo call!");
+        throw new IllegalStateException("noooo call this!");
     }
 
     @Override
@@ -215,6 +268,18 @@ public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         return id == ((Ex) o).id;
+    }
+
+    protected boolean isLegitDownstreamValue(Value v) {
+        return !(Names.result.equals(v.getName()) || Names.exception.equals(v.getName()));
+    }
+
+    protected void propagate(Value v) {
+        getPropagations(v.getName()).forEach(p ->
+                // propagation regardless of recovery or not, since it may have ended up incomplete in an original run
+                // A per-propagation state tracking seems too slow and not needed right now but is an option to prevent
+                // re-sending on the sender's side
+                p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
     }
 
     @Override
@@ -236,14 +301,5 @@ public abstract class Ex implements _Ex, EventDriven, KryoSerializable {
     @Override
     public void read(Kryo kryo, Input input) {
 
-    }
-
-    protected boolean isLegitDownstreamValue(Value v) {
-        return !(Names.result.equals(v.getName()) || Names.exception.equals(v.getName()));
-    }
-
-    protected void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p ->
-                p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
     }
 }

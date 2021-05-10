@@ -6,21 +6,21 @@ import com.esotericsoftware.kryo.io.Output;
 import micro.Ex;
 import nano.ingredients.tuples.Tuple;
 
-public class IdsReservedEvent extends ExEvent {
+public class IdsAllocatedEvent extends ExEvent {
     public Long rangeFrom;
     public Long rangeTo;
 
-    public IdsReservedEvent(Ex ex, Long rangeFrom, Long rangeTo) {
+    public IdsAllocatedEvent(Ex ex, Long rangeFrom, Long rangeTo) {
         super(ex);
         this.rangeFrom = rangeFrom;
         this.rangeTo = rangeTo;
     }
 
-    public IdsReservedEvent(Ex ex, Tuple<Long, Long> range){
+    public IdsAllocatedEvent(Ex ex, Tuple<Long, Long> range){
         this(ex, range.left, range.right);
     }
 
-    public IdsReservedEvent() {
+    public IdsAllocatedEvent() {
     }
 
     @Override

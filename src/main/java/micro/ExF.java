@@ -6,7 +6,7 @@ public class ExF extends Ex {
     }
 
     @Override
-    public void processDownstreamValue(Value v) {
+    public void processValueDownstream(Value v) {
         Check.preCondition(isLegitDownstreamValue(v));
         Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 

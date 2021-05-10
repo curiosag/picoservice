@@ -22,7 +22,7 @@ public class FCall extends F {
 
     @Override
     public String getLabel() {
-        return "call:" + called.getLabel();
+        return "fcall:" + called.getLabel();
     }
 }
 

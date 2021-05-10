@@ -15,6 +15,12 @@ public class Check {
         }
     }
 
+    public static void condition(boolean condition) {
+        if (!condition) {
+            fail("eh...");
+        }
+    }
+
     public static void preCondition(boolean condition) {
         if (!condition) {
             fail("eh...");

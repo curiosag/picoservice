@@ -222,7 +222,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
             idsToAssign.push(i);
         }
         idsAllocated = true;
-        template.getTargetFunctionsToPropagations().forEach(this::createPropagationsForTargetFunc);
+        template.getTargetFunctionsToPropagations().forEach(i -> createPropagationsForTargetFunc(i.left, i.right));
     }
 
     private void createPropagationsForTargetFunc(_F targetFunc, List<FPropagation> propagationTemplates) {

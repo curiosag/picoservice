@@ -1,9 +1,11 @@
 package micro;
 
 import micro.primitives.Primitive;
+import nano.ingredients.tuples.Tuple;
 
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static micro.PropagationType.INDISCRIMINATE;
 
@@ -17,7 +19,7 @@ public class F implements _F, Id {
     public String returnAs = Names.result;
     private Primitive primitive;
 
-    private Map<_F, List<FPropagation>> targetsToPropagations = new HashMap<>();
+    private List<Tuple<_F, List<FPropagation>>> targetsToPropagations = new ArrayList<>();
 
     List<String> formalParameters = new ArrayList<>();
 
@@ -89,9 +91,17 @@ public class F implements _F, Id {
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
         FPropagation p = new FPropagation(nextPropagationId.get(), type, nameExpected, namePropagated, to);
-        targetsToPropagations
-                .computeIfAbsent(p.target, k -> new ArrayList<>())
-                .add(p);
+
+        Optional<Tuple<_F, List<FPropagation>>> current = targetsToPropagations.stream()
+                .filter(i -> i.left.equals(to))
+                .findAny();
+
+        if (current.isEmpty())
+        {
+            current = Optional.of(Tuple.of(to, new ArrayList<>()));
+            targetsToPropagations.add(current.get());
+        }
+        current.get().right.add(p);
     }
 
     @Override
@@ -108,12 +118,16 @@ public class F implements _F, Id {
         return this;
     }
 
-    Map<_F, List<FPropagation>> getTargetFunctionsToPropagations() {
+    List<Tuple<_F, List<FPropagation>>> getTargetFunctionsToPropagations() {
         return targetsToPropagations;
     }
 
+    public List<_F> getTargets(){
+        return targetsToPropagations.stream().map(i -> i.left).collect(Collectors.toList());
+    }
+
     public int getTargetCount(){
-        return targetsToPropagations.keySet().size();
+        return targetsToPropagations.size();
     }
 
     @Override

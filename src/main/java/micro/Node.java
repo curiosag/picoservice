@@ -31,6 +31,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
 
     private final Address address;
     private boolean isRecovery;
+    private boolean debug = false;
 
     public Node(Address address, boolean clearEventLog) {
         this.address = address;
@@ -97,6 +98,10 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     public void debugValueEnqueuedEvent(ValueEnqueuedEvent v) {
+        if(! debug)
+        {
+            return;
+        }
         String to = null;
         String from = null;
         try {

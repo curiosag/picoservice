@@ -9,6 +9,7 @@ import nano.ingredients.guards.Guards;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
 
 public abstract class Ex implements _Ex, Crank, KryoSerializable {
     boolean done = false;
@@ -17,11 +18,8 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
     public F template;
     protected _Ex returnTo;
 
-    private boolean idsAllocated;
-    Stack<Long> idsToAssign = new Stack<>(); // lowest pops first
+    private List<ExPropagation> propagations;
 
-    private final HashMap<String, List<ExPropagation>> nameToPropagations = new HashMap<>();
-    private final HashMap<_F, _Ex> functionTargetsToFunctionExecutions = new HashMap<>();
     private final HashSet<String> namesReceived = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
@@ -33,7 +31,6 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         Guards.notNull(node);
         this.node = node;
         this.id = id;
-        node.register(this);
     }
 
     public Ex(Node node, long id, F template, _Ex returnTo) {
@@ -69,35 +66,47 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         inBox.add(v);
     }
 
-    protected int getNumberOfIdsNeededForPropagationTargets() {
-        return template.getTargetCount();
-    }
-
-    protected int getNumberCustomIdsNeeded() {
-        return 0;
-    }
-
     void proceed() {
         if (done) {
             return;
         }
 
         ExEvent current = exStack.peek();
-        if (current instanceof IdsAllocatedEvent) {
-            initializePropagationTargets((IdsAllocatedEvent) current, template);
+
+        switch (customEventHandling(current)) {
+            case nonconsuming -> {
+                return;
+            }
+            case consuming -> {
+                exStack.pop();
+                return;
+            }
+            case none -> {
+            }
+        }
+
+        if (current instanceof PropagationTargetsAllocatedEvent) {
+            initializePropagationTargets((PropagationTargetsAllocatedEvent) current);
             exStack.pop();
             return;
         }
 
         if (current instanceof ValueEnqueuedEvent) {
-            if (!idsAllocated) {
-                int idsNeeded = getNumberOfIdsNeededForPropagationTargets() + getNumberCustomIdsNeeded();
-                push(new IdsAllocatedEvent(this, node.allocateIds(idsNeeded)));
-            } else {
-                Value value = ((ValueEnqueuedEvent) current).value;
-                processValue(value);
-                push(new ValueProcessedEvent(this, value));
+            if (propagations == null) {
+                push(new PropagationTargetsAllocatedEvent(this, node.allocatePropagationTargets(this, template.getTargets())));
+                return;
             }
+
+            Optional<ExEvent> customValueEvent = raiseCustomEvent(((ValueEnqueuedEvent) current).value);
+            if (customValueEvent.isPresent()) {
+                push(customValueEvent.get());
+                return;
+            }
+
+            Value value = ((ValueEnqueuedEvent) current).value;
+            processValue(value);
+            push(new ValueProcessedEvent(this, value));
+
             return;
         }
 
@@ -115,6 +124,14 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         Check.fail("unhandled event " + current.toString());
     }
 
+    protected CustomEventHandling customEventHandling(ExEvent current) {
+        return CustomEventHandling.none;
+    }
+
+    protected Optional<ExEvent> raiseCustomEvent(Value value) {
+        return Optional.empty();
+    }
+
     protected void processValue(Value v) {
         if (namesReceived.contains(v.getName())) {
             // propagations may re-send values in case of a recovery after an unexpected halt (out of memory, power cut...)
@@ -127,9 +144,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         namesReceived.add(v.getName());
 
         if (v.getName().equals(Names.result) || v.getName().equals(Names.exception)) {
-            Value retVal = v.getName().equals(Names.result) ?
-                    new Value(getNameForReturnValue(), v.get(), this) :
-                    v.withSender(this);
+            Value retVal = v.getName().equals(Names.result) ? createResultValue(v) : v.withSender(this);
             returnTo.receive(retVal);
             push(new ExDoneEvent(this));
         } else {
@@ -141,15 +156,29 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         }
     }
 
+    private Value createResultValue(Value v) {
+        return new Value(getNameForReturnValue(), v.get(), this);
+    }
+
     public void recover(ExEvent e) {
         isRecovery = true;
+
+        switch (customEventHandling(e)) {
+            case nonconsuming, none -> {
+                return;
+            }
+            case consuming -> {
+                return;
+            }
+        }
+
         if (e instanceof ValueReceivedEvent) {
             inBox.add(((ValueReceivedEvent) e).value);
             return;
         }
 
-        if (e instanceof IdsAllocatedEvent) {
-            initializePropagationTargets((IdsAllocatedEvent) e, template);
+        if (e instanceof PropagationTargetsAllocatedEvent) {
+            initializePropagationTargets((PropagationTargetsAllocatedEvent) e);
             return;
         }
 
@@ -207,7 +236,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
 
     void clear() {
         returnTo = null;
-        nameToPropagations.clear();
+        propagations.clear();
         namesReceived.clear();
         paramsReceived.clear();
         done = true;
@@ -217,36 +246,23 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         return template.returnAs;
     }
 
-    private void initializePropagationTargets(IdsAllocatedEvent e, F template) {
-        for (long i = e.rangeTo; i >= e.rangeFrom; i--) {
-            idsToAssign.push(i);
-        }
-        idsAllocated = true;
-        template.getTargetFunctionsToPropagations().forEach(i -> createPropagationsForTargetFunc(i.left, i.right));
+    private void initializePropagationTargets(PropagationTargetsAllocatedEvent e) {
+        propagations = template.getPropagations().stream()
+                .map(t -> new ExPropagation(t, pick(t.target, e.targets)))
+                .collect(Collectors.toList());
     }
 
-    private void createPropagationsForTargetFunc(_F targetFunc, List<FPropagation> propagationTemplates) {
-        propagationTemplates.stream()
-                .map(t -> getOrCreateExPropagation(targetFunc, t))
-                .forEach(p -> nameToPropagations
-                        .computeIfAbsent(p.getNameReceived(), k -> new ArrayList<>())
-                        .add(p));
-    }
-
-    private ExPropagation getOrCreateExPropagation(_F targetFunc, FPropagation t) {
-        _Ex ex = functionTargetsToFunctionExecutions.computeIfAbsent(targetFunc, i -> i.createExecution(getNextExId(), this));
-        return new ExPropagation(t, ex);
-    }
-
-    protected Long getNextExId() {
-        Check.preCondition(!idsToAssign.isEmpty());
-        return idsToAssign.pop();
+    private _Ex pick(_F targetTemplate, List<_Ex> targets) {
+        return targets.stream()
+                .filter(t -> t.getTemplate().equals(targetTemplate))
+                .findAny()
+                .orElseThrow(IllegalStateException::new);
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
-        List<ExPropagation> ps = nameToPropagations.get(paramName);
-
-        return ps != null ? ps : Collections.emptyList();
+        return propagations.stream()
+                .filter(p -> p.getNameReceived().equals(paramName))
+                .collect(Collectors.toList());
     }
 
     public String getLabel() {
@@ -302,4 +318,5 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
     public void read(Kryo kryo, Input input) {
 
     }
+
 }

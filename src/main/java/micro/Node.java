@@ -2,14 +2,17 @@ package micro;
 
 import micro.event.*;
 import micro.trace.Tracer;
-import nano.ingredients.tuples.Tuple;
 
 import java.io.Closeable;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Timer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 public class Node implements Closeable, Hydrator, EventLoop {
     private final Tracer tracer = new Tracer(false);
@@ -51,7 +54,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
             for (Hydratable h : new EventLogReader(getEventLogFileName(address))) {
                 KryoSerializedClass k = KryoSerializedClass.of(h.getClass());
                 switch (k) {
-                    case InitialExecutionCreatedEvent:
+                    case InitialExecutionCreatedEvent: //TODO no tracking of execution created? like in ExFCallByFunctionalValue?
                         ExecutionCreatedEvent e = (ExecutionCreatedEvent) h;
 
                         _Ex ex = getFForId(e.getFId()).createExecution(e.getExId(), top);
@@ -60,14 +63,14 @@ public class Node implements Closeable, Hydrator, EventLoop {
                         idToX.put(e.getExId(), ex);
                         break;
 
-                    case IdsAllocatedEvent, ValueEnqueuedEvent, ValueProcessedEvent:
+                    case PropagationTargetsAllocatedEvent, ValueEnqueuedEvent, ValueProcessedEvent:
                         h.hydrate(this);
                         ExEvent x = (ExEvent) h;
                         Check.invariant(x.ex instanceof Ex, "no ex");
                         x.ex.recover(x);
-                        if(k == KryoSerializedClass.IdsAllocatedEvent){
-                            Long to = ((IdsAllocatedEvent) x).rangeTo;
-                            maxEventId = Math.max(maxEventId, to);
+                        if(k == KryoSerializedClass.PropagationTargetsAllocatedEvent){
+                            Long to = ((PropagationTargetsAllocatedEvent) x).targets.stream().map(Id::getId).max(Long::compare).orElse(0L);
+                            maxOId = Math.max(maxOId, to);
                         }
                         break;
 
@@ -77,9 +80,10 @@ public class Node implements Closeable, Hydrator, EventLoop {
                     default:
                         throw new IllegalStateException("invalid case");
                 }
+                maxEventId = Math.max(maxEventId, 0); //TODO
             }
             maxExId.set(maxOId);
-            maxEventSequenceNr.set(maxEventId);
+            maxEventSequenceNr.set(maxEventId); //TODO ??
         } finally {
             isRecovery = false;
         }
@@ -120,8 +124,8 @@ public class Node implements Closeable, Hydrator, EventLoop {
         loop(cranks);
     }
 
-    private void loop(ConcurrentLinkedQueue<Crank> sources) {
-
+    private void loop(ConcurrentLinkedQueue<Crank> cranks) {
+        Timer t; //TODO
         while (true) {
             if (stop.get()) {
                 Concurrent.sleep(200);
@@ -129,12 +133,12 @@ public class Node implements Closeable, Hydrator, EventLoop {
             }
             Concurrent.sleep(delay.get());
 
-            Crank source = sources.poll();
+            Crank source = cranks.poll();
             if (source != null) {
                 while (source.isMoreToDo()) {
                     source.crank();
                 }
-                sources.add(source);
+                cranks.add(source);
             } else {
                 Concurrent.await(500);
             }
@@ -151,6 +155,10 @@ public class Node implements Closeable, Hydrator, EventLoop {
         if(e instanceof ValueEnqueuedEvent)
         {
             debugValueEnqueuedEvent((ValueEnqueuedEvent)e);
+        }
+        if(e instanceof ExDoneEvent)
+        {
+            cranks.remove(((ExDoneEvent)e).getEx());
         }
         eventLog.put(e);
     }
@@ -176,7 +184,6 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     void addF(_F f) {
-        // todo f's id depends on the sequence of creation, Fs aren't serialized
         idToF.put(f.getId(), f);
     }
 
@@ -215,25 +222,20 @@ public class Node implements Closeable, Hydrator, EventLoop {
         recover(address);
     }
 
-    public Tuple<Long, Long> allocateIds(int count) {
-        long n = maxEventSequenceNr.addAndGet(count);
-        return new Tuple<>(n - (count - 1), n);
+    public List< _Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates) {
+        return targetTemplates.stream().map(t -> createExecution(t, source)).collect(Collectors.toList());
     }
 
     public _Ex createExecution(F f) {
         return createExecution(f, top);
     }
 
-    public _Ex createExecution(F f, _Ex returnTo) {
-        Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
-        eventLog.put(new ExecutionCreatedEvent(ex));
+    public _Ex createExecution(_F f, _Ex returnTo) {
+        _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
+        eventLog.put(new ExecutionCreatedEvent((Ex) ex));
+        cranks.add(ex);
+        idToX.put(ex.getId(), ex); //TODO only for recovery needed
         return ex;
-    }
-
-    @Override
-    public synchronized void register(_Ex e) {
-        idToX.put(((Ex) e).getId(), (Ex) e);
-        cranks.add(e);
     }
 
 }

@@ -3,9 +3,13 @@ package micro;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import micro.event.CustomEventHandling;
+import micro.event.ExEvent;
+import micro.event.ExecutionCreatedEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     long idf;
@@ -22,8 +26,35 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     }
 
     @Override
-    protected int getNumberCustomIdsNeeded() {
-        return 1; // for one Ex of f
+    protected CustomEventHandling customEventHandling(ExEvent e) {
+        if (e instanceof ExecutionCreatedEvent) {
+            acceptFunctionalValueEx(e.getEx());
+            return CustomEventHandling.consuming;
+        }
+        return CustomEventHandling.none;
+    }
+
+    private void acceptFunctionalValueEx(_Ex e) {
+        Check.invariant(e.getTemplate().equals(baseFunction));
+        beingCalled = e;
+        pendingValues.forEach(pv -> beingCalled.receive(pv.withSender(this)));
+    }
+
+    @Override
+    protected Optional<ExEvent> raiseCustomEvent(Value value) {
+        if (baseFunction == null && value.getName().equals(f.getFunctionalValueParam())) {
+            acceptFunctionalValueTemplate(value);
+            return Optional.of(new ExecutionCreatedEvent((Ex) node.createExecution(baseFunction, this))); //TODO (Ex)?
+        }
+
+        return Optional.empty();
+    }
+
+    private void acceptFunctionalValueTemplate(Value value) {
+        Check.invariant(value.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + value);
+        PartiallyAppliedFunction f = ((PartiallyAppliedFunction) value.get());
+        baseFunction = f.baseFunction;
+        pendingValues.addAll(f.partialValues);
     }
 
     @Override
@@ -31,23 +62,15 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
         Check.preCondition(isLegitDownstreamValue(v));
 
         if (v.getName().equals(f.getFunctionalValueParam())) {
-            Check.invariant(v.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + v.toString());
-            PartiallyAppliedFunction p = ((PartiallyAppliedFunction) v.get());
-            baseFunction = p.baseFunction;
-            pendingValues.addAll(p.partialValues);
-        } else {
-            if (baseFunction == null) {
-                pendingValues.add(v);
-            }
+            return; // handled in raiseCustomEvent
         }
 
-        if (v.getName().equals(f.getFunctionalValueParam())) {
-            pendingValues.forEach(pv -> getFunctionBeingCalled().receive(pv.withSender(this)));
+        if (beingCalled != null) {
+            getFunctionBeingCalled().receive(v.withSender(this));
         } else {
-            if (baseFunction != null) {
-                getFunctionBeingCalled().receive(v.withSender(this));
-            }
+            pendingValues.add(v);
         }
+
     }
 
     @Override
@@ -69,9 +92,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     }
 
     private _Ex getFunctionBeingCalled() {
-        if (beingCalled == null) {
-            beingCalled = baseFunction.createExecution(getNextExId(), this);
-        }
+        Check.invariant(beingCalled != null);
         return beingCalled;
     }
 

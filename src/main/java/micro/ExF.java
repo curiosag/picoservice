@@ -25,7 +25,7 @@ public class ExF extends Ex {
         try {
             template.getPrimitive().execute(paramsReceived);
         } catch (Exception e) {
-            node.log(e.getMessage()); // todo remove
+            returnTo.receive(new Value(Names.exception, e, this));
         }
     }
 

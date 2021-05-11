@@ -16,7 +16,7 @@ public enum KryoSerializedClass {
 
     ValueReceivedEvent(2, ValueReceivedEvent::new),
     ValueEnqueuedEvent(3, ValueEnqueuedEvent::new),
-    IdsAllocatedEvent(4, IdsAllocatedEvent::new),
+    PropagationTargetsAllocatedEvent(4, PropagationTargetsAllocatedEvent::new),
     ValueProcessedEvent(5, ValueProcessedEvent::new),
     ExDoneEvent(6, ExDoneEvent::new);
 
@@ -67,7 +67,7 @@ public enum KryoSerializedClass {
 
         idToSerializedClass.put(3, ValueReceivedEvent);
         idToSerializedClass.put(4, ValueEnqueuedEvent);
-        idToSerializedClass.put(5, IdsAllocatedEvent);
+        idToSerializedClass.put(5, PropagationTargetsAllocatedEvent);
         idToSerializedClass.put(6, ValueProcessedEvent);
         idToSerializedClass.put(7, ExDoneEvent);
 
@@ -76,7 +76,7 @@ public enum KryoSerializedClass {
 
         classToSerializedClass.put(ValueReceivedEvent.class, ValueReceivedEvent);
         classToSerializedClass.put(ValueEnqueuedEvent.class, ValueEnqueuedEvent);
-        classToSerializedClass.put(IdsAllocatedEvent.class, IdsAllocatedEvent);
+        classToSerializedClass.put(PropagationTargetsAllocatedEvent.class, PropagationTargetsAllocatedEvent);
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
         classToSerializedClass.put(ExDoneEvent.class, ExDoneEvent);
     }

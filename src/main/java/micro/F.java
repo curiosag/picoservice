@@ -1,9 +1,11 @@
 package micro;
 
 import micro.primitives.Primitive;
-import nano.ingredients.tuples.Tuple;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -19,7 +21,7 @@ public class F implements _F, Id {
     public String returnAs = Names.result;
     private Primitive primitive;
 
-    private List<Tuple<_F, List<FPropagation>>> targetsToPropagations = new ArrayList<>();
+    private final List<FPropagation> propagations = new ArrayList<>();
 
     List<String> formalParameters = new ArrayList<>();
 
@@ -36,7 +38,7 @@ public class F implements _F, Id {
         this.formalParameters.addAll(formalParams);
     }
 
-    public F(Node node, Primitive primitive, String ... formalParams) {
+    public F(Node node, Primitive primitive, String... formalParams) {
         this(node, primitive);
         Collections.addAll(formalParameters, formalParams);
     }
@@ -55,7 +57,7 @@ public class F implements _F, Id {
         return formalParameters.size();
     }
 
-    public boolean isParam(String name){
+    public boolean isParam(String name) {
         return formalParameters.contains(name);
     }
 
@@ -90,23 +92,12 @@ public class F implements _F, Id {
 
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
-        FPropagation p = new FPropagation(nextPropagationId.get(), type, nameExpected, namePropagated, to);
-
-        Optional<Tuple<_F, List<FPropagation>>> current = targetsToPropagations.stream()
-                .filter(i -> i.left.equals(to))
-                .findAny();
-
-        if (current.isEmpty())
-        {
-            current = Optional.of(Tuple.of(to, new ArrayList<>()));
-            targetsToPropagations.add(current.get());
-        }
-        current.get().right.add(p);
+        propagations.add(new FPropagation(nextPropagationId.get(), type, nameExpected, namePropagated, to));
     }
 
     @Override
     public Ex createExecution(long id, _Ex returnTo) {
-        return new ExF(this.node, id,this, returnTo);
+        return new ExF(this.node, id, this, returnTo);
     }
 
     public String getLabel() {
@@ -118,16 +109,15 @@ public class F implements _F, Id {
         return this;
     }
 
-    List<Tuple<_F, List<FPropagation>>> getTargetFunctionsToPropagations() {
-        return targetsToPropagations;
+    List<FPropagation> getPropagations() {
+        return propagations;
     }
 
-    public List<_F> getTargets(){
-        return targetsToPropagations.stream().map(i -> i.left).collect(Collectors.toList());
-    }
-
-    public int getTargetCount(){
-        return targetsToPropagations.size();
+    public List<_F> getTargets() {
+        return propagations.stream()
+                .map(i -> i.target)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     @Override

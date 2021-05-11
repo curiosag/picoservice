@@ -11,15 +11,10 @@ import static micro.PropagationType.TRUE_BRANCH;
 public class ExIf extends Ex {
     private Boolean condition;
 
-    private final Set<ValuePropagation> toPropagateOnConditionSet = new HashSet<>();
+    private final Set<ValuePropagation> stashed = new HashSet<>();
 
     ExIf(Node node, long id, F template, _Ex returnTo) {
         super(node, id, template, returnTo);
-    }
-
-    @Override
-    protected int getNumberCustomIdsNeeded() {
-        return 0; // TODO: enough to return count of functions behind condition + behind the branch with higher function count than the other
     }
 
     @Override
@@ -48,7 +43,7 @@ public class ExIf extends Ex {
     }
 
     private void propagateStashedValues() {
-        toPropagateOnConditionSet.stream()
+        stashed.stream()
                 .filter(p1 -> canPerformConditionalPropagation(p1.propagation.getPropagationType()))
                 .forEach(p -> p.propagation.getTo().receive(new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
     }
@@ -56,7 +51,7 @@ public class ExIf extends Ex {
     private void stashValuePropagations(Value v) {
         getPropagations(v.getName()).stream()
                 .filter(this::isConditioned)
-                .forEach(p -> toPropagateOnConditionSet.add(new ValuePropagation(v, p)));
+                .forEach(p -> stashed.add(new ValuePropagation(v, p)));
     }
 
     private boolean isConditioned(ExPropagation p) {

@@ -1,21 +1,21 @@
-package micro.event;
+package micro.event.eventlog;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
+import micro.event.Event;
 
-import java.io.Closeable;
 import java.io.File;
 
-import static micro.event.KryoStuff.createOutput;
+import static micro.event.eventlog.KryoStuff.createOutput;
 
-public class EventLogWriter implements Closeable {
+public class KryoEventLogWriter implements EventLogWriter {
     private final Kryo kryo = new Kryo();
     private final Output output;
 
     private final String filename;
 
-    public EventLogWriter(String filename, boolean clear) {
+    public KryoEventLogWriter(String filename, boolean clear) {
         this.filename = filename;
         if (clear) {
             deleteFile();
@@ -23,6 +23,7 @@ public class EventLogWriter implements Closeable {
         output = createOutput(filename);
     }
 
+    @Override
     public synchronized void put(Event e) {
         try {
             KryoSerializedClass.writeObject(kryo, output, e);

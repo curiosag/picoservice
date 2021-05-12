@@ -1,9 +1,11 @@
 package micro;
 
 import micro.event.*;
+import micro.event.eventlog.*;
 import micro.trace.Tracer;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,10 +37,11 @@ public class Node implements Closeable, Hydrator, EventLoop {
     private final Address address;
     private boolean isRecovery;
     private boolean debug = false;
+    private boolean logEvents = false;
 
     public Node(Address address, boolean clearEventLog) {
         this.address = address;
-        eventLog = new EventLogWriter(getEventLogFileName(address), clearEventLog);
+        eventLog = logEvents ? new KryoEventLogWriter(getEventLogFileName(address), clearEventLog) : NullEventLogWriter.instance;
         top = createTop();
     }
 
@@ -51,7 +54,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
         try {
             long maxOId = 0;
             long maxEventId = 0;
-            for (Hydratable h : new EventLogReader(getEventLogFileName(address))) {
+            for (Hydratable h : new KryoEventLogReader(getEventLogFileName(address))) {
                 KryoSerializedClass k = KryoSerializedClass.of(h.getClass());
                 switch (k) {
                     case InitialExecutionCreatedEvent: //TODO no tracking of execution created? like in ExFCallByFunctionalValue?
@@ -68,7 +71,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
                         ExEvent x = (ExEvent) h;
                         Check.invariant(x.ex instanceof Ex, "no ex");
                         x.ex.recover(x);
-                        if(k == KryoSerializedClass.PropagationTargetsAllocatedEvent){
+                        if (k == KryoSerializedClass.PropagationTargetsAllocatedEvent) {
                             Long to = ((PropagationTargetsAllocatedEvent) x).targets.stream().map(Id::getId).max(Long::compare).orElse(0L);
                             maxOId = Math.max(maxOId, to);
                         }
@@ -102,8 +105,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     public void debugValueEnqueuedEvent(ValueEnqueuedEvent v) {
-        if(! debug)
-        {
+        if (!debug) {
             return;
         }
         String to = null;
@@ -120,7 +122,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     @Override
-    public void loop(){
+    public void loop() {
         loop(cranks);
     }
 
@@ -148,17 +150,19 @@ public class Node implements Closeable, Hydrator, EventLoop {
     @Override
     public void close() {
         tracer.close();
-        eventLog.close();
+        try {
+            eventLog.close();
+        } catch (IOException e) {
+            throw new RuntimeException();
+        }
     }
 
     private void log(Event e) {
-        if(e instanceof ValueEnqueuedEvent)
-        {
-            debugValueEnqueuedEvent((ValueEnqueuedEvent)e);
+        if (e instanceof ValueEnqueuedEvent) {
+            debugValueEnqueuedEvent((ValueEnqueuedEvent) e);
         }
-        if(e instanceof ExDoneEvent)
-        {
-            cranks.remove(((ExDoneEvent)e).getEx());
+        if (e instanceof ExDoneEvent) {
+            cranks.remove(((ExDoneEvent) e).getEx());
         }
         eventLog.put(e);
     }
@@ -222,7 +226,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
         recover(address);
     }
 
-    public List< _Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates) {
+    public List<_Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates) {
         return targetTemplates.stream().map(t -> createExecution(t, source)).collect(Collectors.toList());
     }
 

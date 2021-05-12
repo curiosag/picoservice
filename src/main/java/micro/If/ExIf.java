@@ -39,13 +39,13 @@ public class ExIf extends Ex {
     private void propagateValueOnCondition(Value v) {
         getPropagations(v.getName()).stream()
                 .filter(p1 -> !isConditioned(p1) || canPerformConditionalPropagation(p1.getPropagationType()))
-                .forEach(p -> p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
+                .forEach(p -> deliver(new Value(p.getNameToPropagate(), v.get(), this), p.getTo()));
     }
 
     private void propagateStashedValues() {
         stashed.stream()
                 .filter(p1 -> canPerformConditionalPropagation(p1.propagation.getPropagationType()))
-                .forEach(p -> p.propagation.getTo().receive(new Value(p.propagation.getNameToPropagate(), p.value.get(), this)));
+                .forEach(p -> deliver(new Value(p.propagation.getNameToPropagate(), p.value.get(), this), p.propagation.getTo()));
     }
 
     private void stashValuePropagations(Value v) {

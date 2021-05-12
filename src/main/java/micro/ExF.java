@@ -25,16 +25,16 @@ public class ExF extends Ex {
         try {
             template.getPrimitive().execute(paramsReceived);
         } catch (Exception e) {
-            returnTo.receive(new Value(Names.exception, e, this));
+            deliverResult(new Value(Names.exception, e, this));
         }
     }
 
     private void applyFunction() {
         try {
             Object value = template.getPrimitive().execute(paramsReceived);
-            returnTo.receive(new Value(template.returnAs, value, this));
+            deliverResult(new Value(template.returnAs, value, this));
         } catch (Exception e) {
-            returnTo.receive(new Value(Names.exception, e, this));
+            deliverResult(new Value(Names.exception, e, this));
         }
     }
 

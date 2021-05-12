@@ -52,7 +52,7 @@ public class ExFCall extends Ex {
         Check.preCondition(isLegitDownstreamValue(v));
         propagate(v);
         if (callTemplate.formalParameters.contains(v.getName())) {
-            getBeingCalled().receive(v.withSender(this));
+            deliver(v.withSender(this), getBeingCalled());
         }
     }
 

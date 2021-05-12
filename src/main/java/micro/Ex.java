@@ -16,10 +16,9 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
     protected final Node node;
     private final long id;
     public F template;
-    protected _Ex returnTo;
+    private _Ex returnTo;
 
     private List<ExPropagation> propagations;
-
     private final HashSet<String> namesReceived = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
@@ -111,8 +110,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         }
 
         if (current instanceof ValueProcessedEvent) {
-            ValueProcessedEvent c = (ValueProcessedEvent) current;
-            clearValue(c);
+            clearValue(((ValueProcessedEvent) current).value);
             return;
         }
 
@@ -145,7 +143,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
 
         if (v.getName().equals(Names.result) || v.getName().equals(Names.exception)) {
             Value retVal = v.getName().equals(Names.result) ? createResultValue(v) : v.withSender(this);
-            returnTo.receive(retVal);
+            deliverResult(retVal);
             push(new ExDoneEvent(this));
         } else {
             namesReceived.add(v.getName());
@@ -153,6 +151,16 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
                 paramsReceived.put(v.getName(), v);
             }
             processValueDownstream(v);
+        }
+    }
+
+    protected void deliverResult(Value v){
+       deliver(v, returnTo);
+    }
+
+    protected void deliver(Value v, _Ex target){
+        if(! isRecovery) {
+            target.receive(v);
         }
     }
 
@@ -188,7 +196,9 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         }
 
         if (e instanceof ValueProcessedEvent) {
-            clearValue((ValueProcessedEvent) e);
+            Value v = ((ValueProcessedEvent)e).value;
+            processValue(v);
+            clearValue(v);
             return;
         }
 
@@ -229,8 +239,8 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         exStack.push(e);
     }
 
-    private void clearValue(ValueProcessedEvent e) {
-        Check.condition(e.value.equals(inBox.poll()));
+    private void clearValue(Value e) {
+        Check.condition(e.equals(inBox.poll()));
         exStack.clear();
     }
 
@@ -295,7 +305,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
                 // propagation regardless of recovery or not, since it may have ended up incomplete in an original run
                 // A per-propagation state tracking seems too slow and not needed right now but is an option to prevent
                 // re-sending on the sender's side
-                p.getTo().receive(new Value(p.getNameToPropagate(), v.get(), this)));
+                deliver(new Value(p.getNameToPropagate(), v.get(), this), p.getTo()));
     }
 
     @Override

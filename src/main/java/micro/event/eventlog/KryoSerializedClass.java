@@ -1,23 +1,24 @@
-package micro.event;
+package micro.event.eventlog;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoSerializable;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import micro.Check;
+import micro.event.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
 public enum KryoSerializedClass {
-    InitialExecutionCreatedEvent(0, ExecutionCreatedEvent::new),
+    InitialExecutionCreatedEvent(0, micro.event.ExecutionCreatedEvent::new),
     ExecutionCreatedEvent(1, ExecutionCreatedEvent::new),
 
-    ValueReceivedEvent(2, ValueReceivedEvent::new),
-    ValueEnqueuedEvent(3, ValueEnqueuedEvent::new),
-    PropagationTargetsAllocatedEvent(4, PropagationTargetsAllocatedEvent::new),
-    ValueProcessedEvent(5, ValueProcessedEvent::new),
+    ValueReceivedEvent(2, micro.event.ValueReceivedEvent::new),
+    ValueEnqueuedEvent(3, micro.event.ValueEnqueuedEvent::new),
+    PropagationTargetsAllocatedEvent(4, micro.event.PropagationTargetsAllocatedEvent::new),
+    ValueProcessedEvent(5, micro.event.ValueProcessedEvent::new),
     ExDoneEvent(6, ExDoneEvent::new);
 
     static Map<Integer, KryoSerializedClass> idToSerializedClass = new HashMap<>();

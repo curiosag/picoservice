@@ -1,4 +1,4 @@
-package micro.event;
+package micro.event.eventlog;
 
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;

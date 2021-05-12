@@ -1,4 +1,4 @@
-package micro.event;
+package micro.event.eventlog;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
@@ -7,16 +7,13 @@ import com.esotericsoftware.kryo.io.Input;
 import micro.Check;
 import micro.Hydratable;
 
-import java.io.Closeable;
-import java.util.Iterator;
-
-public class EventLogIterator implements Iterator<Hydratable>, Closeable {
+public class KryoEventLogIterator implements EventLogIterator {
 
     private final Kryo kryo;
     private final Input input;
     private Hydratable next;
 
-    EventLogIterator(Kryo kryo, Input input) {
+    KryoEventLogIterator(Kryo kryo, Input input) {
         this.kryo = kryo;
         this.input = input;
         next = readNext();

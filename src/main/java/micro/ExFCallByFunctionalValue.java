@@ -37,7 +37,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     private void acceptFunctionalValueEx(_Ex e) {
         Check.invariant(e.getTemplate().equals(baseFunction));
         beingCalled = e;
-        pendingValues.forEach(pv -> beingCalled.receive(pv.withSender(this)));
+        pendingValues.forEach(pv -> deliver(pv.withSender(this), beingCalled));
     }
 
     @Override
@@ -66,7 +66,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
         }
 
         if (beingCalled != null) {
-            getFunctionBeingCalled().receive(v.withSender(this));
+            deliver(v.withSender(this), getFunctionBeingCalled());
         } else {
             pendingValues.add(v);
         }

@@ -1,21 +1,22 @@
 package micro.event;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import micro.Check;
 import micro.Ex;
 import micro.Hydrator;
 import micro._Ex;
+import micro.event.serialization.Incoming;
+import micro.event.serialization.Outgoing;
 
 public abstract class ExEvent extends Event {
     public _Ex ex;
-    long exId;
+    public long exId;
+    public long exReturnToId;
 
     public ExEvent(Ex ex) {
         super();
         this.ex = ex;
         this.exId = ex.getId();
+        this.exReturnToId = ex.getReturnTo().getId();
     }
 
     protected ExEvent() {
@@ -35,19 +36,26 @@ public abstract class ExEvent extends Event {
     }
 
     @Override
-    public void write(Kryo kryo, Output output) {
-        super.write(kryo, output);
+    public void write(Outgoing output) {
+        super.write(output);
         output.writeVarLong(exId, true);
+        output.writeVarLong(exReturnToId, true);
     }
 
     @Override
-    public void read(Kryo kryo, Input input) {
-        super.read(kryo, input);
+    public void read(Incoming input) {
+        super.read(input);
         exId = input.readVarLong(true);
+        exReturnToId = input.readVarLong(true);
     }
 
     @Override
     public void hydrate(Hydrator h) {
         ex = h.getExForId(exId);
+    }
+
+    @Override
+    public void dehydrate() {
+        ex = null;
     }
 }

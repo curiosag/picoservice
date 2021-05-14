@@ -2,7 +2,7 @@ package micro;
 
 import micro.event.CustomEventHandling;
 import micro.event.ExEvent;
-import micro.event.ExecutionCreatedEvent;
+import micro.event.ExCreatedEvent;
 
 import java.util.Optional;
 
@@ -27,7 +27,7 @@ public class ExFCall extends Ex {
 
     @Override
     protected CustomEventHandling customEventHandling(ExEvent e) {
-        if (beingCalled == null && e instanceof ExecutionCreatedEvent) {
+        if (beingCalled == null && e instanceof ExCreatedEvent) {
             acceptExBeingCalled(e);
             return CustomEventHandling.consuming;
         }
@@ -44,7 +44,7 @@ public class ExFCall extends Ex {
         if (beingCalled != null) {
             return Optional.empty();
         }
-        return Optional.of(new ExecutionCreatedEvent((Ex) node.createExecution(callTemplate.getCalled(), this))); //TODO (Ex)?
+        return Optional.of(new ExCreatedEvent((Ex) node.createExecution(callTemplate.getCalled(), this))); //TODO (Ex)?
     }
 
     @Override

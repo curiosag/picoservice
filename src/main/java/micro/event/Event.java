@@ -1,23 +1,23 @@
 package micro.event;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.KryoSerializable;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import micro.Hydratable;
+import micro.event.serialization.Incoming;
+import micro.event.serialization.Outgoing;
+import micro.event.serialization.Serioulizable;
 
-public abstract class Event implements Hydratable, KryoSerializable {
+public abstract class Event implements Hydratable, Serioulizable {
 
     Event()
     {
     }
 
     @Override
-    public void write(Kryo kryo, Output output) {
+    public void write(Outgoing out) {
+
     }
 
     @Override
-    public void read(Kryo kryo, Input input) {
+    public void read(Incoming in) {
 
     }
 }

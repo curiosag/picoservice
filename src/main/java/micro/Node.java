@@ -1,48 +1,56 @@
 package micro;
 
 import micro.event.*;
-import micro.event.eventlog.*;
+import micro.event.eventlog.EventLogReader;
+import micro.event.eventlog.EventLogWriter;
+import micro.event.eventlog.NullEventLogWriter;
+import micro.event.eventlog.kryoeventlog.KryoEventLogReader;
+import micro.event.eventlog.kryoeventlog.KryoEventLogWriter;
+import micro.event.serialization.SerioulizedEvent;
 import micro.trace.Tracer;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-public class Node implements Closeable, Hydrator, EventLoop {
+public class Node implements Closeable, Hydrator {
+    private final Address address;
+
     private final Tracer tracer = new Tracer(false);
-    private final EventLogWriter eventLog;
-
-    private final _Ex top; // the ultimate begin of every chain of executions
-
-    private long maxFId = ExTop.TOP_ID;
-    private final AtomicLong maxExId = new AtomicLong(ExTop.TOP_ID);
-    private final AtomicLong maxEventSequenceNr = new AtomicLong(0);
+    private final EventLogWriter logWriter;
+    private EventLogReader logReader;
 
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean stop = new AtomicBoolean(true);
 
     private final Map<Long, _F> idToF = new HashMap<>();
-    private final Map<Long, _Ex> idToX = new HashMap<>(); //todo works only single threaded now
-    private final Map<Long, _Ex> exRecovered = new HashMap<>();
+    private final Map<Long, _Ex> idToEx = new TreeMap<>(); //todo works only single threaded now
     private final ConcurrentLinkedQueue<Crank> cranks = new ConcurrentLinkedQueue<>();
 
-    private final Address address;
-    private boolean isRecovery;
-    private boolean debug = false;
-    private boolean logEvents = false;
+    private long maxFId = ExTop.TOP_ID; // TODO AtomicLong at least for maxFId, perhaps compiler-assigned FIds?
+    private final AtomicLong maxExId = new AtomicLong(ExTop.TOP_ID);
+    private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
-    public Node(Address address, boolean clearEventLog) {
+    private boolean recover;
+    private final boolean useEventLog;
+    private static final boolean debug = false;
+
+    Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
         this.address = address;
-        eventLog = logEvents ? new KryoEventLogWriter(getEventLogFileName(address), clearEventLog) : NullEventLogWriter.instance;
-        top = createTop();
+        this.logWriter = logWriter;
+        this.logReader = logReader;
+        this.useEventLog = false;
+    }
+
+    public Node(Address address, boolean useEventLog, boolean clearEventLog) {
+        this.address = address;
+        logWriter = useEventLog ? new KryoEventLogWriter(getEventLogFileName(address), clearEventLog) : NullEventLogWriter.instance;
+        this.useEventLog = useEventLog;
     }
 
     private String getEventLogFileName(Address address) {
@@ -50,91 +58,76 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     private void recover(Address address) {
-        boolean isRecovery = true;
-        try {
-            long maxOId = 0;
-            long maxEventId = 0;
-            for (Hydratable h : new KryoEventLogReader(getEventLogFileName(address))) {
-                KryoSerializedClass k = KryoSerializedClass.of(h.getClass());
-                switch (k) {
-                    case InitialExecutionCreatedEvent: //TODO no tracking of execution created? like in ExFCallByFunctionalValue?
-                        ExecutionCreatedEvent e = (ExecutionCreatedEvent) h;
+        Check.preCondition(recover);
 
-                        _Ex ex = getFForId(e.getFId()).createExecution(e.getExId(), top);
-                        maxOId = Math.max(maxOId, e.getExId());
-                        exRecovered.put(e.getExId(), ex);
-                        idToX.put(e.getExId(), ex);
-                        break;
+        if (logReader == null)
+            logReader = new KryoEventLogReader(getEventLogFileName(address));
 
-                    case PropagationTargetsAllocatedEvent, ValueEnqueuedEvent, ValueProcessedEvent:
-                        h.hydrate(this);
-                        ExEvent x = (ExEvent) h;
-                        Check.invariant(x.ex instanceof Ex, "no ex");
-                        x.ex.recover(x);
-                        if (k == KryoSerializedClass.PropagationTargetsAllocatedEvent) {
-                            Long to = ((PropagationTargetsAllocatedEvent) x).targets.stream().map(Id::getId).max(Long::compare).orElse(0L);
-                            maxOId = Math.max(maxOId, to);
-                        }
-                        break;
+        long maxExId = 0;
 
-                    case ExDoneEvent:
-                        break;
-
-                    default:
-                        throw new IllegalStateException("invalid case");
+        for (Hydratable h : logReader) {
+            switch (SerioulizedEvent.of(h.getClass())) {
+                case ExCreatedEvent -> {
+                    ExCreatedEvent e = (ExCreatedEvent) h;
+                    _F f = getFForId(e.getFId());
+                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e, f));
+                    maxExId = Math.max(maxExId, e.exId);
+                    idToEx.put(e.exId, ex);
                 }
-                maxEventId = Math.max(maxEventId, 0); //TODO
+                case ValueReceivedEvent, PropagationTargetExsCreatedEvent, ValueEnqueuedEvent, ValueProcessedEvent -> {
+                    h.hydrate(this);
+                    ExEvent e = (ExEvent) h;
+                    e.ex.recover(e);
+                }
+                case ExDoneEvent -> removeEx(((ExEvent) h).exId);
+                default -> throw new IllegalStateException("invalid type of SerioulizedEvent: " + h.getClass().getSimpleName());
             }
-            maxExId.set(maxOId);
-            maxEventSequenceNr.set(maxEventId); //TODO ??
-        } finally {
-            isRecovery = false;
         }
+
+        this.maxExId.set(maxExId);
+        idToEx.values().stream()
+                .filter(i -> !i.equals(top))
+                .forEach(cranks::add);
+        recover = false;
+    }
+
+    private void removeEx(Long exId){
+        idToEx.remove(exId);
+    }
+
+    private _Ex getReturnTarget(ExCreatedEvent e, _F f) {
+        Optional<Relatch> re = getRelatch(e.exId);
+        if (re.isPresent()) {
+            Check.invariant(re.get().f.equals(f));
+            return re.get().returnTo;
+        }
+        return getExForId(e.exReturnToId);
     }
 
     void note(ExEvent e) {
-        if (isRecovery) {
+        if (recover) {
             return;
         }
         log(e);
-        if (e instanceof ExDoneEvent) {
-            synchronized (this) {
-                cranks.remove(e.ex);
-            }
-        }
     }
 
-    public void debugValueEnqueuedEvent(ValueEnqueuedEvent v) {
-        if (!debug) {
-            return;
+    public void run(boolean recover) {
+        if (recover) {
+            this.recover = recover;
+            recover(address);
         }
-        String to = null;
-        String from = null;
-        try {
-            _Ex sender = v.value.getSender();
-            from = sender == null ? "null" : (v.value.getSender().toString() + " " + v.value.getSender().getId());
-            to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        log(from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
+        crankRoundRobin(cranks);
     }
 
-    @Override
-    public void loop() {
-        loop(cranks);
-    }
-
-    private void loop(ConcurrentLinkedQueue<Crank> cranks) {
-        Timer t; //TODO
+    private void crankRoundRobin(ConcurrentLinkedQueue<Crank> cranks) {
         while (true) {
-            if (stop.get()) {
-                Concurrent.sleep(200);
+            if (stop.get()) { //TODO its rather a non-working suspend. stop should terminate
+                Concurrent.sleep(1000);
                 continue;
             }
             Concurrent.sleep(delay.get());
 
+            // removal of cranks that are done gets triggered by ExDoneEvent
             Crank source = cranks.poll();
             if (source != null) {
                 while (source.isMoreToDo()) {
@@ -151,7 +144,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
     public void close() {
         tracer.close();
         try {
-            eventLog.close();
+            logWriter.close();
         } catch (IOException e) {
             throw new RuntimeException();
         }
@@ -162,9 +155,11 @@ public class Node implements Closeable, Hydrator, EventLoop {
             debugValueEnqueuedEvent((ValueEnqueuedEvent) e);
         }
         if (e instanceof ExDoneEvent) {
-            cranks.remove(((ExDoneEvent) e).getEx());
+            synchronized (this) {
+                cranks.remove(((ExDoneEvent)e).ex);
+            }
         }
-        eventLog.put(e);
+        logWriter.put(e);
     }
 
     public Address getAddress() {
@@ -188,7 +183,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     void addF(_F f) {
-        idToF.put(f.getId(), f);
+        idToF.put(f.getId(), (F) f); //TODO (F)
     }
 
     void setDelay(@SuppressWarnings("SameParameterValue") int delay) {
@@ -202,7 +197,7 @@ public class Node implements Closeable, Hydrator, EventLoop {
 
     @Override
     public _Ex getExForId(long exId) {
-        return Check.notNull(idToX.get(exId));
+        return Check.notNull(idToEx.get(exId));
     }
 
     @Override
@@ -210,20 +205,21 @@ public class Node implements Closeable, Hydrator, EventLoop {
         return Check.notNull(idToF.get(fId));
     }
 
-    private _Ex createTop() {
+    private _Ex initializeTop() {
         _Ex result = new ExTop(address);
         idToF.put(ExTop.TOP_ID, result.getTemplate());
-        idToX.put(ExTop.TOP_ID, result);
+        idToEx.put(ExTop.TOP_ID, result);
         return result;
     }
 
     void start() {
-        this.stop.set(false);
-        new Thread(this::loop).start();
+        start(false);
     }
 
-    void recover() {
-        recover(address);
+    void start(boolean recover) {
+        Check.invariant(recover || relatches.size() == 0);
+        this.stop.set(false);
+        new Thread(() -> run(recover)).start();
     }
 
     public List<_Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates) {
@@ -235,11 +231,45 @@ public class Node implements Closeable, Hydrator, EventLoop {
     }
 
     public _Ex createExecution(_F f, _Ex returnTo) {
+        Check.preCondition(!recover);
         _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
-        eventLog.put(new ExecutionCreatedEvent((Ex) ex));
+        log(new ExCreatedEvent((Ex) ex));
         cranks.add(ex);
-        idToX.put(ex.getId(), ex); //TODO only for recovery needed
+        idToEx.put(ex.getId(), ex);
         return ex;
+    }
+
+    private record Relatch(Long exid, _F f, _Ex returnTo) {
+    }
+
+    List<Relatch> relatches = new ArrayList<>();
+
+    private Optional<Relatch> getRelatch(long exid) {
+        Optional<Relatch> result = relatches.stream().filter(i -> i.exid == exid).findAny();
+        result.ifPresent(relatch -> relatches.remove(relatch));
+        return result;
+    }
+
+    public void relatchExecution(long exId, _F f, _Ex returnTo) {
+        //relatches.add(new Relatch(exId, f, returnTo));
+        idToEx.put(returnTo.getId(), returnTo);
+    }
+
+    public void debugValueEnqueuedEvent(ValueEnqueuedEvent v) {
+        if (!debug) {
+            return;
+        }
+        String to = null;
+        String from = null;
+        try {
+            _Ex sender = v.value.getSender();
+            from = sender == null ? "null" : (v.value.getSender().toString() + " " + v.value.getSender().getId());
+            to = (v.getEx() instanceof Ex ? ((Ex) v.getEx()).getLabel() : "") + " " + v.ex.getId();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        log(from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
     }
 
 }

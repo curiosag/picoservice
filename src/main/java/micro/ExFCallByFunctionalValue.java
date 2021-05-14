@@ -1,17 +1,15 @@
 package micro;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import micro.event.CustomEventHandling;
 import micro.event.ExEvent;
-import micro.event.ExecutionCreatedEvent;
+import micro.event.ExCreatedEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ExFCallByFunctionalValue extends Ex implements Hydratable {
+public class ExFCallByFunctionalValue extends Ex {
+
     long idf;
 
     FCallByFunctionalValue f;
@@ -27,7 +25,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
 
     @Override
     protected CustomEventHandling customEventHandling(ExEvent e) {
-        if (e instanceof ExecutionCreatedEvent) {
+        if (e instanceof ExCreatedEvent) {
             acceptFunctionalValueEx(e.getEx());
             return CustomEventHandling.consuming;
         }
@@ -44,7 +42,7 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
     protected Optional<ExEvent> raiseCustomEvent(Value value) {
         if (baseFunction == null && value.getName().equals(f.getFunctionalValueParam())) {
             acceptFunctionalValueTemplate(value);
-            return Optional.of(new ExecutionCreatedEvent((Ex) node.createExecution(baseFunction, this))); //TODO (Ex)?
+            return Optional.of(new ExCreatedEvent((Ex) node.createExecution(baseFunction, this))); //TODO (Ex)?
         }
 
         return Optional.empty();
@@ -70,7 +68,6 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
         } else {
             pendingValues.add(v);
         }
-
     }
 
     @Override
@@ -96,23 +93,4 @@ public class ExFCallByFunctionalValue extends Ex implements Hydratable {
         return beingCalled;
     }
 
-    @Override
-    public void write(Kryo kryo, Output output) {
-        super.write(kryo, output);
-        output.writeVarLong(f.getId(), true);
-    }
-
-    @Override
-    public void read(Kryo kryo, Input input) {
-        super.read(kryo, input);
-        idf = input.readVarLong(true);
-    }
-
-    @Override
-    public void hydrate(Hydrator h) {
-        _F i = h.getFForId(idf);
-        Check.invariant(i instanceof FCallByFunctionalValue, "..?");
-        //noinspection ConstantConditions
-        f = (FCallByFunctionalValue) i;
-    }
 }

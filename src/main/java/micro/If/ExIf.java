@@ -9,6 +9,7 @@ import static micro.PropagationType.FALSE_BRANCH;
 import static micro.PropagationType.TRUE_BRANCH;
 
 public class ExIf extends Ex {
+
     private Boolean condition;
 
     private final Set<ValuePropagation> stashed = new HashSet<>();

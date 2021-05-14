@@ -1,6 +1,7 @@
 package micro;
 
 public class ExF extends Ex {
+
     public ExF(Node node, long id, F template, _Ex returnTo) {
         super(node, id, template, returnTo);
     }
@@ -18,6 +19,7 @@ public class ExF extends Ex {
             } else {
                 applyFunction();
             }
+            resultOrExceptionFromPrimitive = true;
         }
     }
 

@@ -1,9 +1,5 @@
 package micro;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.KryoSerializable;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import micro.event.*;
 import nano.ingredients.guards.Guards;
 
@@ -11,10 +7,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
-public abstract class Ex implements _Ex, Crank, KryoSerializable {
+public abstract class Ex implements _Ex, Crank {
+    protected boolean resultOrExceptionFromPrimitive;
+
     boolean done = false;
-    protected final Node node;
-    private final long id;
+    protected Node node;
+    private long id;
+
     public F template;
     private _Ex returnTo;
 
@@ -25,18 +24,14 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
     protected Queue<Value> inBox = new ConcurrentLinkedQueue<>();
     protected Stack<ExEvent> exStack = new Stack<>();
     private boolean isRecovery;
-
-    public Ex(Node node, long id) {
-        Guards.notNull(node);
-        this.node = node;
-        this.id = id;
-    }
+    private boolean recovered;
 
     public Ex(Node node, long id, F template, _Ex returnTo) {
-        this(node, id);
         Guards.notNull(template);
         Guards.notNull(returnTo);
 
+        this.node = node;
+        this.id = id;
         this.returnTo = returnTo;
         this.template = template;
     }
@@ -84,16 +79,20 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
             }
         }
 
-        if (current instanceof PropagationTargetsAllocatedEvent) {
-            initializePropagationTargets((PropagationTargetsAllocatedEvent) current);
+        if (current instanceof PropagationTargetExsCreatedEvent) {
+            initializePropagationTargets((PropagationTargetExsCreatedEvent) current);
             exStack.pop();
             return;
         }
 
         if (current instanceof ValueEnqueuedEvent) {
             if (propagations == null) {
-                push(new PropagationTargetsAllocatedEvent(this, node.allocatePropagationTargets(this, template.getTargets())));
-                return;
+                if (template.getTargets().size() > 0) {
+                    push(new PropagationTargetExsCreatedEvent(this, node.allocatePropagationTargets(this, template.getTargets())));
+                    return;
+                } else {
+                    propagations = Collections.emptyList();
+                }
             }
 
             Optional<ExEvent> customValueEvent = raiseCustomEvent(((ValueEnqueuedEvent) current).value);
@@ -104,8 +103,11 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
 
             Value value = ((ValueEnqueuedEvent) current).value;
             processValue(value);
-            push(new ValueProcessedEvent(this, value));
-
+            if (resultOrException(value) || resultOrExceptionFromPrimitive) {
+                push(new ExDoneEvent(this), new ValueProcessedEvent(this, value));
+            } else {
+                push(new ValueProcessedEvent(this, value));
+            }
             return;
         }
 
@@ -135,16 +137,14 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
             // propagations may re-send values in case of a recovery after an unexpected halt (out of memory, power cut...)
             // where the propagation may even have been complete, but the ValueProcessedEvent not been persisted.
             // so receiving/processValue needs to be idempotent
-            node.log("skipping already received value " + v);
-            return;
+            node.log(getLabel() + " skipping already received value " + v);
         }
 
         namesReceived.add(v.getName());
 
-        if (v.getName().equals(Names.result) || v.getName().equals(Names.exception)) {
+        if (resultOrException(v)) {
             Value retVal = v.getName().equals(Names.result) ? createResultValue(v) : v.withSender(this);
             deliverResult(retVal);
-            push(new ExDoneEvent(this));
         } else {
             namesReceived.add(v.getName());
             if (template.formalParameters.contains(v.getName())) {
@@ -154,12 +154,16 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         }
     }
 
-    protected void deliverResult(Value v){
-       deliver(v, returnTo);
+    private boolean resultOrException(Value v) {
+        return v.getName().equals(Names.result) || v.getName().equals(Names.exception);
     }
 
-    protected void deliver(Value v, _Ex target){
-        if(! isRecovery) {
+    protected void deliverResult(Value v) {
+        deliver(v, returnTo);
+    }
+
+    protected void deliver(Value v, _Ex target) {
+        if (!isRecovery) {
             target.receive(v);
         }
     }
@@ -170,44 +174,44 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
 
     public void recover(ExEvent e) {
         isRecovery = true;
+        recovered = true;
+        try {
+            switch (customEventHandling(e)) {
+                case nonconsuming, consuming -> {
+                    return;
+                }
+                case none -> {
+                }
+            }
 
-        switch (customEventHandling(e)) {
-            case nonconsuming, none -> {
+            if (e instanceof ValueReceivedEvent) {
+                inBox.add(((ValueReceivedEvent) e).value);
                 return;
             }
-            case consuming -> {
+
+            if (e instanceof PropagationTargetExsCreatedEvent) {
+                initializePropagationTargets((PropagationTargetExsCreatedEvent) e);
                 return;
             }
-        }
 
-        if (e instanceof ValueReceivedEvent) {
-            inBox.add(((ValueReceivedEvent) e).value);
-            return;
-        }
+            if (e instanceof ValueEnqueuedEvent) {
+                exStack.push(e);
+                return;
+            }
 
-        if (e instanceof PropagationTargetsAllocatedEvent) {
-            initializePropagationTargets((PropagationTargetsAllocatedEvent) e);
-            return;
-        }
+            if (e instanceof ValueProcessedEvent) {
+                Value v = ((ValueProcessedEvent) e).value;
+                processValue(v);
+                clearValue(v);
+                return;
+            }
 
-        if (e instanceof ValueEnqueuedEvent) {
-            exStack.push(e);
-            return;
+            if (e instanceof ExDoneEvent) {
+                done = true;
+            }
+        } finally {
+            isRecovery = false;
         }
-
-        if (e instanceof ValueProcessedEvent) {
-            Value v = ((ValueProcessedEvent)e).value;
-            processValue(v);
-            clearValue(v);
-            return;
-        }
-
-        if (e instanceof ExDoneEvent) {
-            done = true;
-            return;
-        }
-
-        isRecovery = false;
     }
 
     protected abstract void processValueDownstream(Value v);
@@ -215,7 +219,7 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
     @Override
     public void crank() {
         Check.invariant(!isRecovery);
-        Check.invariant(exStack.isEmpty());
+        Check.invariant(exStack.isEmpty() || recovered);
 
         Value value = inBox.peek();
         Check.invariant(value != null);
@@ -231,12 +235,14 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         return !inBox.isEmpty();
     }
 
-    protected void push(ExEvent e) {
+    protected void push(ExEvent... e) {
         if (isRecovery) {
             return;
         }
-        node.note(e);
-        exStack.push(e);
+        for (int i = e.length - 1; i >= 0; i--) {
+            node.note(e[i]);
+        }
+        Arrays.stream(e).forEach(exStack::push);
     }
 
     private void clearValue(Value e) {
@@ -256,21 +262,24 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         return template.returnAs;
     }
 
-    private void initializePropagationTargets(PropagationTargetsAllocatedEvent e) {
+    private void initializePropagationTargets(PropagationTargetExsCreatedEvent e) {
         propagations = template.getPropagations().stream()
                 .map(t -> new ExPropagation(t, pick(t.target, e.targets)))
                 .collect(Collectors.toList());
     }
 
     private _Ex pick(_F targetTemplate, List<_Ex> targets) {
-        return targets.stream()
+        Optional<_Ex> result = targets.stream()
                 .filter(t -> t.getTemplate().equals(targetTemplate))
-                .findAny()
-                .orElseThrow(IllegalStateException::new);
+                .findAny();
+        if (result.isEmpty()) {
+            throw new IllegalStateException();
+        }
+        return result.get();
     }
 
     protected List<ExPropagation> getPropagations(String paramName) {
-        return propagations.stream()
+        return isRecovery ? Collections.emptyList() : propagations.stream()
                 .filter(p -> p.getNameReceived().equals(paramName))
                 .collect(Collectors.toList());
     }
@@ -318,15 +327,23 @@ public abstract class Ex implements _Ex, Crank, KryoSerializable {
         return String.format("%s", template.getLabel());
     }
 
-    @Override
-    public void write(Kryo kryo, Output output) {
-        output.writeVarLong(template.getId(), true);
-        output.writeVarLong(id, true);
+    public Node getNode() {
+        return node;
     }
 
-    @Override
-    public void read(Kryo kryo, Input input) {
-
+    public void setNode(Node node) {
+        this.node = node;
     }
 
+    public void setTemplate(F template) {
+        this.template = template;
+    }
+
+    public _Ex getReturnTo() {
+        return returnTo;
+    }
+
+    public void setReturnTo(_Ex returnTo) {
+        this.returnTo = returnTo;
+    }
 }

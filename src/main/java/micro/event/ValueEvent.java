@@ -1,12 +1,11 @@
 package micro.event;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import micro.Check;
 import micro.Ex;
 import micro.Hydrator;
 import micro.Value;
+import micro.event.serialization.Incoming;
+import micro.event.serialization.Outgoing;
 
 public class ValueEvent extends ExEvent {
     public Value value;
@@ -20,16 +19,16 @@ public class ValueEvent extends ExEvent {
     }
 
     @Override
-    public void write(Kryo kryo, Output output) {
-        super.write(kryo, output);
-        value.write(kryo, output);
+    public void write(Outgoing output) {
+        super.write(output);
+        value.write(output);
     }
 
     @Override
-    public void read(Kryo kryo, Input input) {
-        super.read(kryo, input);
+    public void read(Incoming input) {
+        super.read(input);
         value = new Value();
-        value.read(kryo, input);
+        value.read(input);
     }
 
     @Override
@@ -37,5 +36,11 @@ public class ValueEvent extends ExEvent {
         Check.notNull(value);
         super.hydrate(h);
         value.hydrate(h);
+    }
+
+    @Override
+    public void dehydrate() {
+        super.dehydrate();
+        value.dehydrate();
     }
 }

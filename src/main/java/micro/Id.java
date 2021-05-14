@@ -6,9 +6,4 @@ public interface Id {
 
     void setId(long value);
 
-    default long checkSetIdValue(long value){
-        Check.invariant(getId() < 0, "can't reset id");
-        Check.argument(value >= 0, "id < 0");
-        return value;
-    }
 }

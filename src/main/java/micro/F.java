@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import static micro.PropagationType.INDISCRIMINATE;
 
-
 public class F implements _F, Id {
 
     private final Supplier<Long> nextPropagationId;

@@ -1,15 +1,26 @@
 package micro;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.KryoSerializable;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
+import micro.event.serialization.Incoming;
+import micro.event.serialization.Outgoing;
+import micro.event.serialization.Serioulizable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
-public class Value implements Hydratable, KryoSerializable {
+public class Value implements Hydratable, Serioulizable {
+
+    private static final int INT = 0;
+    private static final int BOOL = 1;
+    private static final int LIST = 2;
+    private static final int PARTIALLY_APPLIED_F = 3;
+    private static final int STRING = 4;
+    private static final Map<Class<?>, Integer> valueTypes = new HashMap<>();
+    static {
+        valueTypes.put(Integer.class, INT);
+        valueTypes.put(Boolean.class, BOOL);
+        valueTypes.put(List.class, LIST);
+        valueTypes.put(PartiallyAppliedFunction.class, PARTIALLY_APPLIED_F);
+        valueTypes.put(String.class, STRING);
+    }
 
     private long senderId;
     private _Ex sender;
@@ -66,75 +77,79 @@ public class Value implements Hydratable, KryoSerializable {
         return Objects.hash(sender, name, value);
     }
 
-    private final static int INT = 0;
-    private final static int BOOL = 1;
-    private final static int LIST = 2;
-    private final static int PARTIALLY_APPLIED_F = 3;
-
     @Override
-    public void write(Kryo kryo, Output output) {
+    public void write(Outgoing output) {
         output.writeVarLong(senderId, true);
         output.writeString(name);
-
-        if (value instanceof Integer) {
-            output.writeVarInt(INT, true);
-            output.writeVarInt((Integer) value, false);
-
-        } else if (value instanceof Boolean) {
-            output.writeVarInt(BOOL, true);
-            output.writeBoolean((Boolean) value);
-
-        } else if (value instanceof List) {
-            output.writeVarInt(LIST, true);
-            List<Integer> items = (List<Integer>) value;
-            output.writeVarInt(items.size(), true);
-            items.forEach(i -> output.writeVarInt(i, true));
-        } else if (value instanceof PartiallyAppliedFunction) {
-            output.writeVarInt(PARTIALLY_APPLIED_F, true);
-            ((PartiallyAppliedFunction) value).write(kryo, output);
-        } else {
-            throw new IllegalArgumentException("value type not handled: " + (value == null ? "NULL" : value.getClass().getSimpleName()));
+        Integer valType = valueTypes.get(value.getClass());
+        switch (valType) {
+            case INT -> {
+                output.writeVarInt(valType, true);
+                output.writeVarInt((Integer) value, false);
+            }
+            case BOOL -> {
+                output.writeVarInt(valType, true);
+                output.writeBoolean((Boolean) value);
+            }
+            case STRING -> {
+                output.writeVarInt(valType, true);
+                output.writeString((String) value);
+            }
+            case LIST -> {
+                output.writeVarInt(valType, true);
+                List<Integer> items = (List<Integer>) value; //TODO some type preserving list verson needed
+                output.writeVarInt(items.size(), true);
+                items.forEach(i -> output.writeVarInt(i, true));
+            }
+            case PARTIALLY_APPLIED_F -> {
+                output.writeVarInt(valType, true);
+                ((PartiallyAppliedFunction) value).write(output);
+            }
+            default -> throw new IllegalArgumentException("value type not handled " + value.getClass().getSimpleName());
         }
+
     }
 
     @Override
-    public void read(Kryo kryo, Input input) {
+    public void read(Incoming input) {
         senderId = input.readVarLong(true);
         name = input.readString();
 
         int valType = input.readVarInt(true);
-        switch (valType) {
-            case INT:
-                value = input.readVarInt(false);
-                break;
-            case BOOL:
-                value = input.readBoolean();
-                break;
-            case LIST:
+        value = switch (valType) {
+            case INT ->  input.readVarInt(false);
+            case BOOL ->  input.readBoolean();
+            case STRING ->  input.readString();
+            case LIST -> {
                 ArrayList<Integer> list = new ArrayList<>();
                 int size = input.readVarInt(true);
                 for (int i = 0; i < size; i++) {
                     list.add(input.readVarInt(true));
                 }
-                value = list;
-                break;
-            case PARTIALLY_APPLIED_F:
+                yield list;
+            }
+            case PARTIALLY_APPLIED_F -> {
                 PartiallyAppliedFunction p = new PartiallyAppliedFunction();
-                p.read(kryo, input);
-                value = p;
-                break;
-            default:
-                throw new IllegalArgumentException("value type not handled " + valType);
-
-        }
+                p.read(input);
+                yield p;
+            }
+            default -> throw new IllegalArgumentException("value type not handled " + valType);
+        };
 
     }
 
     @Override
     public void hydrate(Hydrator h) {
-        sender = h.getExForId(senderId);
-        if (value instanceof PartiallyAppliedFunction) {
-            ((PartiallyAppliedFunction) value).hydrate(h);
+        // rather no hydration of sender, since it immediately gets evicted on termination
+        if (value instanceof Hydratable) {
+            ((Hydratable) value).hydrate(h);
+        }
+    }
+
+    @Override
+    public void dehydrate() {
+        if(value instanceof Hydratable) {
+            ((Hydratable) value).dehydrate();
         }
     }
 }

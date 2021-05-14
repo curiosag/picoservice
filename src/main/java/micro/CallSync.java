@@ -4,61 +4,83 @@ import micro.event.ExEvent;
 import nano.ingredients.Err;
 import nano.ingredients.Name;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CallSync<T extends Serializable> implements _Ex {
+public class CallSync<T> implements _Ex {
 
     private final F f;
     private final Class<T> resultType;
     private final Node node;
+    private Long latchOntoExId;
 
-    private final Map<String, Integer> params = new HashMap<>();
+    private final Map<String, T> params = new HashMap<>();
     private Value result;
+    private _Ex ex;
 
     private CallSync(Class<T> resultType, F f, Node node) {
+        this(null, resultType, f, node);
+    }
+
+    private CallSync(Long latchOntoExId, Class<T> resultType, F f, Node node) {
         this.f = f;
         this.resultType = resultType;
         this.node = node;
+        this.latchOntoExId = latchOntoExId;
     }
 
-    public static <T extends Serializable> CallSync<T> of(Class<T> resultType, F f, Node node) {
+    public static <T> CallSync<T> of(Class<T> resultType, F f, Node node) {
         return new CallSync<>(resultType, f, node);
     }
 
-    public CallSync<T> param(String key, Integer value) {
+    public CallSync<T> param(String key, T value) {
         params.put(key, value);
         return this;
     }
 
+    public CallSync<T> latchOnto(Long exId)
+    {
+        this.latchOntoExId = exId;
+        return this;
+    }
+
+    public long prepareEx() {
+        ex = node.createExecution(f, this);
+        return ex.getId();
+    }
+
     @SuppressWarnings("unchecked")
     public T call() {
-        _Ex ex = node.createExecution(f, this);
-
-        if (params.size() == 0) {
-            ex.receive(Value.of(Name.kickOff, 0, this));
+        if(latchOntoExId == null) {
+            if (ex == null)
+                prepareEx();
+            if (params.size() == 0) {
+                ex.receive(Value.of(Name.kickOff, 0, this));
+            } else {
+                params.forEach((k, v) -> ex.receive(Value.of(k, v, this)));
+            }
         } else {
-            params.forEach((k, v) -> ex.receive(Value.of(k, v, this)));
+            node.relatchExecution(latchOntoExId, f, this);
         }
 
         while (true) {
-            if (result == null) {
-                Concurrent.sleep(10);
+            if (getResult() == null) {
+                Concurrent.sleep(100);
                 continue;
             }
 
-            if (result.getName().equals(Name.error)) {
-                Err e = (Err) result.get();
+            if (getResult().getName().equals(Name.error)) {
+                Err e = (Err) getResult().get();
                 throw new RuntimeException(e.exception);
             } else {
-                if (!(resultType.isAssignableFrom(result.get().getClass()))) {
+                if (!(resultType.isAssignableFrom(getResult().get().getClass()))) {
                     throw new RuntimeException("inconsistent result type");
                 }
-                return (T) result.get();
+                return (T) getResult().get();
             }
 
         }
+
 
     }
 
@@ -74,7 +96,7 @@ public class CallSync<T extends Serializable> implements _Ex {
 
     @Override
     public void receive(Value v) {
-        result = v;
+        setResult(v);
     }
 
     @Override
@@ -110,5 +132,13 @@ public class CallSync<T extends Serializable> implements _Ex {
     @Override
     public void crank() {
 
+    }
+
+    private Value getResult() {
+        return result;
+    }
+
+    private void setResult(Value result) {
+        this.result = result;
     }
 }

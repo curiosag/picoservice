@@ -36,9 +36,10 @@ public class Node implements Closeable, Hydrator {
     private final AtomicLong maxExId = new AtomicLong(ExTop.TOP_ID);
     private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
-    private boolean recover;
+    private boolean recover = false;
+    private boolean recovered = false;
     private final boolean useEventLog;
-    private static final boolean debug = false;
+    private final boolean debug = false;
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
         this.address = address;
@@ -57,50 +58,11 @@ public class Node implements Closeable, Hydrator {
         return "/home/ssmertnig/temp/" + address.getNode() + ".kryo";
     }
 
-    private void recover(Address address) {
-        Check.preCondition(recover);
-
-        if (logReader == null)
-            logReader = new KryoEventLogReader(getEventLogFileName(address));
-
-        long maxExId = 0;
-
-        for (Hydratable h : logReader) {
-            switch (SerioulizedEvent.of(h.getClass())) {
-                case ExCreatedEvent -> {
-                    ExCreatedEvent e = (ExCreatedEvent) h;
-                    _F f = getFForId(e.getFId());
-                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e, f));
-                    maxExId = Math.max(maxExId, e.exId);
-                    idToEx.put(e.exId, ex);
-                }
-                case ValueReceivedEvent, PropagationTargetExsCreatedEvent, ValueEnqueuedEvent, ValueProcessedEvent -> {
-                    h.hydrate(this);
-                    ExEvent e = (ExEvent) h;
-                    e.ex.recover(e);
-                }
-                case ExDoneEvent -> removeEx(((ExEvent) h).exId);
-                default -> throw new IllegalStateException("invalid type of SerioulizedEvent: " + h.getClass().getSimpleName());
-            }
-        }
-
-        this.maxExId.set(maxExId);
-        idToEx.values().stream()
-                .filter(i -> !i.equals(top))
-                .forEach(cranks::add);
-        recover = false;
-    }
-
-    private void removeEx(Long exId){
+    private void removeEx(Long exId) {
         idToEx.remove(exId);
     }
 
     private _Ex getReturnTarget(ExCreatedEvent e, _F f) {
-        Optional<Relatch> re = getRelatch(e.exId);
-        if (re.isPresent()) {
-            Check.invariant(re.get().f.equals(f));
-            return re.get().returnTo;
-        }
         return getExForId(e.exReturnToId);
     }
 
@@ -115,33 +77,79 @@ public class Node implements Closeable, Hydrator {
         if (recover) {
             this.recover = recover;
             recover(address);
+            debug("*** RECOVERED ***");
         }
         crankRoundRobin(cranks);
     }
 
     private void crankRoundRobin(ConcurrentLinkedQueue<Crank> cranks) {
+        debug("*** RUN ***");
         while (true) {
-            if (stop.get()) { //TODO its rather a non-working suspend. stop should terminate
-                Concurrent.sleep(1000);
-                continue;
+            if (stop.get()) {
+                return;
             }
             Concurrent.sleep(delay.get());
 
-            // removal of cranks that are done gets triggered by ExDoneEvent
-            Crank source = cranks.poll();
-            if (source != null) {
-                while (source.isMoreToDo()) {
-                    source.crank();
+            Crank current = cranks.poll();
+            if (current != null) {
+                while (current.isMoreToDoRightNow()) {
+                    current.crank();
                 }
-                cranks.add(source);
+                if (current.isDone()) {
+                    idToEx.remove(current.getId());
+                } else {
+                    cranks.add(current);
+                }
             } else {
-                Concurrent.await(500);
+                Concurrent.await(200);
             }
         }
     }
 
+    private void recover(Address address) {
+        Check.preCondition(recover);
+
+        if (logReader == null)
+            logReader = new KryoEventLogReader(getEventLogFileName(address));
+
+        long maxExId = 0;
+
+        for (Hydratable h : logReader) {
+            switch (SerioulizedEvent.of(h.getClass())) {
+                case ExCreatedEvent, DependendExCreatedEvent -> {
+                    ExCreatedEvent e = (ExCreatedEvent) h;
+                    _F f = getFForId(e.getFId());
+                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e, f));
+                    maxExId = Math.max(maxExId, e.exId);
+                    idToEx.put(e.exId, ex);
+                    if (e instanceof DependendExCreatedEvent) {
+                        DependendExCreatedEvent d = (DependendExCreatedEvent) e;
+                        d.ex = ex;
+                        idToEx.get(d.dependingOnId).recover(e);
+                    }
+                }
+                case KarmaEventCanPropagatePendingValues, ValueReceivedEvent, PropagationTargetExsCreatedEvent, ValueEnqueuedEvent, ValueProcessedEvent -> {
+                    h.hydrate(this);
+                    ExEvent e = (ExEvent) h;
+                    e.ex.recover(e);
+                }
+                case ExDoneEvent -> removeEx(((ExEvent) h).exId);
+                default -> throw new IllegalStateException("invalid type of SerioulizedEvent: " + h.getClass().getSimpleName());
+            }
+        }
+
+        this.maxExId.set(maxExId);
+        idToEx.values().stream()
+                .filter(i -> !i.equals(top))
+                .forEach(cranks::add);
+
+        recover = false;
+        recovered = true;
+    }
+
     @Override
     public void close() {
+        stop();
         tracer.close();
         try {
             logWriter.close();
@@ -151,13 +159,12 @@ public class Node implements Closeable, Hydrator {
     }
 
     private void log(Event e) {
-        if (e instanceof ValueEnqueuedEvent) {
+        if (e instanceof ValueEnqueuedEvent)
             debugValueEnqueuedEvent((ValueEnqueuedEvent) e);
-        }
-        if (e instanceof ExDoneEvent) {
-            synchronized (this) {
-                cranks.remove(((ExDoneEvent)e).ex);
-            }
+        if (e instanceof ExCreatedEvent) {
+            _Ex ex = ((ExCreatedEvent) e).ex;
+            cranks.add(ex);
+            idToEx.put(ex.getId(), ex);
         }
         logWriter.put(e);
     }
@@ -168,6 +175,11 @@ public class Node implements Closeable, Hydrator {
 
     void log(String msg) {
         System.out.println(Thread.currentThread().getId() + " " + msg);
+    }
+
+    public void debug(String s) {
+        if (debug)
+            log(s);
     }
 
     _Ex getTop() {
@@ -217,7 +229,6 @@ public class Node implements Closeable, Hydrator {
     }
 
     void start(boolean recover) {
-        Check.invariant(recover || relatches.size() == 0);
         this.stop.set(false);
         new Thread(() -> run(recover)).start();
     }
@@ -230,28 +241,24 @@ public class Node implements Closeable, Hydrator {
         return createExecution(f, top);
     }
 
-    public _Ex createExecution(_F f, _Ex returnTo) {
+    public DependendExCreatedEvent createDependentExecutionEvent(_F f, _Ex returnTo, _Ex dependingOn) {
         Check.preCondition(!recover);
         _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
-        log(new ExCreatedEvent((Ex) ex));
-        cranks.add(ex);
-        idToEx.put(ex.getId(), ex);
-        return ex;
+        return new DependendExCreatedEvent((Ex) ex, (Ex) dependingOn);
     }
 
-    private record Relatch(Long exid, _F f, _Ex returnTo) {
-    }
-
-    List<Relatch> relatches = new ArrayList<>();
-
-    private Optional<Relatch> getRelatch(long exid) {
-        Optional<Relatch> result = relatches.stream().filter(i -> i.exid == exid).findAny();
-        result.ifPresent(relatch -> relatches.remove(relatch));
-        return result;
+    public _Ex createExecution(_F f, _Ex returnTo) {
+        Check.preCondition(!recover);
+        if (f.equals(returnTo.getTemplate())) {
+            return returnTo;
+        } else {
+            _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
+            log(new ExCreatedEvent((Ex) ex));
+            return ex;
+        }
     }
 
     public void relatchExecution(long exId, _F f, _Ex returnTo) {
-        //relatches.add(new Relatch(exId, f, returnTo));
         idToEx.put(returnTo.getId(), returnTo);
     }
 

@@ -27,6 +27,12 @@ public class Check {
         }
     }
 
+    public static void postCondition(boolean condition) {
+        if (!condition) {
+            fail("eh...");
+        }
+    }
+
     public static void invariant(boolean invariant, String msg) {
         if (!invariant) {
             fail(msg);

@@ -1046,7 +1046,7 @@ public class PicoServiceTest {
 
         _if.returnTo(resultMonitor, Name.result);
 
-        // an example how init/finalize could deviate from propagations, which reduces communication,
+        // an example priority init/finalize could deviate from propagations, which reduces communication,
         // but may be confusing
 
         resultMonitor.propagate(Name.a, Name.leftArg, gt);

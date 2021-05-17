@@ -15,4 +15,6 @@ public interface _Ex extends Id, Crank {
 
     Address getAddress();
 
+    String getLabel();
+
 }

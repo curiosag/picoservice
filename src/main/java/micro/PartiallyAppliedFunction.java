@@ -19,6 +19,7 @@ public class PartiallyAppliedFunction implements Hydratable, Serioulizable {
         Guards.notNull(baseFunction);
         Guards.notNull(partialValues);
         this.baseFunction = baseFunction;
+        this.idBaseFunction = baseFunction.getId();
         this.partialValues.addAll(partialValues);
     }
 

@@ -8,6 +8,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 public abstract class Ex implements _Ex, Crank {
+    protected static final ExEvent none = new ExEvent() {
+    };
+
     protected boolean resultOrExceptionFromPrimitive;
 
     boolean done = false;
@@ -23,7 +26,8 @@ public abstract class Ex implements _Ex, Crank {
 
     protected Queue<Value> inBox = new ConcurrentLinkedQueue<>();
     protected Stack<ExEvent> exStack = new Stack<>();
-    private boolean isRecovery;
+    protected Queue<KarmaEvent> exValueAfterlife = new LinkedList<>();
+    protected boolean isRecovery;
     private boolean recovered;
 
     public Ex(Node node, long id, F template, _Ex returnTo) {
@@ -67,16 +71,15 @@ public abstract class Ex implements _Ex, Crank {
 
         ExEvent current = exStack.peek();
 
-        switch (customEventHandling(current)) {
-            case nonconsuming -> {
-                return;
-            }
-            case consuming -> {
-                exStack.pop();
-                return;
-            }
-            case none -> {
-            }
+        if (current instanceof KarmaEvent k) {
+            handleKarma(k);
+            exStack.pop();
+            return;
+        }
+
+        if (customEventHandled(current)) {
+            exStack.pop();
+            return;
         }
 
         if (current instanceof PropagationTargetExsCreatedEvent) {
@@ -85,38 +88,56 @@ public abstract class Ex implements _Ex, Crank {
             return;
         }
 
-        if (current instanceof ValueEnqueuedEvent) {
-            if (propagations == null) {
-                if (template.getTargets().size() > 0) {
-                    push(new PropagationTargetExsCreatedEvent(this, node.allocatePropagationTargets(this, template.getTargets())));
-                    return;
-                } else {
-                    propagations = Collections.emptyList();
-                }
-            }
+        if (current instanceof ValueEnqueuedEvent valueEvent) {
+            if (triggeredPropagationTargetExsCreatedEvent())
+                return;
 
-            Optional<ExEvent> customValueEvent = raiseCustomEvent(((ValueEnqueuedEvent) current).value);
-            if (customValueEvent.isPresent()) {
-                push(customValueEvent.get());
+            if (eventChainedBeforeProcessValue(valueEvent)) {
                 return;
             }
 
-            Value value = ((ValueEnqueuedEvent) current).value;
-            processValue(value);
-            if (resultOrException(value) || resultOrExceptionFromPrimitive) {
-                push(new ExDoneEvent(this), new ValueProcessedEvent(this, value));
-            } else {
-                push(new ValueProcessedEvent(this, value));
-            }
+            processValue(valueEvent.value);
+
+            // The valueEnqueued/ValueProcessed transactionality is needed in any case, so eventChainedAfterProcessValue
+            // must react to ValueEnqeuedEvent rather than ValueProcessedEvent. This implies that processValue must be idempotent
+            // at the 2nd call when ValueEnqueuedEvent is processed again after eventChainedAfterProcessValue returned true
+            if (eventChainedAfterProcessValue(valueEvent))
+                return;
+
+            // afterlife is a recoverable way to trigger events tied to a value V after ValueProcessedEvent(V) when the
+            // eventChainedAfterProcessValue mechanism isn't suitable.
+            // Its for the case when a single value V processed causes the whole subsequent execution tree
+            // to execute, followed by the final enclosing ValueProcessedEvent(V). Such an event log prevents reasonable recovery.
+            // (ValueEnqueuedEvent(V) -> all the executions x1...xn until result -> ValueProcessedEvent(V). Imagine shutdown at xi, but
+            // on recovery ValueEnqueuedEvent would reinitiate x1...xn in the absence of ValueProcessedEvent. So some mechanism is needed
+            // to resolve such scenarios). Its relevant for the cases with potentially stashed pending values,
+            // ExFCallByFunctionalValue and ExIf
+            getAfterlife(valueEvent).ifPresent(this::extendAfterlife);
+
+            push(new ValueProcessedEvent(this, valueEvent.value));
             return;
         }
 
         if (current instanceof ValueProcessedEvent) {
-            clearValue(((ValueProcessedEvent) current).value);
+
+            Value value = ((ValueProcessedEvent) current).value;
+            clearValue(value);
+
+            if (resultOrException(value) || resultOrExceptionFromPrimitive) {
+                push(new ExDoneEvent(this));
+            }
+
             return;
         }
 
         if (current instanceof ExDoneEvent) {
+            if (recovered) {
+                exValueAfterlife.clear();
+            } else {
+                Check.postCondition(exValueAfterlife.isEmpty());
+            }
+            exStack.pop();
+            Check.postCondition(exStack.isEmpty());
             done = true;
             return;
         }
@@ -124,20 +145,69 @@ public abstract class Ex implements _Ex, Crank {
         Check.fail("unhandled event " + current.toString());
     }
 
-    protected CustomEventHandling customEventHandling(ExEvent current) {
-        return CustomEventHandling.none;
+    protected void handleKarma(KarmaEvent k) {
+        throw new IllegalStateException("implementation mising?");
     }
 
-    protected Optional<ExEvent> raiseCustomEvent(Value value) {
+    private void extendAfterlife(KarmaEvent karma) {
+        node.note(karma);
+        exValueAfterlife.add(karma);
+    }
+
+    protected boolean customEventHandled(ExEvent current) {
+        return false;
+    }
+
+    private boolean triggeredPropagationTargetExsCreatedEvent() {
+        if (propagations == null) {
+            if (template.getTargets().size() > 0) {
+                push(new PropagationTargetExsCreatedEvent(this, node.allocatePropagationTargets(this, template.getTargets())));
+                return true;
+            } else {
+                propagations = Collections.emptyList();
+            }
+        }
+        return false;
+    }
+
+    private boolean eventChainedBeforeProcessValue(ValueEnqueuedEvent current) {
+        ExEvent triggered = getEventTriggeredBeforeCurrent(current);
+        if (triggered != none) {
+            push(triggered);
+            return true;
+        }
+        return false;
+    }
+
+    protected Optional<KarmaEvent> getAfterlife(ValueEnqueuedEvent valueEvent) {
         return Optional.empty();
+    }
+
+    private boolean eventChainedAfterProcessValue(ValueEnqueuedEvent current) {
+        ExEvent triggered = getEventTriggeredAfterCurrent(current);
+        if (triggered != none) {
+            push(triggered);
+            return true;
+        }
+        return false;
+    }
+
+    protected ExEvent getEventTriggeredBeforeCurrent(ValueEnqueuedEvent value) {
+        return none;
+    }
+
+    protected ExEvent getEventTriggeredAfterCurrent(ValueEnqueuedEvent value) {
+        return none;
     }
 
     protected void processValue(Value v) {
         if (namesReceived.contains(v.getName())) {
-            // propagations may re-send values in case of a recovery after an unexpected halt (out of memory, power cut...)
-            // where the propagation may even have been complete, but the ValueProcessedEvent not been persisted.
-            // so receiving/processValue needs to be idempotent
-            node.log(getLabel() + " skipping already received value " + v);
+            // receiving/processValue needs to be idempotent
+            //
+            // Propagations may re-send values in case of a recovery after an unexpected halt (out of memory, power cut...)
+            // where the propagation may even have been completed, but the ValueProcessedEvent not been persisted.
+            // Also eventChainedAfterCurrent causes a 2nd call of processValue that should return immediately.
+            return;
         }
 
         namesReceived.add(v.getName());
@@ -176,12 +246,13 @@ public abstract class Ex implements _Ex, Crank {
         isRecovery = true;
         recovered = true;
         try {
-            switch (customEventHandling(e)) {
-                case nonconsuming, consuming -> {
-                    return;
-                }
-                case none -> {
-                }
+            if (e instanceof KarmaEvent k) {
+                exValueAfterlife.add(k);
+                return;
+            }
+
+            if (customEventHandled(e)) {
+                return;
             }
 
             if (e instanceof ValueReceivedEvent) {
@@ -202,6 +273,7 @@ public abstract class Ex implements _Ex, Crank {
             if (e instanceof ValueProcessedEvent) {
                 Value v = ((ValueProcessedEvent) e).value;
                 processValue(v);
+                exStack.push(e);
                 clearValue(v);
                 return;
             }
@@ -221,33 +293,51 @@ public abstract class Ex implements _Ex, Crank {
         Check.invariant(!isRecovery);
         Check.invariant(exStack.isEmpty() || recovered);
 
+        if (recovered && !exStack.isEmpty()) {
+            process(exStack);
+            return; // So the caller decides if there's more to do
+        }
+
+        if (!exValueAfterlife.isEmpty()) {
+            exStack.addAll(exValueAfterlife);
+            exValueAfterlife.clear();
+            process(exStack);
+            return; // So the caller decides if there's more to do
+        }
+
         Value value = inBox.peek();
         Check.invariant(value != null);
 
         push(new ValueEnqueuedEvent(this, value));
+        process(exStack);
+    }
+
+    private void process(Stack<ExEvent> exStack) {
         while (!exStack.isEmpty()) {
             proceed();
         }
     }
 
     @Override
-    public boolean isMoreToDo() {
-        return !inBox.isEmpty();
+    public boolean isMoreToDoRightNow() {
+        // inbox might be populated in some re-send recovery cases, where a result
+        // already has been produced. Therefore *done* must be considered too
+        // afterlife should be processed immediately after valueProcessed, so should be ok with done-logic here too
+        return (!(done || (inBox.isEmpty()))) || !exValueAfterlife.isEmpty();
     }
 
-    protected void push(ExEvent... e) {
+    protected void push(ExEvent e) {
         if (isRecovery) {
             return;
         }
-        for (int i = e.length - 1; i >= 0; i--) {
-            node.note(e[i]);
-        }
-        Arrays.stream(e).forEach(exStack::push);
+        node.note(e);
+        exStack.push(e);
     }
 
     private void clearValue(Value e) {
         Check.condition(e.equals(inBox.poll()));
-        exStack.clear();
+        Check.condition(exStack.pop() instanceof ValueProcessedEvent);
+        Check.condition(exStack.pop() instanceof ValueEnqueuedEvent);
     }
 
     void clear() {
@@ -284,6 +374,7 @@ public abstract class Ex implements _Ex, Crank {
                 .collect(Collectors.toList());
     }
 
+    @Override
     public String getLabel() {
         return template.getLabel();
     }
@@ -310,7 +401,8 @@ public abstract class Ex implements _Ex, Crank {
     }
 
     protected void propagate(Value v) {
-        getPropagations(v.getName()).forEach(p ->
+        List<ExPropagation> propagations = getPropagations(v.getName());
+        propagations.forEach(p ->
                 // propagation regardless of recovery or not, since it may have ended up incomplete in an original run
                 // A per-propagation state tracking seems too slow and not needed right now but is an option to prevent
                 // re-sending on the sender's side
@@ -335,15 +427,16 @@ public abstract class Ex implements _Ex, Crank {
         this.node = node;
     }
 
-    public void setTemplate(F template) {
-        this.template = template;
-    }
-
     public _Ex getReturnTo() {
         return returnTo;
     }
 
     public void setReturnTo(_Ex returnTo) {
         this.returnTo = returnTo;
+    }
+
+    @Override
+    public boolean isDone() {
+        return done;
     }
 }

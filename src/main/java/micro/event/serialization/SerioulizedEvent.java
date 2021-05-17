@@ -8,14 +8,17 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public enum SerioulizedEvent {
-    InitialExCreatedEvent(0, ExCreatedEvent::new),
-    ExCreatedEvent(1, ExCreatedEvent::new),
+    ExCreatedEvent(0, ExCreatedEvent::new),
+    DependendExCreatedEvent(1, DependendExCreatedEvent::new),
 
     ValueReceivedEvent(2, micro.event.ValueReceivedEvent::new),
     ValueEnqueuedEvent(3, micro.event.ValueEnqueuedEvent::new),
     PropagationTargetExsCreatedEvent(4, PropagationTargetExsCreatedEvent::new),
     ValueProcessedEvent(5, micro.event.ValueProcessedEvent::new),
-    ExDoneEvent(6, ExDoneEvent::new);
+    ExDoneEvent(6, ExDoneEvent::new),
+
+    KarmaEventCanPropagatePendingValues(10, KarmaEventCanPropagatePendingValues::new);
+
 
     static Map<Integer, SerioulizedEvent> idToSerializedClass = new HashMap<>();
     static Map<Class, SerioulizedEvent> classToSerializedClass = new HashMap<>();
@@ -59,16 +62,17 @@ public enum SerioulizedEvent {
     }
 
     static {
-        idToSerializedClass.put(0, InitialExCreatedEvent);
-        idToSerializedClass.put(1, ExCreatedEvent);
+        idToSerializedClass.put(0, ExCreatedEvent);
+        idToSerializedClass.put(1, DependendExCreatedEvent);
 
         idToSerializedClass.put(2, ValueReceivedEvent);
         idToSerializedClass.put(3, ValueEnqueuedEvent);
         idToSerializedClass.put(4, PropagationTargetExsCreatedEvent);
         idToSerializedClass.put(5, ValueProcessedEvent);
         idToSerializedClass.put(6, ExDoneEvent);
+        idToSerializedClass.put(10, KarmaEventCanPropagatePendingValues);
 
-        classToSerializedClass.put(InitialExCreatedEvent.class, InitialExCreatedEvent);
+        classToSerializedClass.put(DependendExCreatedEvent.class, DependendExCreatedEvent);
         classToSerializedClass.put(ExCreatedEvent.class, ExCreatedEvent);
 
         classToSerializedClass.put(ValueReceivedEvent.class, ValueReceivedEvent);
@@ -76,6 +80,7 @@ public enum SerioulizedEvent {
         classToSerializedClass.put(PropagationTargetExsCreatedEvent.class, PropagationTargetExsCreatedEvent);
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
         classToSerializedClass.put(ExDoneEvent.class, ExDoneEvent);
+        classToSerializedClass.put(KarmaEventCanPropagatePendingValues.class, KarmaEventCanPropagatePendingValues);
     }
 
 }

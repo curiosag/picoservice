@@ -1,13 +1,12 @@
 package micro.event;
 
-import micro.Check;
-import micro.Ex;
-import micro.Hydrator;
-import micro._Ex;
+import micro.*;
 import micro.event.serialization.Incoming;
 import micro.event.serialization.Outgoing;
 
 public abstract class ExEvent extends Event {
+
+    public String exName;
     public _Ex ex;
     public long exId;
     public long exReturnToId;
@@ -56,6 +55,9 @@ public abstract class ExEvent extends Event {
 
     @Override
     public void dehydrate() {
+        if(ex != null) {
+            exName = ((F) ex.getTemplate()).getLabel();
+        }
         ex = null;
     }
 }

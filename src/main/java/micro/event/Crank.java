@@ -1,8 +1,12 @@
 package micro.event;
 
-public interface Crank {
+import micro.Id;
 
-    boolean isMoreToDo();
+public interface Crank extends Id {
+
+    boolean isMoreToDoRightNow();
+
+    boolean isDone();
 
     void crank();
 

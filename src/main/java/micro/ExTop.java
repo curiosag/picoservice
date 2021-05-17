@@ -70,6 +70,11 @@ public class ExTop implements  _Ex, Id {
     }
 
     @Override
+    public String getLabel() {
+        return "TOP";
+    }
+
+    @Override
     public long getId() {
         return TOP_ID;
     }
@@ -80,8 +85,13 @@ public class ExTop implements  _Ex, Id {
     }
 
     @Override
-    public boolean isMoreToDo() {
+    public boolean isMoreToDoRightNow() {
         return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return true;
     }
 
     @Override

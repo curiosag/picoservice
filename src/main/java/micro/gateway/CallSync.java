@@ -1,5 +1,6 @@
-package micro;
+package micro.gateway;
 
+import micro.*;
 import micro.event.ExEvent;
 import nano.ingredients.Err;
 import nano.ingredients.Name;
@@ -91,7 +92,7 @@ public class CallSync<T> implements _Ex {
 
     @Override
     public _F getTemplate() {
-        throw new RuntimeException("no call expected");
+        return FGateway.instance;
     }
 
     @Override
@@ -110,9 +111,14 @@ public class CallSync<T> implements _Ex {
     }
 
     @Override
+    public String getLabel() {
+        return "CallSync";
+    }
+
+    @Override
     public long getId() {
         return -1;
-    }
+    } //TODO won't work for multiple sync calls simultaneously
 
     @Override
     public void setId(long value) {
@@ -125,8 +131,13 @@ public class CallSync<T> implements _Ex {
     }
 
     @Override
-    public boolean isMoreToDo() {
+    public boolean isMoreToDoRightNow() {
         return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return true;
     }
 
     @Override
@@ -134,11 +145,11 @@ public class CallSync<T> implements _Ex {
 
     }
 
-    private Value getResult() {
+    private synchronized Value getResult() {
         return result;
     }
 
-    private void setResult(Value result) {
+    private synchronized void setResult(Value result) {
         this.result = result;
     }
 }

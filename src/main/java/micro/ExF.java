@@ -14,10 +14,12 @@ public class ExF extends Ex {
         propagate(v);
 
         if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
-            if (template.getPrimitive().isSideEffect()) {
-                applySideEffect();
-            } else {
-                applyFunction();
+            if(! isRecovery) {
+                if (template.getPrimitive().isSideEffect()) {
+                    applySideEffect();
+                } else {
+                    applyFunction();
+                }
             }
             resultOrExceptionFromPrimitive = true;
         }

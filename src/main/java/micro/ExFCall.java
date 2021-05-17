@@ -1,15 +1,14 @@
 package micro;
 
-import micro.event.CustomEventHandling;
+import micro.event.DependendExCreatedEvent;
 import micro.event.ExEvent;
-import micro.event.ExCreatedEvent;
-
-import java.util.Optional;
+import micro.event.ValueEnqueuedEvent;
 
 public class ExFCall extends Ex {
 
     private FCall callTemplate; //TODO zu kompliziert, wieso nicht gleich "called" hier?
     private _Ex beingCalled;
+    private boolean dependendExCreatedEventRaised;
 
     ExFCall(Node node, long exId, FCall callTemplate, _Ex returnTo) {
         super(node, exId, callTemplate, returnTo);
@@ -26,29 +25,34 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    protected CustomEventHandling customEventHandling(ExEvent e) {
-        if (beingCalled == null && e instanceof ExCreatedEvent) {
-            acceptExBeingCalled(e);
-            return CustomEventHandling.consuming;
+    protected boolean customEventHandled(ExEvent e) {
+        if (e instanceof DependendExCreatedEvent) {
+            acceptExBeingCalled((DependendExCreatedEvent)e);
+            return true;
         }
-        return CustomEventHandling.none;
+        return false;
     }
 
-    private void acceptExBeingCalled(ExEvent e) {
+    private void acceptExBeingCalled(DependendExCreatedEvent e) {
         Check.invariant(e.getEx().getTemplate().equals(callTemplate.getCalled()));
         beingCalled = e.getEx();
+        dependendExCreatedEventRaised = true; // for recovery case
     }
 
     @Override
-    protected Optional<ExEvent> raiseCustomEvent(Value value) {
-        if (beingCalled != null) {
-            return Optional.empty();
+    protected ExEvent getEventTriggeredBeforeCurrent(ValueEnqueuedEvent value) {
+        if (! dependendExCreatedEventRaised) {
+            dependendExCreatedEventRaised = true;
+            return node.createDependentExecutionEvent(callTemplate.getCalled(), this, this);
         }
-        return Optional.of(new ExCreatedEvent((Ex) node.createExecution(callTemplate.getCalled(), this))); //TODO (Ex)?
+        return none;
     }
 
     @Override
     public void processValueDownstream(Value v) {
+        if (isRecovery) {
+            return;
+        }
         Check.preCondition(isLegitDownstreamValue(v));
         propagate(v);
         if (callTemplate.formalParameters.contains(v.getName())) {

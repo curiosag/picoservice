@@ -1,8 +1,6 @@
 package micro;
 
-import micro.event.CustomEventHandling;
-import micro.event.ExEvent;
-import micro.event.ExCreatedEvent;
+import micro.event.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,13 +8,12 @@ import java.util.Optional;
 
 public class ExFCallByFunctionalValue extends Ex {
 
-    long idf;
-
     FCallByFunctionalValue f;
     _F baseFunction;
     _Ex beingCalled;
 
     private final List<Value> pendingValues = new ArrayList<>();
+    private boolean dependentExCreated;
 
     ExFCallByFunctionalValue(Node node, long id, FCallByFunctionalValue f, _Ex returnTo) {
         super(node, id, f, returnTo);
@@ -24,33 +21,50 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
-    protected CustomEventHandling customEventHandling(ExEvent e) {
-        if (e instanceof ExCreatedEvent) {
-            acceptFunctionalValueEx(e.getEx());
-            return CustomEventHandling.consuming;
-        }
-        return CustomEventHandling.none;
-    }
+    protected void handleKarma(KarmaEvent k) {
+        Check.condition(k instanceof KarmaEventCanPropagatePendingValues);
+        Check.preCondition(dependentExCreated);
 
-    private void acceptFunctionalValueEx(_Ex e) {
-        Check.invariant(e.getTemplate().equals(baseFunction));
-        beingCalled = e;
         pendingValues.forEach(pv -> deliver(pv.withSender(this), beingCalled));
+        pendingValues.clear();
     }
 
     @Override
-    protected Optional<ExEvent> raiseCustomEvent(Value value) {
-        if (baseFunction == null && value.getName().equals(f.getFunctionalValueParam())) {
-            acceptFunctionalValueTemplate(value);
-            return Optional.of(new ExCreatedEvent((Ex) node.createExecution(baseFunction, this))); //TODO (Ex)?
+    protected boolean customEventHandled(ExEvent e) {
+        if (e instanceof DependendExCreatedEvent) {
+            dependentExCreated = true; // needs to be set in case of recovery
+            beingCalled = e.getEx();
+            Check.postCondition((isRecovery && baseFunction == null) || beingCalled.getTemplate().equals(baseFunction));
+            return true;
         }
 
+        return false;
+    }
+
+    @Override
+    protected Optional<KarmaEvent> getAfterlife(ValueEnqueuedEvent e) {
+        if (isFunctionalValueParam(e)) {
+            return Optional.of(new KarmaEventCanPropagatePendingValues(this));
+        }
         return Optional.empty();
     }
 
-    private void acceptFunctionalValueTemplate(Value value) {
-        Check.invariant(value.get() instanceof PartiallyAppliedFunction, "that wasn't expected: " + value);
-        PartiallyAppliedFunction f = ((PartiallyAppliedFunction) value.get());
+    private boolean isFunctionalValueParam(ValueEvent e) {
+        return e.value.getName().equals(f.getFunctionalValueParam());
+    }
+
+    @Override
+    protected ExEvent getEventTriggeredAfterCurrent(ValueEnqueuedEvent e) {
+        if (!dependentExCreated && isFunctionalValueParam(e)) {
+            dependentExCreated = true;
+            return node.createDependentExecutionEvent(baseFunction, this, this);
+        }
+        return none;
+    }
+
+    private void acceptFunctionalValueTemplate(Object value) {
+        Check.invariant(value instanceof PartiallyAppliedFunction, "that wasn't expected: " + value);
+        PartiallyAppliedFunction f = ((PartiallyAppliedFunction) value);
         baseFunction = f.baseFunction;
         pendingValues.addAll(f.partialValues);
     }
@@ -60,13 +74,11 @@ public class ExFCallByFunctionalValue extends Ex {
         Check.preCondition(isLegitDownstreamValue(v));
 
         if (v.getName().equals(f.getFunctionalValueParam())) {
-            return; // handled in raiseCustomEvent
-        }
-
-        if (beingCalled != null) {
-            deliver(v.withSender(this), getFunctionBeingCalled());
-        } else {
+            acceptFunctionalValueTemplate(v.get());
+        } else if (beingCalled == null) {
             pendingValues.add(v);
+        } else {
+            deliver(v.withSender(this), getFunctionBeingCalled());
         }
     }
 

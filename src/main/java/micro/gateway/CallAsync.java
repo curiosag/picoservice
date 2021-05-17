@@ -1,5 +1,6 @@
-package micro;
+package micro.gateway;
 
+import micro.*;
 import micro.event.ExEvent;
 import nano.ingredients.Name;
 
@@ -88,12 +89,22 @@ public class CallAsync<T extends Serializable> implements _Ex {
     }
 
     @Override
-    public boolean isMoreToDo() {
+    public boolean isMoreToDoRightNow() {
         return false;
+    }
+
+    @Override
+    public boolean isDone() {
+        return true;
     }
 
     @Override
     public void crank() {
 
+    }
+
+    @Override
+    public String getLabel() {
+        return "CallSync";
     }
 }

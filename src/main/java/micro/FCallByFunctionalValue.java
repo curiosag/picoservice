@@ -6,8 +6,8 @@ public class FCallByFunctionalValue extends F {
 
     private final String functionalValueParam;
 
-    public FCallByFunctionalValue(Node node, String functionalValueParam, String ... formalParams) {
-        super(node, Primitive.nop, formalParams);
+    public FCallByFunctionalValue(Env env, String functionalValueParam, String ... formalParams) {
+        super(env, Primitive.nop, formalParams);
         this.functionalValueParam = functionalValueParam;
     }
 
@@ -17,7 +17,7 @@ public class FCallByFunctionalValue extends F {
 
     @Override
     public Ex createExecution(long id, _Ex returnTo) {
-        return new ExFCallByFunctionalValue(this.node, id,this, returnTo);
+        return new ExFCallByFunctionalValue(this.env, id,this, returnTo);
     }
 
 }

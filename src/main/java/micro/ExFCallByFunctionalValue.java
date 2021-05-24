@@ -15,8 +15,8 @@ public class ExFCallByFunctionalValue extends Ex {
     private final List<Value> pendingValues = new ArrayList<>();
     private boolean dependentExCreated;
 
-    ExFCallByFunctionalValue(Node node, long id, FCallByFunctionalValue f, _Ex returnTo) {
-        super(node, id, f, returnTo);
+    ExFCallByFunctionalValue(Env env, long id, FCallByFunctionalValue f, _Ex returnTo) {
+        super(env, id, f, returnTo);
         this.f = f;
     }
 
@@ -57,7 +57,7 @@ public class ExFCallByFunctionalValue extends Ex {
     protected ExEvent getEventTriggeredAfterCurrent(ValueEnqueuedEvent e) {
         if (!dependentExCreated && isFunctionalValueParam(e)) {
             dependentExCreated = true;
-            return node.createDependentExecutionEvent(baseFunction, this, this);
+            return env.createDependentExecutionEvent(baseFunction, this, this);
         }
         return none;
     }

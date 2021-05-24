@@ -2,8 +2,8 @@ package micro;
 
 public class ExF extends Ex {
 
-    public ExF(Node node, long id, F template, _Ex returnTo) {
-        super(node, id, template, returnTo);
+    public ExF(Env env, long id, F template, _Ex returnTo) {
+        super(env, id, template, returnTo);
     }
 
     @Override

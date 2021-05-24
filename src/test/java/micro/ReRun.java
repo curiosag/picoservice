@@ -16,29 +16,29 @@ public class ReRun {
     public record InitialRun(Long exId, List<Hydratable> events) {
     }
 
-    public static InitialRun runAndCheck(Object expected, Function<Node, CallSync<?>> call) {
+    public static InitialRun runAndCheck(Object expected, Function<Env, CallSync<?>> call) {
         SimpleListEventLog log = new SimpleListEventLog();
         long exId;
-        try (Node node = new Node(address, log, log)) {
-            node.start();
-            CallSync<?> sync = call.apply(node);
+        try (Node env = new Node(address, log, log)) {
+            env.start();
+            CallSync<?> sync = call.apply(env);
             exId = sync.prepareEx();
             assertEquals(expected, sync.call());
         }
         return new InitialRun(exId, log.events);
     }
 
-    public static void reRunAndCheck(long latchOntoExId, Function<Node, CallSync<?>> call, List<Hydratable> events, Object expected) {
+    public static void reRunAndCheck(long latchOntoExId, Function<Env, CallSync<?>> call, List<Hydratable> events, Object expected) {
         SimpleListEventLog log = new SimpleListEventLog(events);
-        try (Node node = new Node(address, log, log)) {
-            CallSync<?> sync = call.apply(node);
+        try (Node env = new Node(address, log, log)) {
+            CallSync<?> sync = call.apply(env);
             sync.latchOnto(latchOntoExId);
-            node.start(true); //TODO race condition, more if node started before call.apply. Node.idToF.get(fId) returns null for fid 1
+            env.start(true); //TODO race condition, more if node started before call.apply. Node.idToF.get(fId) returns null for fid 1
             assertEquals(expected, sync.call());
         }
     }
 
-    public static void reReReReRunAndCheck(long latchOntoExId, Function<Node, CallSync<?>> call, List<Hydratable> events, Object expected) {
+    public static void reReReReRunAndCheck(long latchOntoExId, Function<Env, CallSync<?>> call, List<Hydratable> events, Object expected) {
         if (true)
         for (int i = events.size(); i > 2; i--) {
             //System.out.println("RERUN " + i);

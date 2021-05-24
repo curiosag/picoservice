@@ -3,14 +3,14 @@ package micro.primitives.Lists;
 import micro.Check;
 import micro.Names;
 import micro.Value;
+import micro.primitives.Library;
 import micro.primitives.Primitive;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class Cons implements Primitive {
-    @SuppressWarnings({"unchecked", "ConstantConditions"})
+    @SuppressWarnings({"unchecked", "ConstantConditions", "rawtypes"})
     @Override
     public Object execute(Map<String, Value> params) {
         Value vl = params.get(Names.list);
@@ -27,9 +27,6 @@ public class Cons implements Primitive {
 
         List list = (List) l;
         Check.invariant(list.isEmpty() || e.getClass().equals(list.get(0).getClass()), "can't add heterogenous element");
-        ArrayList result = new ArrayList();
-        result.add(e);
-        result.addAll(list);
-        return result;
+        return Library.cons(e, list);
     }
 }

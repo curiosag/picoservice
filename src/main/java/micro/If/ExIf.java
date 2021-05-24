@@ -18,8 +18,8 @@ public class ExIf extends Ex {
 
     private final List<ValuePropagation> stash = new ArrayList<>();
 
-    ExIf(Node node, long id, F template, _Ex returnTo) {
-        super(node, id, template, returnTo);
+    ExIf(Env env, long id, F template, _Ex returnTo) {
+        super(env, id, template, returnTo);
     }
 
     @Override

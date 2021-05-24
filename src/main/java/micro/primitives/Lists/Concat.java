@@ -3,15 +3,15 @@ package micro.primitives.Lists;
 import micro.Check;
 import micro.Names;
 import micro.Value;
+import micro.primitives.Library;
 import micro.primitives.Primitive;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class Concat implements Primitive {
 
-    @SuppressWarnings({"unchecked", "ConstantConditions"})
+    @SuppressWarnings({"unchecked", "ConstantConditions, rawtypes"})
     @Override
     public Object execute(Map<String, Value> params) {
         Value vl = params.get(Names.left);
@@ -23,9 +23,6 @@ public class Concat implements Primitive {
         Object r = vr.get();
         Check.invariant(l instanceof List && r instanceof List, "Lists expected");
 
-        ArrayList result = new ArrayList();
-        result.addAll((List)vl.get());
-        result.addAll((List)vr.get());
-        return result;
+        return Library.concat((List)vl.get(), (List)vr.get());
     }
 }

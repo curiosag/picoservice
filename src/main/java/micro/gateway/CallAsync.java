@@ -14,19 +14,19 @@ public class CallAsync<T extends Serializable> implements _Ex {
     private final F f;
     private final Class<T> resultType;
     Consumer<T> consumer;
-    private final Node node;
+    private final Env env;
 
     private final Map<String, Integer> params = new HashMap<>();
 
-    private CallAsync(Class<T> resultType, F f, Consumer<T> consumer, Node node) {
+    private CallAsync(Class<T> resultType, F f, Consumer<T> consumer, Env env) {
         this.f = f;
         this.resultType = resultType;
         this.consumer = consumer;
-        this.node = node;
+        this.env = env;
     }
 
-    public static <T extends Serializable> CallAsync<T> of(Class<T> resultType, F f, Consumer<T> consumer, Node node) {
-        return new CallAsync<>(resultType, f, consumer, node);
+    public static <T extends Serializable> CallAsync<T> of(Class<T> resultType, F f, Consumer<T> consumer, Env env) {
+        return new CallAsync<>(resultType, f, consumer, env);
     }
 
     public CallAsync<T> param(String key, Integer value) {
@@ -35,7 +35,11 @@ public class CallAsync<T extends Serializable> implements _Ex {
     }
 
     public void call() {
-        _Ex ex = node.createExecution(f,this);
+        call(null);
+    }
+
+    public void call(Integer relatchToId) {
+        _Ex ex = env.createExecution(f,this);
 
         if (params.size() == 0) {
             ex.receive(Value.of(Name.kickOff, 0, this));
@@ -58,7 +62,7 @@ public class CallAsync<T extends Serializable> implements _Ex {
     @Override
     public void receive(Value v) {
         if (!(resultType.isAssignableFrom(v.get().getClass()))) {
-            throw new RuntimeException("inconsistent result type");
+            throw new RuntimeException("inconsistent result type " + v.get().getClass().getSimpleName());
         }
         consumer.accept((T) v.get());
     }

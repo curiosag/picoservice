@@ -23,14 +23,14 @@ public class FCall extends F {
         return result;
     }
 
-    public FCall(Node node, F called) {
-        super(node, Primitive.nop, called.formalParameters);
+    public FCall(Env env, F called) {
+        super(env, Primitive.nop, called.formalParameters);
         this.called = called;
     }
 
     @Override
     public Ex createExecution(long exId, _Ex returnTo) {
-        return new ExFCall(this.node, exId, this, returnTo);
+        return new ExFCall(this.env, exId, this, returnTo);
     }
 
     public F getCalled() {

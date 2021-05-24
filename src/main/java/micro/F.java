@@ -15,7 +15,7 @@ public class F implements _F, Id {
 
     private final Supplier<Long> nextPropagationId;
     private final long id;
-    protected final Node node;
+    protected final Env env;
     private String label;
     public String returnAs = Names.result;
     private Primitive primitive;
@@ -24,21 +24,21 @@ public class F implements _F, Id {
 
     List<String> formalParameters = new ArrayList<>();
 
-    private F(Node node, Primitive primitive) {
-        this.node = node;
-        this.id = node.getNextFId();
-        node.addF(this);
-        this.nextPropagationId = node::getNextExId;
+    private F(Env env, Primitive primitive) {
+        this.env = env;
+        this.id = env.getNextFId();
+        env.addF(this);
+        this.nextPropagationId = env::getNextExId;
         this.primitive = primitive;
     }
 
-    public F(Node node, Primitive primitive, List<String> formalParams) {
-        this(node, primitive);
+    public F(Env env, Primitive primitive, List<String> formalParams) {
+        this(env, primitive);
         this.formalParameters.addAll(formalParams);
     }
 
-    public F(Node node, Primitive primitive, String... formalParams) {
-        this(node, primitive);
+    public F(Env env, Primitive primitive, String... formalParams) {
+        this(env, primitive);
         Collections.addAll(formalParameters, formalParams);
     }
 
@@ -96,7 +96,7 @@ public class F implements _F, Id {
 
     @Override
     public Ex createExecution(long id, _Ex returnTo) {
-        return new ExF(this.node, id, this, returnTo);
+        return new ExF(this.env, id, this, returnTo);
     }
 
     public String getLabel() {
@@ -124,11 +124,11 @@ public class F implements _F, Id {
         return label != null ? label : "no name";
     }
 
-    public static F f(Node node, Primitive primitive, String... params) {
+    public static F f(Env env, Primitive primitive, String... params) {
         if (primitive == null) {
             throw new IllegalArgumentException();
         }
-        return new F(node, primitive, params);
+        return new F(env, primitive, params);
     }
 
     @Override

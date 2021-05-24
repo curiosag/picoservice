@@ -5,11 +5,12 @@ import micro.event.serialization.Outgoing;
 import micro.event.serialization.Serioulizable;
 import nano.ingredients.guards.Guards;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class PartiallyAppliedFunction implements Hydratable, Serioulizable {
+public class PartiallyAppliedFunction implements Hydratable, Serializable, Serioulizable {
 
     private long idBaseFunction;
     _F baseFunction;

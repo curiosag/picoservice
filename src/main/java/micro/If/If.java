@@ -6,8 +6,8 @@ import micro.primitives.Primitive;
 
 public class If extends F {
 
-    public If(Node node) {
-        super(node, Primitive.nop, Names.condition, Names.onTrue, Names.onFalse);
+    public If(Env env) {
+        super(env, Primitive.nop, Names.condition, Names.onTrue, Names.onFalse);
     }
 
     public void addPropagation(PropagationType propagationType, String name, _F to) {
@@ -27,10 +27,10 @@ public class If extends F {
 
     @Override
     public Ex createExecution(long id, _Ex returnTo) {
-        return new ExIf(this.node, id, this, returnTo);
+        return new ExIf(this.env, id, this, returnTo);
     }
 
-    public static If iff(Node node){
-        return new If(node);
+    public static If iff(Env env){
+        return new If(env);
     }
 }

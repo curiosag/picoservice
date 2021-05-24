@@ -11,14 +11,17 @@ import micro.trace.Tracer;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-public class Node implements Closeable, Hydrator {
+public class Node implements Env, Closeable {
     private final Address address;
 
     private final Tracer tracer = new Tracer(false);
@@ -66,7 +69,8 @@ public class Node implements Closeable, Hydrator {
         return getExForId(e.exReturnToId);
     }
 
-    void note(ExEvent e) {
+    @Override
+    public void note(ExEvent e) {
         if (recover) {
             return;
         }
@@ -169,6 +173,7 @@ public class Node implements Closeable, Hydrator {
         logWriter.put(e);
     }
 
+    @Override
     public Address getAddress() {
         return address;
     }
@@ -182,26 +187,33 @@ public class Node implements Closeable, Hydrator {
             log(s);
     }
 
-    _Ex getTop() {
+
+    @Override
+    public _Ex getTop() {
         return top;
     }
 
-    long getNextFId() {
+    @Override
+    public long getNextFId() {
         return ++maxFId;
     }
 
+    @Override
     public long getNextExId() {
         return maxExId.incrementAndGet();
     }
 
-    void addF(_F f) {
+    @Override
+    public void addF(_F f) {
         idToF.put(f.getId(), (F) f); //TODO (F)
     }
 
-    void setDelay(@SuppressWarnings("SameParameterValue") int delay) {
+    @Override
+    public void setDelay(@SuppressWarnings("SameParameterValue") int delay) {
         this.delay.set(delay);
     }
 
+    @Override
     @SuppressWarnings("unused")
     public void stop() {
         this.stop.set(true);
@@ -224,29 +236,35 @@ public class Node implements Closeable, Hydrator {
         return result;
     }
 
-    void start() {
+    @Override
+    public void start() {
         start(false);
     }
 
-    void start(boolean recover) {
+    @Override
+    public void start(boolean recover) {
         this.stop.set(false);
         new Thread(() -> run(recover)).start();
     }
 
+    @Override
     public List<_Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates) {
         return targetTemplates.stream().map(t -> createExecution(t, source)).collect(Collectors.toList());
     }
 
+    @Override
     public _Ex createExecution(F f) {
         return createExecution(f, top);
     }
 
+    @Override
     public DependendExCreatedEvent createDependentExecutionEvent(_F f, _Ex returnTo, _Ex dependingOn) {
         Check.preCondition(!recover);
         _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
         return new DependendExCreatedEvent((Ex) ex, (Ex) dependingOn);
     }
 
+    @Override
     public _Ex createExecution(_F f, _Ex returnTo) {
         Check.preCondition(!recover);
         if (f.equals(returnTo.getTemplate())) {
@@ -258,6 +276,7 @@ public class Node implements Closeable, Hydrator {
         }
     }
 
+    @Override
     public void relatchExecution(long exId, _F f, _Ex returnTo) {
         idToEx.put(returnTo.getId(), returnTo);
     }

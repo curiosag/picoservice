@@ -12,26 +12,26 @@ public class CallSync<T> implements _Ex {
 
     private final F f;
     private final Class<T> resultType;
-    private final Node node;
+    private final Env env;
     private Long latchOntoExId;
 
     private final Map<String, T> params = new HashMap<>();
     private Value result;
     private _Ex ex;
 
-    private CallSync(Class<T> resultType, F f, Node node) {
-        this(null, resultType, f, node);
+    private CallSync(Class<T> resultType, F f, Env env) {
+        this(null, resultType, f, env);
     }
 
-    private CallSync(Long latchOntoExId, Class<T> resultType, F f, Node node) {
+    private CallSync(Long latchOntoExId, Class<T> resultType, F f, Env env) {
         this.f = f;
         this.resultType = resultType;
-        this.node = node;
+        this.env = env;
         this.latchOntoExId = latchOntoExId;
     }
 
-    public static <T> CallSync<T> of(Class<T> resultType, F f, Node node) {
-        return new CallSync<>(resultType, f, node);
+    public static <T> CallSync<T> of(Class<T> resultType, F f, Env env) {
+        return new CallSync<>(resultType, f, env);
     }
 
     public CallSync<T> param(String key, T value) {
@@ -46,7 +46,7 @@ public class CallSync<T> implements _Ex {
     }
 
     public long prepareEx() {
-        ex = node.createExecution(f, this);
+        ex = env.createExecution(f, this);
         return ex.getId();
     }
 
@@ -56,12 +56,12 @@ public class CallSync<T> implements _Ex {
             if (ex == null)
                 prepareEx();
             if (params.size() == 0) {
-                ex.receive(Value.of(Name.kickOff, 0, this));
+                ex.receive(Value.of(Name.kickOff, Integer.valueOf(0), this));
             } else {
                 params.forEach((k, v) -> ex.receive(Value.of(k, v, this)));
             }
         } else {
-            node.relatchExecution(latchOntoExId, f, this);
+            env.relatchExecution(latchOntoExId, f, this);
         }
 
         while (true) {

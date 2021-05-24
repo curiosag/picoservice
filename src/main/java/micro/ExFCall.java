@@ -10,8 +10,8 @@ public class ExFCall extends Ex {
     private _Ex beingCalled;
     private boolean dependendExCreatedEventRaised;
 
-    ExFCall(Node node, long exId, FCall callTemplate, _Ex returnTo) {
-        super(node, exId, callTemplate, returnTo);
+    ExFCall(Env env, long exId, FCall callTemplate, _Ex returnTo) {
+        super(env, exId, callTemplate, returnTo);
         this.callTemplate = callTemplate;
     }
 
@@ -43,7 +43,7 @@ public class ExFCall extends Ex {
     protected ExEvent getEventTriggeredBeforeCurrent(ValueEnqueuedEvent value) {
         if (! dependendExCreatedEventRaised) {
             dependendExCreatedEventRaised = true;
-            return node.createDependentExecutionEvent(callTemplate.getCalled(), this, this);
+            return env.createDependentExecutionEvent(callTemplate.getCalled(), this, this);
         }
         return none;
     }

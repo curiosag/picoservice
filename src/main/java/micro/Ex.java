@@ -14,7 +14,7 @@ public abstract class Ex implements _Ex, Crank {
     protected boolean resultOrExceptionFromPrimitive;
 
     boolean done = false;
-    protected Node node;
+    protected Env env;
     private long id;
 
     public F template;
@@ -30,11 +30,11 @@ public abstract class Ex implements _Ex, Crank {
     protected boolean isRecovery;
     private boolean recovered;
 
-    public Ex(Node node, long id, F template, _Ex returnTo) {
+    public Ex(Env env, long id, F template, _Ex returnTo) {
         Guards.notNull(template);
         Guards.notNull(returnTo);
 
-        this.node = node;
+        this.env = env;
         this.id = id;
         this.returnTo = returnTo;
         this.template = template;
@@ -52,7 +52,7 @@ public abstract class Ex implements _Ex, Crank {
 
     @Override
     public Address getAddress() {
-        return node.getAddress();
+        return env.getAddress();
     }
 
     @Override
@@ -60,7 +60,7 @@ public abstract class Ex implements _Ex, Crank {
         if (done) {
             return;
         }
-        node.note(new ValueReceivedEvent(this, v));
+        env.note(new ValueReceivedEvent(this, v));
         inBox.add(v);
     }
 
@@ -150,7 +150,7 @@ public abstract class Ex implements _Ex, Crank {
     }
 
     private void extendAfterlife(KarmaEvent karma) {
-        node.note(karma);
+        env.note(karma);
         exValueAfterlife.add(karma);
     }
 
@@ -161,7 +161,7 @@ public abstract class Ex implements _Ex, Crank {
     private boolean triggeredPropagationTargetExsCreatedEvent() {
         if (propagations == null) {
             if (template.getTargets().size() > 0) {
-                push(new PropagationTargetExsCreatedEvent(this, node.allocatePropagationTargets(this, template.getTargets())));
+                push(new PropagationTargetExsCreatedEvent(this, env.allocatePropagationTargets(this, template.getTargets())));
                 return true;
             } else {
                 propagations = Collections.emptyList();
@@ -330,7 +330,7 @@ public abstract class Ex implements _Ex, Crank {
         if (isRecovery) {
             return;
         }
-        node.note(e);
+        env.note(e);
         exStack.push(e);
     }
 
@@ -419,12 +419,12 @@ public abstract class Ex implements _Ex, Crank {
         return String.format("%s", template.getLabel());
     }
 
-    public Node getNode() {
-        return node;
+    public Env getNode() {
+        return env;
     }
 
-    public void setNode(Node node) {
-        this.node = node;
+    public void setNode(Env env) {
+        this.env = env;
     }
 
     public _Ex getReturnTo() {

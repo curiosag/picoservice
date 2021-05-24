@@ -3,11 +3,13 @@ package micro.primitives.Lists;
 import micro.Check;
 import micro.Names;
 import micro.Value;
+import micro.primitives.Library;
 import micro.primitives.Primitive;
 
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings({"unchecked", "ConstantConditions", "rawtypes"})
 public class Tail implements Primitive {
 
     @Override
@@ -18,6 +20,6 @@ public class Tail implements Primitive {
         List list = (List) param.get();
         Check.invariant(!list.isEmpty(), "list is empty");
 
-        return list.subList(1, list.size());
+        return Library.tail(list);
     }
 }

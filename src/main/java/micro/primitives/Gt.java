@@ -7,9 +7,10 @@ import java.util.Map;
 
 public class Gt implements Primitive {
 
+    @SuppressWarnings("unchecked")
     @Override
     public Object execute(Map<String, Value> params) {
-        return As.Comparable(params, Names.left).compareTo(As.Comparable(params, Names.right)) > 0;
+        return Library.gt(As.Comparable(params, Names.left), As.Comparable(params, Names.right));
     }
 
     public static Gt gt(){

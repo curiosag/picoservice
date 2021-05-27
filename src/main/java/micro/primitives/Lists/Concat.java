@@ -11,6 +11,8 @@ import java.util.Map;
 
 public class Concat implements Primitive {
 
+    public static Concat concat = new Concat();
+
     @SuppressWarnings({"unchecked", "ConstantConditions, rawtypes"})
     @Override
     public Object execute(Map<String, Value> params) {

@@ -7,13 +7,12 @@ import java.util.Map;
 
 public class Lteq implements Primitive {
 
+    public static Lteq lteq = new Lteq();
+
     @SuppressWarnings("unchecked")
     @Override
     public Object execute(Map<String, Value> params) {
         return Library.lteq(As.Comparable(params, Names.left),(As.Comparable(params, Names.right)));
     }
 
-    public static Lteq lteq(){
-        return new Lteq();
-    }
 }

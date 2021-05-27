@@ -7,9 +7,9 @@ import java.util.List;
 
 public interface Env extends Hydrator {
 
-    void note(ExEvent e);
-
     Address getAddress();
+
+    void note(ExEvent e);
 
     _Ex getTop();
 
@@ -35,6 +35,7 @@ public interface Env extends Hydrator {
 
     _Ex createExecution(_F f, _Ex returnTo);
 
-    void relatchExecution(long exId, _F f, _Ex returnTo);
+    void relatchExecution(_F f, _Ex returnTo);
 
+    int getMaxDepth();
 }

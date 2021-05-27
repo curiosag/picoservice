@@ -12,6 +12,8 @@ import java.util.Map;
 @SuppressWarnings({"unchecked", "ConstantConditions", "rawtypes"})
 public class Head implements Primitive {
 
+    public static Head head = new Head();
+
     @Override
     public Object execute(Map<String, Value> params) {
         Value param = params.get(Names.list);

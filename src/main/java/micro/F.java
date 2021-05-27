@@ -23,6 +23,7 @@ public class F implements _F, Id {
     private final List<FPropagation> propagations = new ArrayList<>();
 
     List<String> formalParameters = new ArrayList<>();
+    protected boolean isTailRecursive;
 
     private F(Env env, Primitive primitive) {
         this.env = env;
@@ -40,6 +41,11 @@ public class F implements _F, Id {
     public F(Env env, Primitive primitive, String... formalParams) {
         this(env, primitive);
         Collections.addAll(formalParameters, formalParams);
+    }
+
+    @Override
+    public Address getAddress() {
+        return Address.localhost;
     }
 
     @Override
@@ -96,7 +102,7 @@ public class F implements _F, Id {
 
     @Override
     public Ex createExecution(long id, _Ex returnTo) {
-        return new ExF(this.env, id, this, returnTo);
+        return /* TODO isTailRecursive ? new ExFTailRecursive(this.env, id, this, returnTo) : */ new ExF(this.env, id, this, returnTo);
     }
 
     public String getLabel() {
@@ -142,5 +148,18 @@ public class F implements _F, Id {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    public F tailRecursive() {
+        Check.invariant(primitive == Primitive.nop, "Primitive can't be recursive");
+        Check.invariant(formalParameters.size() > 0, "Recursion needs at least one parameter");
+
+        this.isTailRecursive = true;
+        return this;
+    }
+
+    @Override
+    public boolean isTailRecursive() {
+        return isTailRecursive;
     }
 }

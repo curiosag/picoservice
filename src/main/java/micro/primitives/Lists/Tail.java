@@ -12,6 +12,8 @@ import java.util.Map;
 @SuppressWarnings({"unchecked", "ConstantConditions", "rawtypes"})
 public class Tail implements Primitive {
 
+    public static Tail tail = new Tail();
+
     @Override
     public Object execute(Map<String, Value> params) {
         Value param = params.get(Names.list);
@@ -22,4 +24,5 @@ public class Tail implements Primitive {
 
         return Library.tail(list);
     }
+
 }

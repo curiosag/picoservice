@@ -10,6 +10,8 @@ import java.util.Map;
 
 public class IsEmpty implements Primitive {
 
+    public static IsEmpty isEmpty = new IsEmpty();
+
     @Override
     public Object execute(Map<String, Value> params) {
         Value param = params.get(Names.list);
@@ -18,7 +20,4 @@ public class IsEmpty implements Primitive {
         return ((List) param.get()).isEmpty();
     }
 
-    public static Primitive isEmpty(){
-        return new IsEmpty();
-    }
 }

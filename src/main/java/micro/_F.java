@@ -11,4 +11,11 @@ public interface _F extends Id {
 
     _Ex createExecution(long id, _Ex returnTo);
 
+    Address getAddress();
+
+    default boolean isLocal(){
+        return getAddress().equals(Address.localhost);
+    }
+
+    boolean isTailRecursive();
 }

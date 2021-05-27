@@ -1,8 +1,7 @@
 package micro;
 
 import micro.If.If;
-import micro.gateway.CallAsync;
-import micro.gateway.CallSync;
+import micro.gateway.Gateway;
 import micro.primitives.*;
 import micro.primitives.Lists.*;
 import nano.ingredients.Name;
@@ -13,7 +12,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Arrays.asList;
@@ -22,12 +20,9 @@ import static micro.Names.*;
 import static micro.PropagationType.*;
 import static micro.ReRun.runAndCheck;
 import static micro.primitives.Add.add;
-import static micro.primitives.Eq.eq;
-import static micro.primitives.Gt.gt;
 import static micro.primitives.Mul.mul;
 import static micro.primitives.Primitive.nop;
 import static micro.primitives.Print.print;
-import static micro.primitives.Sub.subInt;
 import static org.junit.Assert.assertEquals;
 
 public class MicroTest {
@@ -39,11 +34,10 @@ public class MicroTest {
     private static final Integer _1 = 1;
     private static final Integer _0 = 0;
 
-    private final Address address = new Address(new byte[0], 1, 1);
 
     @Test
     public void testLet() {
-        Node env = new Node(address, false, false);
+        try (Node env = createNode()) {
         /*
 
         func f(){
@@ -58,32 +52,29 @@ public class MicroTest {
 
         */
 
-        ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+            ResultCollector result = new ResultCollector();
+            Action resultListener = new Action(i -> result.set(i.values()));
 
-        F f = f(env, nop, Names.a).returnAs(Names.output).label("f");
-        F mul = f(env, mul(), Names.left, Names.right).label("mul").returnAs(Names.b);
-        F add = f(env, add(), Names.left, Names.right).label("add");
+            F f = f(env, nop, Names.a).returnAs(Names.output).label("f");
+            F mul = f(env, mul(), Names.left, Names.right).label("mul").returnAs(Names.b);
+            F add = f(env, add(), Names.left, Names.right).label("add");
 
-        f.addPropagation(ping, CONST(env, 2).returnAs(Names.a).label("const:2"));
-        f.addPropagation(Names.a, Names.left, mul);
-        f.addPropagation(Names.a, Names.right, mul);
+            f.addPropagation(ping, CONST(env, 2).returnAs(Names.a).label("const:2"));
+            f.addPropagation(Names.a, Names.left, mul);
+            f.addPropagation(Names.a, Names.right, mul);
 
-        f.addPropagation(Names.a, Names.left, add);
-        f.addPropagation(Names.b, Names.right, add);
+            f.addPropagation(Names.a, Names.left, add);
+            f.addPropagation(Names.b, Names.right, add);
 
-        F main = f(env, resultListener, Names.output).label("main");
-        main.addPropagation(ping, f);
+            F main = f(env, resultListener, Names.output).label("main");
+            main.addPropagation(ping, f);
 
-        _Ex ex = env.createExecution(main);
+            _Ex ex = env.createExecution(main);
 
-        env.start();
-        try {
+            env.start();
             ex.receive(Value.of(ping, 0, env.getTop()));
             Concurrent.await(() -> !result.isEmpty());
             assertEquals(6, result.get().get(0).get());
-        } finally {
-            env.close();
         }
     }
 
@@ -105,7 +96,7 @@ public class MicroTest {
     public void testSimpleFunc_useAddDirectly() {
 
         ReRun.InitialRun rInit = runAndCheck(_3, n -> {
-            CallSync<Integer> sync = createSimpleFunc_useAddDirectly(n);
+            Gateway<Integer> sync = getSynchronized(n, createSimpleFunc_useAddDirectly(n));
             sync.param(Names.a, 1);
             sync.param(Names.b, 2);
             return sync;
@@ -114,29 +105,43 @@ public class MicroTest {
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = new ArrayList<>(rInit.events().subList(0, rInit.events().size() - 2));
         System.out.println("*** RECOVERY ***");
-        for (int i = 0; i < 10; i++) {
-            ReRun.reReReReRunAndCheck(rInit.exId(), this::createSimpleFunc_useAddDirectly, log, _3);
+        for (int i = 0; i < 5; i++) {
+            ReRun.reReReReRunAndCheck(rInit.exId(), (id, env) -> getSynchronized(id, env, createSimpleFunc_useAddDirectly(env)), log, _3);
         }
 
     }
 
-    private CallSync<Integer> createSimpleFunc_useAddDirectly(Env env) {
-        F main = f(env, print(), Names.result).label("main");
+    private Gateway<Integer> getSynchronized(Env env, F f) {
+        return getSynchronized(Integer.class, env, f);
+    }
+
+    private Gateway<Integer> getSynchronized(Long relatchToId, Env env, F f) {
+        return getSynchronized(Integer.class, relatchToId, env, f);
+    }
+
+    private <T> Gateway<T> getSynchronized(Class<T> resultType, Env env, F f) {
+        return Gateway.of(resultType, f, env);
+    }
+
+    private <T> Gateway<T> getSynchronized(Class<T> resultType, Long relatchToId, Env env, F f) {
+        return Gateway.of(relatchToId, resultType, f, env);
+    }
+
+    private F createSimpleFunc_useAddDirectly(Env env) {
+        F main = f(env, print, Names.result).label("main");
         F add = f(env, add(), Names.left, Names.right).label("add");
 
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
 
-        CallSync<Integer> sync = CallSync.of(Integer.class, main, env);
-
-        return sync;
+        return main;
     }
 
 
     @Test
     public void testSimpleFunc_usingFCall() {
         ReRun.InitialRun rInit = runAndCheck(_3, n -> {
-            CallSync<Integer> sync = createSimpleFuncByFCall(n);
+            Gateway<Integer> sync = getSynchronized(n, createSimpleFuncByFCall(n));
             sync.param(Names.a, 1);
             sync.param(Names.b, 2);
             return sync;
@@ -145,11 +150,11 @@ public class MicroTest {
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
 
-        ReRun.reReReReRunAndCheck(rInit.exId(), this::createSimpleFuncByFCall, log, _3);
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createSimpleFuncByFCall(n)), log, _3);
     }
 
-    private CallSync<Integer> createSimpleFuncByFCall(Env env) {
-        F main = f(env, print(), Names.result).label("main");
+    private F createSimpleFuncByFCall(Env env) {
+        F main = f(env, print, Names.result).label("main");
         F add = f(env, add(), Names.left, Names.right).label("add");
 
         // FCall is redundant here, main could interact with add directly
@@ -158,9 +163,7 @@ public class MicroTest {
         main.addPropagation(Names.a, Names.left, callAdd);
         main.addPropagation(Names.b, Names.right, callAdd);
 
-        CallSync<Integer> sync = CallSync.of(Integer.class, main, env);
-
-        return sync;
+        return main;
     }
 
 
@@ -245,34 +248,27 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testCalcSync() {
-        Node env = new Node(address, false, false);
-        F calc = createCalc(env);
-
-        env.start();
-        try {
-            CallSync<Integer> sync = CallSync.of(Integer.class, calc, env);
+        try (Node env = createNode()) {
+            F calc = createCalc(env);
+            env.start();
+            Gateway<Integer> sync = Gateway.of(Integer.class, calc, env);
             sync.param(Names.a, 1);
             sync.param(Names.c, 2);
             sync.param(Names.b, 3);
 
             assertEquals(Integer.valueOf(12), sync.call());
-        } finally {
-            env.close();
         }
     }
 
     @Test
-    public void testCalcAsync() {
-        Node env = new Node(address, false, false);
-        F calc = createCalc(env);
-        final AtomicInteger i1 = new AtomicInteger(0);
-        final AtomicInteger i2 = new AtomicInteger(0);
-
-        env.start();
-        try {
-
-            CallAsync<Integer> call1 = CallAsync.of(Integer.class, calc, i1::addAndGet, env);
-            CallAsync<Integer> call2 = CallAsync.of(Integer.class, calc, i2::addAndGet, env);
+    public void testCalcAsyncConcurrently() {
+        try (Node env = createNode()) {
+            F calc = createCalc(env);
+            final AtomicInteger i1 = new AtomicInteger(0);
+            final AtomicInteger i2 = new AtomicInteger(0);
+            env.start();
+            Gateway<Integer> call1 = Gateway.of(Integer.class, calc, env);
+            Gateway<Integer> call2 = Gateway.of(Integer.class, calc, env);
 
             call1.param(Names.a, 1);
             call1.param(Names.c, 2);
@@ -282,13 +278,11 @@ trisum(a,b,c)   trimul(a,b,c)
             call2.param(Names.c, 4);
             call2.param(Names.b, 3);
 
-            call1.call();
-            call2.call();
+            call1.callAsync(i1::addAndGet);
+            call2.callAsync(i2::addAndGet);
             Concurrent.await(() -> i1.get() > 0 && i2.get() > 0);
             assertEquals(Integer.valueOf(12), Integer.valueOf(i1.get()));
             assertEquals(Integer.valueOf(33), Integer.valueOf(i2.get()));
-        } finally {
-            env.close();
         }
     }
 
@@ -301,6 +295,8 @@ trisum(a,b,c)   trimul(a,b,c)
           subtract(a, b)
         }
 
+    }
+
        print(useFVar(2,1));
 
     */
@@ -308,7 +304,7 @@ trisum(a,b,c)   trimul(a,b,c)
     @Test
     public void testFunctionalValue() {
         ReRun.InitialRun rInit = runAndCheck(_1, n -> {
-            CallSync<Integer> sync = createCallByFunctionalValue(n);
+            Gateway<Integer> sync = getSynchronized(n, createCallByFunctionalValue(n));
             sync.param(Names.a, 2);
             sync.param(Names.b, 1);
             return sync;
@@ -317,14 +313,18 @@ trisum(a,b,c)   trimul(a,b,c)
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
 
-        ReRun.reReReReRunAndCheck(rInit.exId(), this::createCallByFunctionalValue, log, _1);
-
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> {
+            Gateway<Integer> sync = getSynchronized(id, n, createCallByFunctionalValue(n));
+            sync.param(Names.a, 2);
+            sync.param(Names.b, 1);
+            return sync;
+        }, log, _1);
     }
 
-    private CallSync<Integer> createCallByFunctionalValue(Env env){
+    private F createCallByFunctionalValue(Env env){
         F main = f(env, nop, Names.output).label("main");
 
-        F sub = f(env, subInt(), Names.left, Names.right).label("sub");
+        F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
         F useFVar = f(env, nop, Names.a, Names.b).label("useFVar").returnAs(result);
 
         // a plain functional value is a partially applied function with no partial parameters
@@ -340,7 +340,7 @@ trisum(a,b,c)   trimul(a,b,c)
         main.addPropagation(Names.a, useFVar);
         main.addPropagation(Names.b, useFVar);
 
-        return CallSync.of(Integer.class, main, env);
+        return main;
     }
     /*
 
@@ -357,77 +357,90 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testPartialFunctionApplication() {
-        Node env = new Node(address, false, false);
-        ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        try (Node env = createNode()) {
+            ResultCollector result = new ResultCollector();
+            Action resultListener = new Action(i -> result.set(i.values()));
 
-        F main = f(env, resultListener, Names.output).label("main");
+            F main = f(env, resultListener, Names.output).label("main");
 
-        F sub = f(env, subInt(), Names.left, Names.right).label("sub");
-        F usePartial = f(env, nop, Names.a, Names.b).returnAs(Names.output).label("usePartial");
+            F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
+            F usePartial = f(env, nop, Names.a, Names.b).returnAs(Names.output).label("usePartial");
 
-        F createDec = new FCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
-        F callDec = new FCallByFunctionalValue(env, paramFVar, Names.left).label("callDec");
+            F createDec = new FCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
+            F callDec = new FCallByFunctionalValue(env, paramFVar, Names.left).label("callDec");
 
-        usePartial.addPropagation(Names.b, Names.right, createDec);
-        usePartial.addPropagation(paramFVar, callDec);
-        usePartial.addPropagation(Name.a, Names.left, callDec);
+            usePartial.addPropagation(Names.b, Names.right, createDec);
+            usePartial.addPropagation(paramFVar, callDec);
+            usePartial.addPropagation(Name.a, Names.left, callDec);
 
-        main.addPropagation(Names.a, usePartial);
-        main.addPropagation(Names.b, usePartial);
+            main.addPropagation(Names.a, usePartial);
+            main.addPropagation(Names.b, usePartial);
 
-        _Ex ex = env.createExecution(main);
+            _Ex ex = env.createExecution(main);
 
-        env.start();
+            env.start();
 
-        ex.receive(Value.of(Names.a, 2, env.getTop()));
-        ex.receive(Value.of(Names.b, 1, env.getTop()));
+            ex.receive(Value.of(Names.a, 2, env.getTop()));
+            ex.receive(Value.of(Names.b, 1, env.getTop()));
 
-        Concurrent.await(() -> !result.isEmpty());
-        assertEquals(1, result.get().get(0).get());
-
-        env.close();
+            Concurrent.await(() -> !result.isEmpty());
+            assertEquals(1, result.get().get(0).get());
+        }
     }
 
     @Test
     public void testConst() {
-        Node env = new Node(address, false, false);
+        try (Node env = createNode()) {
 
-        F main = f(env, print(), Names.result).label("main");
-        F dec = f(env, nop, Names.a).label("dec");
-        F sub = f(env, subInt(), Names.left, Names.right).label("sub");
-        F one = f(env, new Constant(1)).returnAs(Names.right).label("const:one");
+            F main = f(env, print, Names.result).label("main");
+            F dec = f(env, nop, Names.a).label("dec");
+            F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
+            F one = f(env, new Constant(1)).returnAs(Names.right).label("const:one");
 
-        main.addPropagation(ping, dec);
-        dec.addPropagation(ping, sub);
-        sub.addPropagation(ping, one);
+            main.addPropagation(ping, dec);
+            dec.addPropagation(ping, sub);
+            sub.addPropagation(ping, one);
 
-        main.addPropagation(Names.a, dec);
-        dec.addPropagation(Names.a, Names.left, sub);
-        _Ex TOP = env.getTop();
-        _Ex ex = env.createExecution(main);
-        ex.receive(Value.of(ping, 0, TOP));
-        ex.receive(Value.of(Names.a, 1, TOP));
+            main.addPropagation(Names.a, dec);
+            dec.addPropagation(Names.a, Names.left, sub);
+            _Ex TOP = env.getTop();
+            _Ex ex = env.createExecution(main);
+            ex.receive(Value.of(ping, 0, TOP));
+            ex.receive(Value.of(Names.a, 1, TOP));
+        }
     }
 
     @Test
     public void testIf() {
-        ReRun.InitialRun rInit = runAndCheck(_2, this::createMax);
+
+        ReRun.InitialRun rInit = runAndCheck(_2, n -> {
+            F max = createMax(n);
+            Gateway<Integer> sync = getSynchronized(n, max);
+            sync.param(Names.left, 2);
+            sync.param(right, 1);
+            return sync;
+        });
 
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
 
-        ReRun.reReReReRunAndCheck(rInit.exId(), this::createMax, log, _2);
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> {
+            F max = createMax(n);
+            Gateway<Integer> sync = getSynchronized(id, n, max);
+            sync.param(Names.left, 2);
+            sync.param(right, 1);
+            return sync;
+        }, log, _2);
     }
 
     /*
      * max(left, right) = if(left > right) left else right
      *
      * */
-    private CallSync<Integer> createMax(Env env) {
+    private F createMax(Env env) {
         F max = f(env, nop, Names.left, Names.right).label("max");
         If iff = iff(env).label("if");
-        F gt = f(env, gt(), Names.left, Names.right).returnAs(Names.condition).label("gt");
+        F gt = f(env, Gt.gt, Names.left, Names.right).returnAs(Names.condition).label("gt");
 
         max.addPropagation(Names.left, iff);
         max.addPropagation(Names.right, iff);
@@ -438,11 +451,33 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
         iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
 
-        CallSync<Integer> sync = CallSync.of(Integer.class, max, env);
-        sync.param(Names.left, 2);
-        sync.param(right, 1);
-        return sync;
+        return max;
     }
+
+
+
+    @Test
+    public void testRecSumSimultaneously() {
+        final AtomicInteger i1 = new AtomicInteger(0);
+        final AtomicInteger i2 = new AtomicInteger(0);
+
+        try (Node env = createNode()) {
+            F main = createRecSum(env);
+
+            env.start();
+
+            Gateway.of(Integer.class, main, env).param(Names.a, 3).callAsync(i1::addAndGet);
+            Gateway.of(Integer.class, main, env).param(Names.a, 150).callAsync(i2::addAndGet);
+
+            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0);
+
+            assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
+            assertEquals(Integer.valueOf(11325), Integer.valueOf(i2.get()));
+
+            System.out.println(env.getMaxDepth() + " exs used for recursive geometrical sum");
+        }
+    }
+
 
     /* function geo(a) = if (a = 0)
                            0
@@ -455,38 +490,14 @@ trisum(a,b,c)   trimul(a,b,c)
        print(geo(3));
     */
 
-    @Test
-    public void testSimpleRecursion() {
-        Node env = new Node(address, false, false);
-        F main = createRecSum(env);
-        //node.setDelay(1);
-        env.start();
-
-        _Ex m1 = env.createExecution(main);
-        _Ex m2 = env.createExecution(main);
-
-        m1.receive(Value.of(Names.a, 3, m1.returnTo()));
-        m2.receive(Value.of(Names.a, 50, m1.returnTo()));
-
-        Concurrent.sleep(8000);
-        env.close();
-    }
-
-    @Test
-    public void testResumeSimpleRecursion() {
-        //resumeComputation(this::createRecSum); //TODO
-    }
-
     private F createRecSum(Env env) {
-        F main = f(env, print(), Names.result).label("main");
         F geo = f(env, nop, Names.a).label("geo");
         If iff = iff(env).label("if");
 
-        main.addPropagation(Names.a, geo);
         geo.addPropagation(Names.a, iff);
 
         // condition
-        F eq = f(env, eq(), Names.left, Names.right).returnAs(Names.condition).label("eq");
+        F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
 
         iff.addPropagation(CONDITION, Names.a, Names.left, eq);
         eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
@@ -497,7 +508,7 @@ trisum(a,b,c)   trimul(a,b,c)
         iff.addPropagation(FALSE_BRANCH, Names.a, block_else);
         // let next_a = a - 1
         String next_a = "next_a";
-        F sub = f(env, subInt(), Names.left, Names.right).returnAs(next_a).label("sub");
+        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
         block_else.addPropagation(Names.a, Names.left, sub);
         sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
         // a + geo(next_a);
@@ -507,81 +518,138 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(Names.a, Names.left, add);
         block_else.addPropagation(next_a, add);
         add.addPropagation(next_a, Names.a, geoReCall);
-        return main;
+        return geo;
+    }
+
+
+    @Test
+    public void testTailRecSum() {
+        final AtomicInteger i1 = new AtomicInteger(0);
+
+        try (Node env = createNode()) {
+            F main = createTailRecSum(env);
+
+            env.start();
+            Gateway.of(Integer.class, main, env).param(Names.a, 500).param(Names.c, 500).callAsync(i1::addAndGet);
+
+            Concurrent.await(() -> i1.get() > 0);
+            assertEquals(Integer.valueOf(125250), Integer.valueOf(i1.get()));
+            System.out.println(env.getMaxDepth() + " exs used simultaneously for tail recursive geometrical sum of 500");
+        }
+    }
+
+    @Test
+    public void testTailRecSumRecovery() {
+        ReRun.InitialRun rInit = runAndCheck(_3, n -> {
+            Gateway<Integer> sync = getSynchronized(n, createTailRecSum(n));
+            sync.param(Names.a, 2);
+            sync.param(Names.c, 2);
+            return sync;
+        });
+
+        // truncate log, so that last result will get processed again in any case
+        List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
+
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _3);
+    }
+
+    /* function geo_tailrec(a, cumulated) =
+                         if (a = 0)
+                           cumulated
+                         else
+                         {
+                           let next_a = a - 1
+                           let cum = cumulated + next_a
+                           geo_tailrec(next_a, cum);
+                         }
+
+       print(geo(3, 0));
+    */
+
+    private F createTailRecSum(Env env) {
+        //reIterate() clears out full sets of parameters and resets after each iteration
+        F geo = f(env, nop, Names.a, Names.c)./*tailRecursive().*/label("geo");
+        If iff = iff(env).label("if");
+
+        geo.addPropagation(Names.a, iff);
+        geo.addPropagation(Names.c, iff);
+
+        // condition
+        F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
+
+        iff.addPropagation(CONDITION, Names.a, Names.left, eq);
+        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
+        // onTrue
+        iff.addPropagation(TRUE_BRANCH, Names.c, result, iff);
+        // onFalse
+        F block_else = f(env, nop).label("block_else");
+        iff.addPropagation(FALSE_BRANCH, Names.a, block_else);
+        iff.addPropagation(FALSE_BRANCH, Names.c, block_else);
+        // let next_a = a - 1
+        String next_a = "next_a";
+        String cumulated = "cumulated";
+        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
+        sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
+        block_else.addPropagation(Names.a, Names.left, sub);
+        // let cum = cumulated + next_a
+
+        F add = f(env, add(), Names.left, Names.right).returnAs(cumulated).label("add");
+        // downstream propagation
+        block_else.addPropagation(next_a, Names.left, add);
+        block_else.addPropagation(Names.c, Names.right, add);
+        // recursion. TODO not sure what happened, if this would hinge on iff instead of block_else with all the stashing there
+        block_else.addPropagation(cumulated, Names.c, geo);
+        block_else.addPropagation(next_a, Names.a, geo);
+
+        return geo;
     }
 
     @Test
     public void testQuicksort() {
-        Node env = new Node(address, false, false);
+        Node env = createNode();
 
-        ResultCollector result = new ResultCollector();
-        F main = createQuicksortCall(env, result);
+        F main = createQuicksort(env);
 
         env.start();
         try {
-            testFor(env, result, main, list(), list());
-            testFor(env, result, main, list(1), list(1));
-            testFor(env, result, main, list(1, 2), list(1, 2));
-            testFor(env, result, main, list(2, 1), list(1, 2));
-            testFor(env, result, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
+            testFor(env, main, list(), list());
+            testFor(env, main, list(1), list(1));
+            testFor(env, main, list(1, 2), list(1, 2));
+            testFor(env, main, list(2, 1), list(1, 2));
+            testFor(env, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
 
             ArrayList<Integer> randList = randomList(100);
             ArrayList<Integer> randListSorted = new ArrayList<>(randList);
             randListSorted.sort(Integer::compareTo);
-            testFor(env, result, main, randList, randListSorted);
-            System.out.println("Max exid used: " + (env.getNextExId() - 1));
+            testFor(env, main, randList, randListSorted);
         } finally {
             env.close();
         }
     }
 
+
+    @Test
+    public void testQuickReReReReReSort() {
+        for (int i = 0; i < 5; i++) {
+          testQuickReSort();
+        }
+    }
+
     @Test
     public void testQuickReSort() {
-        ArrayList<Integer> initial = randomList(100);//list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4);
+        ArrayList<Integer> initial = randomList(3);
         ArrayList<Integer> randListSorted = new ArrayList<>(initial);
         randListSorted.sort(Integer::compareTo);
-        ArrayList<Integer> expected = randListSorted;//list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ArrayList<Integer> expected = randListSorted;
 
-        ReRun.InitialRun rInit = runAndCheck(expected, (n) -> createSyncQuicksort(n).param("list", initial));
+        ReRun.InitialRun rInit = runAndCheck(expected, (n) -> getSynchronized(List.class, n, createQuicksort(n)).param("list", initial));
 
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
 
-        ReRun.reReReReRunAndCheck(rInit.exId(), (n) -> createSyncQuicksort(n).param("list", initial), log, expected);
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(List.class, id, n, createQuicksort(n)), log, expected);
     }
 
-    @Test
-    public void testQuicksortRerun() {
-        ArrayList<Integer> initial = list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4);
-        ArrayList<Integer> expected = list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
-
-        Function<Env, CallSync<?>> createF = (n) -> createSyncQuicksort(n).param("list", initial);
-        ReRun.InitialRun rInit = runAndCheck(expected, createF);
-
-        // truncate log, so that last result will get processed again in any case
-        List<Hydratable> events = rInit.events().subList(0, rInit.events().size() - 2);
-        for (int i = 0; i < events.size() - 2; i++) {
-            ReRun.reRunAndCheck(rInit.exId(), createF, events.subList(0, events.size() - i), expected);
-            System.out.print(i + " ");
-        }
-
-    }
-
-    private CallSync<Object> createSyncQuicksort(Env env) {
-        F quicksort = createQuicksort(env);
-        F callQuicksort = new FCall(env, quicksort).returnAs(Names.output).label("callQuicksort initially");
-        return CallSync.of(Object.class, callQuicksort, env);
-    }
-
-    private F createQuicksortCall(Env env, ResultCollector result) {
-        Action resultListener = new Action(i -> result.set(i.values()));
-
-        F main = f(env, resultListener, Names.output).label("main");
-        F quicksort = createQuicksort(env);
-        F callQuicksort = new FCall(env, quicksort).returnAs(Names.output).label("callQuicksort initially");
-        main.addPropagation(list, callQuicksort);
-        return main;
-    }
 
         /*
         lteq: (u,v) -> boolean
@@ -613,11 +681,11 @@ trisum(a,b,c)   trimul(a,b,c)
         String sortedLteq = "sortedLteq";
         String consed = "consed";
 
-        F quicksort = new F(env, nop, list).label("QUICKSORT(list)");
+        F quicksort = new F(env, nop, list).label("quicksort");
         If if_listEmpty = iff(env).label("if:listEmpty");
         quicksort.addPropagation(list, if_listEmpty);
 
-        F isEmpty = new F(env, new IsEmpty(), list).returnAs(condition).label("isEmpty");
+        F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
         F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
         if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
@@ -625,16 +693,16 @@ trisum(a,b,c)   trimul(a,b,c)
         F block_else = f(env, nop).label("block_else");
         if_listEmpty.addPropagation(FALSE_BRANCH, list, block_else);
 
-        F head = new F(env, new Head(), list).returnAs(Names.head).label("head()");
-        F tail = new F(env, new Tail(), list).returnAs(Names.tail).label("tail()");
+        F head = new F(env, Head.head, list).returnAs(Names.head).label("head()");
+        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail()");
         block_else.addPropagation(list, head);
         block_else.addPropagation(list, tail);
 
-        F gt = f(env, Gt.gt(), Names.left, Names.right).label("gt?");
+        F gt = f(env, Gt.gt, Names.left, Names.right).label("gt?");
         F createTestGt = new FCreatePartiallyAppliedFunction(env, gt, Names.right).returnAs(predicateTestGt).label("createTestGt");
         block_else.addPropagation(Names.head, right, createTestGt);
 
-        F lteq = f(env, Lteq.lteq(), Names.left, Names.right).label("lteq?");
+        F lteq = f(env, Lteq.lteq, Names.left, Names.right).label("lteq?");
         F createTestLteq = new FCreatePartiallyAppliedFunction(env, lteq, Names.right).returnAs(predicateTestLteq).label("createTestLteq");
         block_else.addPropagation(Names.head, right, createTestLteq);
 
@@ -652,11 +720,11 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(filteredGt, Names.list, qsortRecallGt);
         block_else.addPropagation(filteredLteq, Names.list, qsortRecallLteq);
 
-        F cons = new F(env, new Cons(), element, list).returnAs(consed).label("cons");
+        F cons = new F(env, Cons.cons, element, list).returnAs(consed).label("cons");
         block_else.addPropagation(Names.head, Names.element, cons);
         block_else.addPropagation(sortedGt, list, cons);
 
-        F concat = new F(env, new Concat(), left, right).label("concat");
+        F concat = new F(env, Concat.concat, left, right).label("concat");
         block_else.addPropagation(consed, right, concat);
         block_else.addPropagation(sortedLteq, Names.left, concat);
 
@@ -666,78 +734,43 @@ trisum(a,b,c)   trimul(a,b,c)
 
     @Test
     public void testFilter() {
-        Node env = new Node(address, false, false);
-        ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
+        Node env = createNode();
 
-        F main = createFilterTest(env, resultListener);
+        F main = createFilterTest(env);
 
         env.start();
-        testFor(env, result, main, list(), list());
-        testFor(env, result, main, list(1), list());
-        testFor(env, result, main, list(1, 2, 3), list());
-        testFor(env, result, main, list(1, 2, 3, 4, 5), list(4, 5));
-        testFor(env, result, main, list(5), list(5));
+        testFor(env, main, list(), list());
+        testFor(env, main, list(1), list());
+        testFor(env, main, list(1, 2, 3), list());
+        testFor(env, main, list(1, 2, 3, 4, 5), list(4, 5));
+        testFor(env, main, list(5), list(5));
         env.close();
     }
 
-    private F createFilterTest(Env env, Action resultListener) {
-        F main = f(env, resultListener, Names.output).label("main");
+    /**
+     * returns a function without parameters, a ping example
+     */
+    private F createFilterTest(Env env) {
+        F main = f(env, nop).label("filter");
 
         String const3 = "const:3";
-        F gt = f(env, Gt.gt(), Names.left, Names.right).label("gt?");
+        F gt = f(env, Gt.gt, Names.left, Names.right).label("gt?");
         F createPredicate = new FCreatePartiallyAppliedFunction(env, gt, Names.right).returnAs(predicate).label("createPredicate");
 
         main.addPropagation(list, ping, createPredicate);
         createPredicate.addPropagation(ping, CONST(env, 3).returnAs(Names.right).label(const3));
 
         F filter = createFilter(env);
-        F callFilter = new FCall(env, filter).returnAs(Names.output).label("callFilter initially");
+        F callFilter = new FCall(env, filter).label("callFilter initially");
 
         main.addPropagation(predicate, callFilter);
         main.addPropagation(list, callFilter);
         return main;
     }
 
-    @Test
-    public void testSuspendFilterTest() {
-        Node env = new Node(address, false, false);
-        ResultCollector result = new ResultCollector();
-        Action resultListener = new Action(i -> result.set(i.values()));
-
-        F main = createFilterTest(env, resultListener);
-
-        env.start();
-        env.setDelay(5);
-
-        ArrayList<Integer> source = list(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-
-        _Ex ex = env.createExecution(main);
-        ex.receive(Value.of(Names.list, source, env.getTop()));
-
-        Concurrent.sleep(3000);
-        env.stop();
-        Concurrent.sleep(1000);
-        env.close();
-    }
-
-    @Test
-    public void testResumeFilterTest() {
-        Node env = new Node(address, false, false);
-        ResultCollector result = new ResultCollector();
-
-        resumeComputation(() -> {
-            Action resultListener = new Action(i -> result.set(i.values()));
-            return createFilterTest(env, resultListener);
-        });
-    }
-
-    private void testFor(Env env, ResultCollector resultCollector, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
-        resultCollector.clear();
-        _Ex ex = env.createExecution(main);
-        ex.receive(Value.of(Names.list, source, env.getTop()));
-        Concurrent.await(() -> !resultCollector.isEmpty());
-        assertEquals(expected, resultCollector.get().get(0).get());
+    private void testFor(Env env, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
+        assertEquals(expected, getSynchronized(List.class, env, main).param(list, source).call());
+        System.out.printf("Tested %s input size: %d max stack depth:%d\n", main.getLabel(), source.size(), env.getMaxDepth());
     }
 
     /*
@@ -766,7 +799,7 @@ trisum(a,b,c)   trimul(a,b,c)
         filter.addPropagation(list, if_listEmpty);
         filter.addPropagation(predicate, if_listEmpty);
 
-        F isEmpty = new F(env, new IsEmpty(), list).returnAs(condition).label("**isEmpty");
+        F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("**isEmpty");
         if_listEmpty.addPropagation(CONDITION, list, isEmpty);
         F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("**const:emptylist()");
         if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
@@ -775,8 +808,8 @@ trisum(a,b,c)   trimul(a,b,c)
         if_listEmpty.addPropagation(FALSE_BRANCH, list, block_else);
         if_listEmpty.addPropagation(FALSE_BRANCH, predicate, block_else);
 
-        F head = new F(env, new Head(), list).returnAs(Names.head).label("**head()");
-        F tail = new F(env, new Tail(), list).returnAs(Names.tail).label("**tail()");
+        F head = new F(env, Head.head, list).returnAs(Names.head).label("**head()");
+        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("**tail()");
         F filterReCall = new FCall(env, filter).returnAs(tailFiltered).label("**filterReCall");
 
         If if_predicate = iff(env).label("**if:predicate");
@@ -789,20 +822,24 @@ trisum(a,b,c)   trimul(a,b,c)
         block_else.addPropagation(Names.head, if_predicate);
         block_else.addPropagation(tailFiltered, if_predicate);
 
-        // TODO: underlying partial function takes left/right, right is already applied, left needs to be supplied
-        // would be nice to have a remapping somewhere for the remaining 1 parameter, "left" -> "argument" or so
+        // underlying partial function takes left/right, right is already applied, left needs to be supplied
+        // TODO: would be nice to have a remapping somewhere for the remaining 1 parameter, "left" -> "argument" or so
         F callPredicate = new FCallByFunctionalValue(env, predicate, Names.left).returnAs(condition).label("**callPredicateByFVal");
 
         if_predicate.addPropagation(CONDITION, predicate, callPredicate);
         if_predicate.addPropagation(CONDITION, Names.head, Names.left, callPredicate);
 
-        F cons = new F(env, new Cons(), element, list).label("**cons");
+        F cons = new F(env, Cons.cons, element, list).label("**cons");
         if_predicate.addPropagation(TRUE_BRANCH, Names.head, element, cons);
         if_predicate.addPropagation(TRUE_BRANCH, tailFiltered, Names.list, cons);
 
         if_predicate.addPropagation(FALSE_BRANCH, tailFiltered, new F(env, new Val(), tailFiltered).label("**VAL:tailFiltered"));
 
         return filter;
+    }
+
+    private Node createNode() {
+        return new Node(Address.localhost, false, false);
     }
 
     private F CONST(Env env, Object i) {
@@ -828,8 +865,9 @@ trisum(a,b,c)   trimul(a,b,c)
         return list;
     }
 
+
     private void resumeComputation(Supplier<_F> getF) {
-        Node env = new Node(address, false, false);
+        Node env = createNode();
         getF.get();
         env.setDelay(1);
         env.start(true);

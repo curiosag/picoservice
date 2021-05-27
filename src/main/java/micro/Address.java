@@ -1,6 +1,8 @@
 package micro;
 
 public class Address {
+    public static final Address localhost = new Address(new byte[0], 0, 0);
+
     private byte[] ip;
     private int port;
     private int node;

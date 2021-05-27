@@ -16,6 +16,7 @@ public class ExTop implements  _Ex, Id {
 
     private _F createTemplate() {
         return new _F(){
+
             @Override
             public long getId() {
                 return TOP_ID;
@@ -34,6 +35,16 @@ public class ExTop implements  _Ex, Id {
             @Override
             public _Ex createExecution(long id, _Ex returnTo) {
                 throw new IllegalStateException();
+            }
+
+            @Override
+            public Address getAddress() {
+                return Address.localhost;
+            }
+
+            @Override
+            public boolean isTailRecursive() {
+                return false;
             }
 
         };

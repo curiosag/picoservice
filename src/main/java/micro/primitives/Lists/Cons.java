@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 
 public class Cons implements Primitive {
+
+    public static Cons cons = new Cons();
+
     @SuppressWarnings({"unchecked", "ConstantConditions", "rawtypes"})
     @Override
     public Object execute(Map<String, Value> params) {

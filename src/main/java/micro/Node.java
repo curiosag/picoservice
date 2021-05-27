@@ -277,8 +277,13 @@ public class Node implements Env, Closeable {
     }
 
     @Override
-    public void relatchExecution(long exId, _F f, _Ex returnTo) {
+    public void relatchExecution(_F f, _Ex returnTo) {
         idToEx.put(returnTo.getId(), returnTo);
+    }
+
+    @Override
+    public int getMaxDepth() {
+        return 0;
     }
 
     public void debugValueEnqueuedEvent(ValueEnqueuedEvent v) {

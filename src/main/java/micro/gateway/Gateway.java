@@ -7,62 +7,50 @@ import nano.ingredients.Name;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
-public class CallSync<T> implements _Ex {
+public class Gateway<T> implements _Ex {
 
     private final F f;
     private final Class<T> resultType;
     private final Env env;
-    private Long latchOntoExId;
+    private final Long id;
+    private final boolean recovered;
+    private Consumer<T> consumer;
 
     private final Map<String, T> params = new HashMap<>();
     private Value result;
     private _Ex ex;
 
-    private CallSync(Class<T> resultType, F f, Env env) {
-        this(null, resultType, f, env);
-    }
-
-    private CallSync(Long latchOntoExId, Class<T> resultType, F f, Env env) {
+    private Gateway(Long id, boolean recovered, Class<T> resultType, F f, Env env) {
         this.f = f;
         this.resultType = resultType;
         this.env = env;
-        this.latchOntoExId = latchOntoExId;
+        this.id = id;
+        this.recovered = recovered;
     }
 
-    public static <T> CallSync<T> of(Class<T> resultType, F f, Env env) {
-        return new CallSync<>(resultType, f, env);
+    public static <T> Gateway<T> of(Class<T> resultType, F f, Env env) {
+        return new Gateway<>(env.getNextExId(), false, resultType, f, env);
     }
 
-    public CallSync<T> param(String key, T value) {
+    public static <T> Gateway<T> of(long runId, Class<T> resultType, F f, Env env) {
+        return new Gateway<>(runId, true, resultType, f, env);
+    }
+
+    public Gateway<T> param(String key, T value) {
         params.put(key, value);
         return this;
     }
 
-    public CallSync<T> latchOnto(Long exId)
-    {
-        this.latchOntoExId = exId;
-        return this;
-    }
-
-    public long prepareEx() {
-        ex = env.createExecution(f, this);
-        return ex.getId();
+    public void callAsync(Consumer<T> consumer) {
+        this.consumer = consumer;
+        startOff();
     }
 
     @SuppressWarnings("unchecked")
     public T call() {
-        if(latchOntoExId == null) {
-            if (ex == null)
-                prepareEx();
-            if (params.size() == 0) {
-                ex.receive(Value.of(Name.kickOff, Integer.valueOf(0), this));
-            } else {
-                params.forEach((k, v) -> ex.receive(Value.of(k, v, this)));
-            }
-        } else {
-            env.relatchExecution(latchOntoExId, f, this);
-        }
+        startOff();
 
         while (true) {
             if (getResult() == null) {
@@ -82,7 +70,19 @@ public class CallSync<T> implements _Ex {
 
         }
 
+    }
 
+    private void startOff() {
+        if (recovered) {
+            env.relatchExecution(f, this);
+        } else {
+            ex = env.createExecution(f, this);
+            if (params.size() == 0) {
+                ex.receive(Value.of(Names.ping, 0, this));
+            } else {
+                params.forEach((k, v) -> ex.receive(Value.of(k, v, this)));
+            }
+        }
     }
 
     @Override
@@ -97,7 +97,14 @@ public class CallSync<T> implements _Ex {
 
     @Override
     public void receive(Value v) {
+        if (!(resultType.isAssignableFrom(v.get().getClass()))) {
+            throw new RuntimeException("inconsistent result type " + v.get().getClass().getSimpleName());
+        }
         setResult(v);
+        if (consumer != null) {
+            //noinspection unchecked
+            consumer.accept((T) v.get());
+        }
     }
 
     @Override
@@ -112,13 +119,13 @@ public class CallSync<T> implements _Ex {
 
     @Override
     public String getLabel() {
-        return "CallSync";
+        return "Gateway";
     }
 
     @Override
     public long getId() {
-        return -1;
-    } //TODO won't work for multiple sync calls simultaneously
+        return id;
+    }
 
     @Override
     public void setId(long value) {
@@ -127,7 +134,7 @@ public class CallSync<T> implements _Ex {
 
     @Override
     public String toString() {
-        return "SyncCall{f:" + f.getLabel() + "}";
+        return "Gateway(" + f.getLabel() + "())";
     }
 
     @Override
@@ -137,7 +144,7 @@ public class CallSync<T> implements _Ex {
 
     @Override
     public boolean isDone() {
-        return true;
+        return true; // doesn't matter here, but false would cause it to linger in crank list
     }
 
     @Override

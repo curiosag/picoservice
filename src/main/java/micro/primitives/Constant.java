@@ -4,7 +4,7 @@ import micro.Value;
 
 import java.util.Map;
 
-public class Constant implements Primitive{
+public class Constant implements Primitive {
 
     private final Object constValue;
 

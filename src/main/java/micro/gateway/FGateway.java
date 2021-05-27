@@ -1,5 +1,6 @@
 package micro.gateway;
 
+import micro.Address;
 import micro.PropagationType;
 import micro._Ex;
 import micro._F;
@@ -26,5 +27,15 @@ public class FGateway implements _F {
     @Override
     public _Ex createExecution(long id, _Ex returnTo) {
         throw new IllegalStateException();
+    }
+
+    @Override
+    public Address getAddress() {
+        return Address.localhost;
+    }
+
+    @Override
+    public boolean isTailRecursive() {
+        return false;
     }
 }

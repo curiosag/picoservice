@@ -53,7 +53,7 @@ public class ExFCall extends Ex {
         if (isRecovery) {
             return;
         }
-        Check.preCondition(isLegitDownstreamValue(v));
+        Check.preCondition(isDownstream(v.getName()));
         propagate(v);
         if (callTemplate.formalParameters.contains(v.getName())) {
             deliver(v.withSender(this), getBeingCalled());
@@ -63,13 +63,6 @@ public class ExFCall extends Ex {
     private _Ex getBeingCalled() {
         Check.preCondition(beingCalled != null);
         return beingCalled;
-    }
-
-    @Override
-    void clear() {
-        beingCalled = null;
-        callTemplate = null;
-        super.clear();
     }
 
 }

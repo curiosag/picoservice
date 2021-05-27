@@ -64,14 +64,14 @@ public class ExFCallByFunctionalValue extends Ex {
 
     private void acceptFunctionalValueTemplate(Object value) {
         Check.invariant(value instanceof PartiallyAppliedFunction, "that wasn't expected: " + value);
-        PartiallyAppliedFunction f = ((PartiallyAppliedFunction) value);
+        @SuppressWarnings("ConstantConditions") PartiallyAppliedFunction f = ((PartiallyAppliedFunction) value);
         baseFunction = f.baseFunction;
         pendingValues.addAll(f.partialValues);
     }
 
     @Override
     protected void processValueDownstream(Value v) {
-        Check.preCondition(isLegitDownstreamValue(v));
+        Check.preCondition(isDownstream(v.getName()));
 
         if (v.getName().equals(f.getFunctionalValueParam())) {
             acceptFunctionalValueTemplate(v.get());
@@ -80,15 +80,6 @@ public class ExFCallByFunctionalValue extends Ex {
         } else {
             deliver(v.withSender(this), getFunctionBeingCalled());
         }
-    }
-
-    @Override
-    void clear() {
-        beingCalled = null;
-        baseFunction = null;
-        f = null;
-        pendingValues.clear();
-        super.clear();
     }
 
     @Override

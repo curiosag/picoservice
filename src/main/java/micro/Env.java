@@ -37,5 +37,5 @@ public interface Env extends Hydrator {
 
     void relatchExecution(_F f, _Ex returnTo);
 
-    int getMaxDepth();
+    int getMaxExCount();
 }

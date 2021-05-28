@@ -17,7 +17,7 @@ public enum SerioulizedEvent {
     ValueProcessedEvent(5, micro.event.ValueProcessedEvent::new),
     ExDoneEvent(6, ExDoneEvent::new),
 
-    KarmaEventCanPropagatePendingValues(10, KarmaEventCanPropagatePendingValues::new);
+    AfterlifeEventCanPropagatePendingValues(10, AfterlifeEventCanPropagatePendingValues::new);
 
 
     static Map<Integer, SerioulizedEvent> idToSerializedClass = new HashMap<>();
@@ -70,7 +70,7 @@ public enum SerioulizedEvent {
         idToSerializedClass.put(4, PropagationTargetExsCreatedEvent);
         idToSerializedClass.put(5, ValueProcessedEvent);
         idToSerializedClass.put(6, ExDoneEvent);
-        idToSerializedClass.put(10, KarmaEventCanPropagatePendingValues);
+        idToSerializedClass.put(10, AfterlifeEventCanPropagatePendingValues);
 
         classToSerializedClass.put(DependendExCreatedEvent.class, DependendExCreatedEvent);
         classToSerializedClass.put(ExCreatedEvent.class, ExCreatedEvent);
@@ -80,7 +80,7 @@ public enum SerioulizedEvent {
         classToSerializedClass.put(PropagationTargetExsCreatedEvent.class, PropagationTargetExsCreatedEvent);
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
         classToSerializedClass.put(ExDoneEvent.class, ExDoneEvent);
-        classToSerializedClass.put(KarmaEventCanPropagatePendingValues.class, KarmaEventCanPropagatePendingValues);
+        classToSerializedClass.put(AfterlifeEventCanPropagatePendingValues.class, AfterlifeEventCanPropagatePendingValues);
     }
 
 }

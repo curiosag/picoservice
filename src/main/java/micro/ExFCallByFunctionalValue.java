@@ -21,8 +21,8 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
-    protected void handleKarma(KarmaEvent k) {
-        Check.condition(k instanceof KarmaEventCanPropagatePendingValues);
+    protected void handleAfterlife(AfterlifeEvent k) {
+        Check.condition(k instanceof AfterlifeEventCanPropagatePendingValues);
         Check.preCondition(dependentExCreated);
 
         pendingValues.forEach(pv -> deliver(pv.withSender(this), beingCalled));
@@ -42,9 +42,9 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
-    protected Optional<KarmaEvent> getAfterlife(ValueEnqueuedEvent e) {
+    protected Optional<AfterlifeEvent> getAfterlife(ValueEnqueuedEvent e) {
         if (isFunctionalValueParam(e)) {
-            return Optional.of(new KarmaEventCanPropagatePendingValues(this));
+            return Optional.of(new AfterlifeEventCanPropagatePendingValues(this));
         }
         return Optional.empty();
     }

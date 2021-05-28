@@ -1,8 +1,8 @@
 package micro.If;
 
 import micro.*;
-import micro.event.KarmaEvent;
-import micro.event.KarmaEventCanPropagatePendingValues;
+import micro.event.AfterlifeEvent;
+import micro.event.AfterlifeEventCanPropagatePendingValues;
 import micro.event.PropagationTargetExsCreatedEvent;
 import micro.event.ValueEnqueuedEvent;
 
@@ -64,15 +64,15 @@ public class ExIf extends Ex {
     }
 
     @Override
-    protected void handleKarma(KarmaEvent k) {
-        Check.condition(k instanceof KarmaEventCanPropagatePendingValues);
+    protected void handleAfterlife(AfterlifeEvent k) {
+        Check.condition(k instanceof AfterlifeEventCanPropagatePendingValues);
         propagateStashedValues();
     }
 
     @Override
-    protected Optional<KarmaEvent> getAfterlife(ValueEnqueuedEvent v) {
+    protected Optional<AfterlifeEvent> getAfterlife(ValueEnqueuedEvent v) {
         if (Names.condition.equals(v.value.getName())) {
-            return Optional.of(new KarmaEventCanPropagatePendingValues(this));
+            return Optional.of(new AfterlifeEventCanPropagatePendingValues(this));
         }
         return Optional.empty();
     }
@@ -107,7 +107,7 @@ public class ExIf extends Ex {
     private void propagateConditionally(Value v) {
         getPropagations(v.getName()).stream()
                 .filter(p1 -> !isConditioned(p1) || servesBranchChosen(condition, p1.getPropagationType()))
-                .forEach(p -> deliver(new Value(p.getNameToPropagate(), v.get(), this), p.getTo()));
+                .forEach(p -> propagate(p, v));
     }
 
     private void propagateStashedValues() {
@@ -116,7 +116,7 @@ public class ExIf extends Ex {
         stash.forEach(
                 v -> getPropagations(v.getName()).stream()
                         .filter(p1 -> p1.getPropagationType() != PropagationType.CONDITION)
-                        .forEach(p -> deliver(Value.of(p.getNameToPropagate(), v.get(), v.getSender()), p.getTo()))
+                        .forEach(p -> propagate(p, v))
         );
 
         stash.clear();

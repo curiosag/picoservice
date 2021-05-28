@@ -27,7 +27,7 @@ public abstract class Ex implements _Ex, Crank {
 
     protected Queue<Value> inBox = new ConcurrentLinkedQueue<>();
     protected Stack<ExEvent> exStack = new Stack<>();
-    protected Queue<KarmaEvent> exValueAfterlife = new ArrayDeque<>();
+    protected Queue<AfterlifeEvent> exValueAfterlife = new ArrayDeque<>();
     protected boolean isRecovery;
     private boolean recovered;
 
@@ -72,8 +72,8 @@ public abstract class Ex implements _Ex, Crank {
 
         ExEvent current = exStack.peek();
 
-        if (current instanceof KarmaEvent k) {
-            handleKarma(k);
+        if (current instanceof AfterlifeEvent k) {
+            handleAfterlife(k);
             exStack.pop();
             return;
         }
@@ -146,13 +146,13 @@ public abstract class Ex implements _Ex, Crank {
         Check.fail("unhandled event " + current.toString());
     }
 
-    protected void handleKarma(KarmaEvent k) {
+    protected void handleAfterlife(AfterlifeEvent k) {
         throw new IllegalStateException("implementation mising?");
     }
 
-    private void extendAfterlife(KarmaEvent karma) {
-        env.note(karma);
-        exValueAfterlife.add(karma);
+    private void extendAfterlife(AfterlifeEvent Afterlife) {
+        env.note(Afterlife);
+        exValueAfterlife.add(Afterlife);
     }
 
     protected boolean customEventHandled(ExEvent current) {
@@ -180,7 +180,7 @@ public abstract class Ex implements _Ex, Crank {
         return false;
     }
 
-    protected Optional<KarmaEvent> getAfterlife(ValueEnqueuedEvent valueEvent) {
+    protected Optional<AfterlifeEvent> getAfterlife(ValueEnqueuedEvent valueEvent) {
         return Optional.empty();
     }
 
@@ -239,6 +239,12 @@ public abstract class Ex implements _Ex, Crank {
         }
     }
 
+    protected void propagate(ExPropagation p, Value v) {
+        if (!isRecovery) {
+            p.getTo().receive(Value.of(p.getNameToPropagate(), v.get(), this));
+        }
+    }
+
     private Value createResultValue(Value v) {
         return new Value(getNameForReturnValue(), v.get(), this);
     }
@@ -247,7 +253,7 @@ public abstract class Ex implements _Ex, Crank {
         isRecovery = true;
         recovered = true;
         try {
-            if (e instanceof KarmaEvent k) {
+            if (e instanceof AfterlifeEvent k) {
                 exValueAfterlife.add(k);
                 return;
             }
@@ -398,7 +404,7 @@ public abstract class Ex implements _Ex, Crank {
                 // propagation regardless of recovery or not, since it may have ended up incomplete in an original run
                 // A per-propagation state tracking seems too slow and not needed right now but is an option to prevent
                 // re-sending on the sender's side
-                deliver(new Value(p.getNameToPropagate(), v.get(), this), p.getTo()));
+                propagate(p, v));
     }
 
     @Override

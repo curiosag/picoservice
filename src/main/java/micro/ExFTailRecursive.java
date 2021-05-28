@@ -1,7 +1,7 @@
 package micro;
 
-import micro.event.KarmaEvent;
-import micro.event.KarmaEventCanPropagatePendingValues;
+import micro.event.AfterlifeEvent;
+import micro.event.AfterlifeEventCanPropagatePendingValues;
 import micro.event.ValueEnqueuedEvent;
 
 import java.util.ArrayList;
@@ -18,16 +18,16 @@ public class ExFTailRecursive extends Ex {
     }
 
     @Override
-    protected void handleKarma(KarmaEvent k) {
-        Check.invariant(k instanceof KarmaEventCanPropagatePendingValues);
+    protected void handleAfterlife(AfterlifeEvent k) {
+        Check.invariant(k instanceof AfterlifeEventCanPropagatePendingValues);
         stash.forEach(this::propagate);
         stash.clear();
     }
 
     @Override
-    protected Optional<KarmaEvent> getAfterlife(ValueEnqueuedEvent e) {
+    protected Optional<AfterlifeEvent> getAfterlife(ValueEnqueuedEvent e) {
         if(paramsReceived.size() == template.numParams()) {
-            return Optional.of(new KarmaEventCanPropagatePendingValues(this));
+            return Optional.of(new AfterlifeEventCanPropagatePendingValues(this));
         }
         return Optional.empty();
     }

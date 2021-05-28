@@ -132,7 +132,7 @@ public class Node implements Env, Closeable {
                         idToEx.get(d.dependingOnId).recover(e);
                     }
                 }
-                case KarmaEventCanPropagatePendingValues, ValueReceivedEvent, PropagationTargetExsCreatedEvent, ValueEnqueuedEvent, ValueProcessedEvent -> {
+                case AfterlifeEventCanPropagatePendingValues, ValueReceivedEvent, PropagationTargetExsCreatedEvent, ValueEnqueuedEvent, ValueProcessedEvent -> {
                     h.hydrate(this);
                     ExEvent e = (ExEvent) h;
                     e.ex.recover(e);

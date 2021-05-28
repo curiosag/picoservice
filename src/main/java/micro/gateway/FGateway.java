@@ -1,9 +1,8 @@
 package micro.gateway;
 
-import micro.Address;
-import micro.PropagationType;
-import micro._Ex;
-import micro._F;
+import micro.*;
+
+import java.util.List;
 
 public class FGateway implements _F {
 
@@ -22,6 +21,11 @@ public class FGateway implements _F {
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
         throw new IllegalStateException();
+    }
+
+    @Override
+    public List<FPropagation> getPropagations() {
+        return null;
     }
 
     @Override

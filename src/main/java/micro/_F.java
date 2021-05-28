@@ -1,5 +1,7 @@
 package micro;
 
+import java.util.List;
+
 public interface _F extends Id {
 
     /**
@@ -8,6 +10,8 @@ public interface _F extends Id {
      *
      * */
     void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to);
+
+    List<FPropagation> getPropagations();
 
     _Ex createExecution(long id, _Ex returnTo);
 

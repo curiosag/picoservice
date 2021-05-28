@@ -16,6 +16,7 @@ public class F implements _F, Id {
     private final Supplier<Long> nextPropagationId;
     private final long id;
     protected final Env env;
+    public int icnt; // a debug thing
     private String label;
     public String returnAs = Names.result;
     private Primitive primitive;
@@ -114,7 +115,8 @@ public class F implements _F, Id {
         return this;
     }
 
-    List<FPropagation> getPropagations() {
+    @Override
+    public List<FPropagation> getPropagations() {
         return propagations;
     }
 

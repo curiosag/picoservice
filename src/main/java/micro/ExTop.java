@@ -2,6 +2,8 @@ package micro;
 
 import micro.event.ExEvent;
 
+import java.util.List;
+
 public class ExTop implements  _Ex, Id {
 
     public final static long TOP_ID = 0;
@@ -30,6 +32,11 @@ public class ExTop implements  _Ex, Id {
             @Override
             public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
                 throw new IllegalStateException();
+            }
+
+            @Override
+            public List<FPropagation> getPropagations() {
+                return null;
             }
 
             @Override

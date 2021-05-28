@@ -1,5 +1,6 @@
 package micro;
 
+import micro.If.ExIf;
 import micro.event.*;
 import nano.ingredients.guards.Guards;
 
@@ -20,13 +21,13 @@ public abstract class Ex implements _Ex, Crank {
     public F template;
     private _Ex returnTo;
 
-    private List<ExPropagation> propagations;
+    protected List<ExPropagation> propagations = new ArrayList<>();
     private final HashSet<String> namesReceived = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
     protected Queue<Value> inBox = new ConcurrentLinkedQueue<>();
     protected Stack<ExEvent> exStack = new Stack<>();
-    protected Queue<KarmaEvent> exValueAfterlife = new LinkedList<>();
+    protected Queue<KarmaEvent> exValueAfterlife = new ArrayDeque<>();
     protected boolean isRecovery;
     private boolean recovered;
 
@@ -83,13 +84,13 @@ public abstract class Ex implements _Ex, Crank {
         }
 
         if (current instanceof PropagationTargetExsCreatedEvent) {
-            initializePropagationTargets((PropagationTargetExsCreatedEvent) current);
+            addPropagationTargets((PropagationTargetExsCreatedEvent) current);
             exStack.pop();
             return;
         }
 
         if (current instanceof ValueEnqueuedEvent valueEvent) {
-            if (triggeredPropagationTargetExsCreatedEvent())
+            if (triggerPropagationTargetExsCreatedEvent(valueEvent))
                 return;
 
             if (eventChainedBeforeProcessValue(valueEvent)) {
@@ -105,7 +106,7 @@ public abstract class Ex implements _Ex, Crank {
                 return;
 
             // afterlife is a recoverable way to trigger events tied to a value V after ValueProcessedEvent(V) when the
-            // eventChainedAfterProcessValue mechanism isn't suitable.
+            // eventChainedAfterProcessValue mechanism isn't suitable. Its an internal alternative inBox with priority over the actual inBox.
             // Its for the case when a single value V processed causes the whole subsequent execution tree
             // to execute, followed by the final enclosing ValueProcessedEvent(V). Such an event log prevents reasonable recovery.
             // (ValueEnqueuedEvent(V) -> all the executions x1...xn until result -> ValueProcessedEvent(V). Imagine shutdown at xi, but
@@ -158,16 +159,16 @@ public abstract class Ex implements _Ex, Crank {
         return false;
     }
 
-    private boolean triggeredPropagationTargetExsCreatedEvent() {
-        if (propagations == null) {
-            if (template.getTargets().size() > 0) {
-                push(new PropagationTargetExsCreatedEvent(this, env.allocatePropagationTargets(this, template.getTargets())));
-                return true;
-            } else {
-                propagations = Collections.emptyList();
-            }
+    protected boolean triggerPropagationTargetExsCreatedEvent(ValueEnqueuedEvent valueEvent) {
+        if (needsInitialTargets()) {
+            push(new PropagationTargetExsCreatedEvent(this, env.allocatePropagationTargets(this, template.getTargets())));
+            return true;
         }
         return false;
+    }
+
+    protected boolean needsInitialTargets() {
+        return template.getTargets().size() > 0 && propagations.size() == 0;
     }
 
     private boolean eventChainedBeforeProcessValue(ValueEnqueuedEvent current) {
@@ -261,7 +262,7 @@ public abstract class Ex implements _Ex, Crank {
             }
 
             if (e instanceof PropagationTargetExsCreatedEvent) {
-                initializePropagationTargets((PropagationTargetExsCreatedEvent) e);
+                addPropagationTargets((PropagationTargetExsCreatedEvent) e);
                 return;
             }
 
@@ -340,22 +341,17 @@ public abstract class Ex implements _Ex, Crank {
         Check.condition(exStack.pop() instanceof ValueEnqueuedEvent);
     }
 
-    void clear() {
-        returnTo = null;
-        propagations.clear();
-        namesReceived.clear();
-        paramsReceived.clear();
-        done = true;
-    }
-
     String getNameForReturnValue() {
         return template.returnAs;
     }
 
-    private void initializePropagationTargets(PropagationTargetExsCreatedEvent e) {
-        propagations = template.getPropagations().stream()
+    private void addPropagationTargets(PropagationTargetExsCreatedEvent e) {
+        Check.invariant(propagations.isEmpty() || this instanceof ExIf);
+
+        propagations.addAll(template.getPropagations().stream()
+                .filter(t -> e.targetTemplates.contains(t.target))
                 .map(t -> new ExPropagation(t, pick(t.target, e.targets)))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     private _Ex pick(_F targetTemplate, List<_Ex> targets) {
@@ -368,9 +364,9 @@ public abstract class Ex implements _Ex, Crank {
         return result.get();
     }
 
-    protected List<ExPropagation> getPropagations(String paramName) {
+    protected List<ExPropagation> getPropagations(String valueName) {
         return isRecovery ? Collections.emptyList() : propagations.stream()
-                .filter(p -> p.getNameReceived().equals(paramName))
+                .filter(p -> p.getNameReceived().equals(valueName))
                 .collect(Collectors.toList());
     }
 
@@ -394,10 +390,6 @@ public abstract class Ex implements _Ex, Crank {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         return id == ((Ex) o).id;
-    }
-
-    protected boolean isLegitDownstreamValue(Value v) {
-        return !(Names.result.equals(v.getName()) || Names.exception.equals(v.getName()));
     }
 
     protected void propagate(Value v) {
@@ -439,4 +431,5 @@ public abstract class Ex implements _Ex, Crank {
     public boolean isDone() {
         return done;
     }
+
 }

@@ -14,6 +14,7 @@ public class Value implements Hydratable, Serioulizable {
     private static final int PARTIALLY_APPLIED_F = 3;
     private static final int STRING = 4;
     private static final Map<Class<?>, Integer> valueTypes = new HashMap<>();
+
     static {
         valueTypes.put(Integer.class, INT);
         valueTypes.put(Boolean.class, BOOL);
@@ -47,6 +48,14 @@ public class Value implements Hydratable, Serioulizable {
 
     public Object get() {
         return value;
+    }
+
+    public <T> T getAs(Class<T> resultType) {
+        if (!(resultType.isAssignableFrom(value.getClass()))) {
+            throw new RuntimeException("inconsistent result type");
+        }
+        //noinspection unchecked
+        return (T) value;
     }
 
     public static Value of(String name, Object value, _Ex sender) {
@@ -117,9 +126,9 @@ public class Value implements Hydratable, Serioulizable {
 
         int valType = input.readVarInt(true);
         value = switch (valType) {
-            case INT ->  input.readVarInt(false);
-            case BOOL ->  input.readBoolean();
-            case STRING ->  input.readString();
+            case INT -> input.readVarInt(false);
+            case BOOL -> input.readBoolean();
+            case STRING -> input.readString();
             case LIST -> {
                 ArrayList<Integer> list = new ArrayList<>();
                 int size = input.readVarInt(true);
@@ -148,7 +157,7 @@ public class Value implements Hydratable, Serioulizable {
 
     @Override
     public void dehydrate() {
-        if(value instanceof Hydratable) {
+        if (value instanceof Hydratable) {
             ((Hydratable) value).dehydrate();
         }
     }

@@ -1,11 +1,11 @@
 package micro;
 
-class FPropagation implements Id {
+public class FPropagation implements Id { //TODO should be a record, need no id
     final long id;
-    final PropagationType propagationType;
-    final String nameReceived;
-    final String nameToPropagate;
-    final _F target;
+    public final PropagationType propagationType;
+    public final String nameReceived;
+    public final String nameToPropagate;
+    public final _F target;
 
     /**
      * If this.equals(target) a reflexive propagation will be established, meaning an execution propagates values to itself

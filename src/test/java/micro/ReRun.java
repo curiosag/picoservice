@@ -25,6 +25,7 @@ public class ReRun {
             Gateway<?> sync = call.apply(env);
             exId = sync.getId();
             assertEquals(expected, sync.call());
+            assertEquals(0, ((Node) env).getCrankCount());
         }
         return new InitialRun(exId, log.events);
     }
@@ -35,6 +36,7 @@ public class ReRun {
             Gateway<?> sync = call.apply(latchOntoExId, env);
             env.start(true); //TODO race condition, more if node started before call.apply. Node.idToF.get(fId) returns null for fid 1
             assertEquals(expected, sync.call());
+            System.out.printf("(%d)", ((Node)env).getCrankCount());
         }
     }
 

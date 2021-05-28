@@ -1,6 +1,7 @@
 package micro;
 
 import micro.If.If;
+import micro.event.eventlog.memeventlog.SimpleListEventLog;
 import micro.gateway.Gateway;
 import micro.primitives.*;
 import micro.primitives.Lists.*;
@@ -618,7 +619,7 @@ trisum(a,b,c)   trimul(a,b,c)
             testFor(env, main, list(2, 1), list(1, 2));
             testFor(env, main, list(9, 0, 8, 1, 7, 2, 6, 3, 5, 4), list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
 
-            ArrayList<Integer> randList = randomList(100);
+            ArrayList<Integer> randList = randomList(150);
             ArrayList<Integer> randListSorted = new ArrayList<>(randList);
             randListSorted.sort(Integer::compareTo);
             testFor(env, main, randList, randListSorted);

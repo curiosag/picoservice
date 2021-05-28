@@ -22,7 +22,6 @@ public class ExFTailRecursive extends Ex {
         Check.invariant(k instanceof KarmaEventCanPropagatePendingValues);
         stash.forEach(this::propagate);
         stash.clear();
-        clear(this);
     }
 
     @Override

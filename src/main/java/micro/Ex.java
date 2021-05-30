@@ -22,7 +22,7 @@ public abstract class Ex implements _Ex, Crank {
     private _Ex returnTo;
 
     protected List<ExPropagation> propagations = new ArrayList<>();
-    private final HashSet<String> namesReceived = new HashSet<>();
+    protected final HashSet<String> namesReceived = new HashSet<>();
     final Map<String, Value> paramsReceived = new HashMap<>();
 
     protected Queue<Value> inBox = new ConcurrentLinkedQueue<>();
@@ -124,7 +124,7 @@ public abstract class Ex implements _Ex, Crank {
             Value value = ((ValueProcessedEvent) current).value;
             clearValue(value);
 
-            if (resultOrException(value) || resultOrExceptionFromPrimitive) {
+            if (resultOrException(value) || resultOrExceptionFromPrimitive || termSignalConsidered(value)) {
                 push(new ExDoneEvent(this));
             }
 
@@ -146,6 +146,19 @@ public abstract class Ex implements _Ex, Crank {
         Check.fail("unhandled event " + current.toString());
     }
 
+    protected boolean termSignalConsidered(Value value) {
+        if (! done && value instanceof Command c && c.is(Command.terminateTailRecursionElements)) {
+            propagations.stream()
+                    .filter(p -> p.getPropagationType() != PropagationType.UPSTREAM)
+                    .filter(p -> ! p.getTo().getTemplate().isTailRecursive())
+                    .map(ExPropagation::getTo)
+                    .distinct()
+                    .forEach(i -> sendCommand(i, Command.terminateTailRecursionElements));
+            return true;
+        }
+        return false;
+    }
+
     protected void handleAfterlife(AfterlifeEvent k) {
         throw new IllegalStateException("implementation mising?");
     }
@@ -161,7 +174,7 @@ public abstract class Ex implements _Ex, Crank {
 
     protected boolean triggerPropagationTargetExsCreatedEvent(ValueEnqueuedEvent valueEvent) {
         if (needsInitialTargets()) {
-            push(new PropagationTargetExsCreatedEvent(this, env.allocatePropagationTargets(this, template.getTargets())));
+            push(new PropagationTargetExsCreatedEvent(this, env.createTargets(this, template.getTargets())));
             return true;
         }
         return false;
@@ -202,6 +215,10 @@ public abstract class Ex implements _Ex, Crank {
     }
 
     protected void processValue(Value v) {
+        if (v instanceof Command c) {
+            return;
+        }
+
         if (namesReceived.contains(v.getName())) {
             // receiving/processValue needs to be idempotent
             //
@@ -241,7 +258,10 @@ public abstract class Ex implements _Ex, Crank {
 
     protected void propagate(ExPropagation p, Value v) {
         if (!isRecovery) {
-            p.getTo().receive(Value.of(p.getNameToPropagate(), v.get(), this));
+            if (p.getPropagationType() == PropagationType.UPSTREAM)
+                returnTo.receive(Value.of(p.getNameToPropagate(), v.get(), this));
+            else
+                p.getTo().receive(Value.of(p.getNameToPropagate(), v.get(), this));
         }
     }
 
@@ -302,14 +322,14 @@ public abstract class Ex implements _Ex, Crank {
 
         if (recovered && !exStack.isEmpty()) {
             process(exStack);
-            return; // So the caller decides if there's more to do
+            return;
         }
 
         if (!exValueAfterlife.isEmpty()) {
             exStack.addAll(exValueAfterlife);
             exValueAfterlife.clear();
             process(exStack);
-            return; // So the caller decides if there's more to do
+            return;
         }
 
         Value value = inBox.peek();
@@ -436,6 +456,10 @@ public abstract class Ex implements _Ex, Crank {
     @Override
     public boolean isDone() {
         return done;
+    }
+
+    protected void sendCommand(_Ex target, String type) {
+        target.receive(new Command(type, this, this));
     }
 
 }

@@ -11,18 +11,6 @@ public class FCall extends F {
 
     Map<String, String> paramNameMapping = new HashMap<>();
 
-    public FCall addParamNameMapping(String from, String to){
-        paramNameMapping.put(from, to);
-        return this;
-    }
-
-    public String mapParamName(String name){
-        String result = paramNameMapping.get(name);
-        if(result == null)
-            return name;
-        return result;
-    }
-
     public FCall(Env env, F called) {
         super(env, Primitive.nop, called.formalParameters);
         this.called = called;

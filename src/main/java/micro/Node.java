@@ -7,19 +7,19 @@ import micro.event.eventlog.NullEventLogWriter;
 import micro.event.eventlog.kryoeventlog.KryoEventLogReader;
 import micro.event.eventlog.kryoeventlog.KryoEventLogWriter;
 import micro.event.serialization.SerioulizedEvent;
+import micro.gateway.Gateway;
 import micro.trace.Tracer;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
+import static micro.ExTop.TOP_ID;
 
 public class Node implements Env, Closeable {
     private final Address address;
@@ -35,14 +35,14 @@ public class Node implements Env, Closeable {
     private final Map<Long, _Ex> idToEx = new TreeMap<>(); //todo works only single threaded now
     private final ConcurrentLinkedQueue<Crank> cranks = new ConcurrentLinkedQueue<>();
 
-    private long maxFId = ExTop.TOP_ID; // TODO AtomicLong at least for maxFId, perhaps compiler-assigned FIds?
-    private final AtomicLong maxExId = new AtomicLong(ExTop.TOP_ID);
+    private long maxFId = TOP_ID; // TODO AtomicLong at least for maxFId, perhaps compiler-assigned FIds?
+    private final AtomicLong maxExId = new AtomicLong(TOP_ID);
     private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
     private boolean recover = false;
     private boolean recovered = false;
     private final boolean useEventLog;
-    private final boolean debug = false;
+    private static final boolean debug = false;
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
         this.address = address;
@@ -231,8 +231,8 @@ public class Node implements Env, Closeable {
 
     private _Ex initializeTop() {
         _Ex result = new ExTop(address);
-        idToF.put(ExTop.TOP_ID, result.getTemplate());
-        idToEx.put(ExTop.TOP_ID, result);
+        idToF.put(TOP_ID, result.getTemplate());
+        idToEx.put(TOP_ID, result);
         return result;
     }
 
@@ -248,7 +248,7 @@ public class Node implements Env, Closeable {
     }
 
     @Override
-    public List<_Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates) {
+    public List<_Ex> createTargets(_Ex source, List<_F> targetTemplates) {
         return targetTemplates.stream().map(t -> createExecution(t, source)).collect(Collectors.toList());
     }
 
@@ -265,15 +265,10 @@ public class Node implements Env, Closeable {
     }
 
     @Override
-    public _Ex createExecution(_F f, _Ex returnTo) {
+    public DependendExCreatedEvent createDependentExecutionEvent(_F f, _Ex returnTo, _Ex dependingOn) {
         Check.preCondition(!recover);
-        if (f.equals(returnTo.getTemplate())) {
-            return returnTo;
-        } else {
-            _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
-            log(new ExCreatedEvent((Ex) ex));
-            return ex;
-        }
+        _Ex ex = createOrRecycleExecution(f, returnTo);
+        return new DependendExCreatedEvent((Ex) ex, (Ex) dependingOn);
     }
 
     @Override

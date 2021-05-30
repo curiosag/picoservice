@@ -2,9 +2,10 @@ package micro;
 
 import micro.event.ExEvent;
 
-import java.util.List;
-
 public class ExTop implements  _Ex, Id {
+
+
+    public static final ExTop instance = new ExTop(Address.localhost);
 
     public final static long TOP_ID = 0;
 
@@ -13,48 +14,7 @@ public class ExTop implements  _Ex, Id {
 
     public ExTop(Address address) {
         this.address = address;
-        this.template = createTemplate();
-    }
-
-    private _F createTemplate() {
-        return new _F(){
-
-            @Override
-            public long getId() {
-                return TOP_ID;
-            }
-
-            @Override
-            public void setId(long value) {
-                throw new IllegalStateException();
-            }
-
-            @Override
-            public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
-                throw new IllegalStateException();
-            }
-
-            @Override
-            public List<FPropagation> getPropagations() {
-                return null;
-            }
-
-            @Override
-            public _Ex createExecution(long id, _Ex returnTo) {
-                throw new IllegalStateException();
-            }
-
-            @Override
-            public Address getAddress() {
-                return Address.localhost;
-            }
-
-            @Override
-            public boolean isTailRecursive() {
-                return false;
-            }
-
-        };
+        this.template = new FTop();
     }
 
     @Override

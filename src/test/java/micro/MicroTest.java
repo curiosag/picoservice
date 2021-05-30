@@ -447,15 +447,32 @@ trisum(a,b,c)   trimul(a,b,c)
         max.addPropagation(Names.right, iff);
 
         //TODO possible that nothing is stashed? Also in useFVar?
-        iff.addPropagation(CONDITION, Names.left, gt);
-        iff.addPropagation(CONDITION, Names.right, gt);
-        iff.addPropagation(TRUE_BRANCH, Names.left, Names.result, iff);
-        iff.addPropagation(FALSE_BRANCH, Names.right, Names.result, iff);
+        iff.addPropagation(COND_CONDITION, Names.left, gt);
+        iff.addPropagation(COND_CONDITION, Names.right, gt);
+        iff.addPropagation(COND_TRUE_BRANCH, Names.left, Names.result, iff);
+        iff.addPropagation(COND_FALSE_BRANCH, Names.right, Names.result, iff);
 
         return max;
     }
 
+    @Test
+    public void testRecSum() {
+        final AtomicInteger i1 = new AtomicInteger(0);
 
+        try (Node env = createNode()) {
+            F main = createRecSum(env);
+
+            env.start();
+
+            Gateway.of(Integer.class, main, env).param(Names.a, 3).callAsync(i1::addAndGet);
+
+            Concurrent.await(() -> i1.get() > 0);
+
+            assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
+
+            System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");
+        }
+    }
 
     @Test
     public void testRecSumSimultaneously() {
@@ -480,7 +497,10 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
 
-    /* function geo(a) = if (a = 0)
+    /* This version avoids the use of UPSTREAM propagations, since it sends all parameters to geo bypassing
+       in-between elements.
+
+       function geo(a) = if (a = 0)
                            0
                          else
                          {
@@ -500,13 +520,13 @@ trisum(a,b,c)   trimul(a,b,c)
         // condition
         F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
 
-        iff.addPropagation(CONDITION, Names.a, Names.left, eq);
+        iff.addPropagation(COND_CONDITION, Names.a, Names.left, eq);
         eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
         // onTrue
-        iff.addPropagation(TRUE_BRANCH, Names.a, ping, CONST(env, 0).label("zero:ontrue"));
+        iff.addPropagation(COND_TRUE_BRANCH, Names.a, ping, CONST(env, 0).label("zero:ontrue"));
         // onFalse
         F block_else = f(env, nop).label("block_else");
-        iff.addPropagation(FALSE_BRANCH, Names.a, block_else);
+        iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);
         // let next_a = a - 1
         String next_a = "next_a";
         F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
@@ -522,9 +542,25 @@ trisum(a,b,c)   trimul(a,b,c)
         return geo;
     }
 
-
     @Test
     public void testTailRecSum() {
+        final AtomicInteger i1 = new AtomicInteger(0);
+        SimpleListEventLog log = new SimpleListEventLog();
+        try (Node env = new Node(Address.localhost, log, log)) {
+            env.start();
+            F s1 = createTailRecSum(env);
+
+            Gateway.of(Integer.class, s1, env).param(Names.a, 3).param(Names.c, 3).callAsync(i1::addAndGet);
+
+            Concurrent.await(() -> i1.get() > 0);
+            assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
+            System.out.println(env.getMaxExCount() + " exs used simultaneously for 3 tail recursive geometrical sums of 153");
+        }
+    }
+
+
+    @Test
+    public void testTailRecSumAsync() {
         final AtomicInteger i1 = new AtomicInteger(0);
 
         try (Node env = createNode()) {
@@ -551,7 +587,7 @@ trisum(a,b,c)   trimul(a,b,c)
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
 
-        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _3);
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _1);
     }
 
     /* function geo_tailrec(a, cumulated) =
@@ -578,14 +614,14 @@ trisum(a,b,c)   trimul(a,b,c)
         // condition
         F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
 
-        iff.addPropagation(CONDITION, Names.a, Names.left, eq);
+        iff.addPropagation(COND_CONDITION, Names.a, Names.left, eq);
         eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
         // onTrue
-        iff.addPropagation(TRUE_BRANCH, Names.c, result, iff);
+        iff.addPropagation(COND_TRUE_BRANCH, Names.c, result, iff);
         // onFalse
         F block_else = f(env, nop).label("block_else");
-        iff.addPropagation(FALSE_BRANCH, Names.a, block_else);
-        iff.addPropagation(FALSE_BRANCH, Names.c, block_else);
+        iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);
+        iff.addPropagation(COND_FALSE_BRANCH, Names.c, block_else);
         // let next_a = a - 1
         String next_a = "next_a";
         String cumulated = "cumulated";
@@ -593,14 +629,15 @@ trisum(a,b,c)   trimul(a,b,c)
         sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
         block_else.addPropagation(Names.a, Names.left, sub);
         // let cum = cumulated + next_a
-
         F add = f(env, add(), Names.left, Names.right).returnAs(cumulated).label("add");
-        // downstream propagation
         block_else.addPropagation(next_a, Names.left, add);
         block_else.addPropagation(Names.c, Names.right, add);
-        // recursion. TODO not sure what happened, if this would hinge on iff instead of block_else with all the stashing there
-        block_else.addPropagation(cumulated, Names.c, geo);
-        block_else.addPropagation(next_a, Names.a, geo);
+
+        block_else.addUpstreamPropagation(cumulated);
+        block_else.addUpstreamPropagation(next_a);
+
+        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, cumulated, Names.c, geo);
+        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, next_a, Names.a, geo);
 
         return geo;
     }
@@ -687,12 +724,12 @@ trisum(a,b,c)   trimul(a,b,c)
         quicksort.addPropagation(list, if_listEmpty);
 
         F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
-        if_listEmpty.addPropagation(CONDITION, list, isEmpty);
+        if_listEmpty.addPropagation(COND_CONDITION, list, isEmpty);
         F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
-        if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
+        if_listEmpty.addPropagation(COND_TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(env, nop).label("block_else");
-        if_listEmpty.addPropagation(FALSE_BRANCH, list, block_else);
+        if_listEmpty.addPropagation(COND_FALSE_BRANCH, list, block_else);
 
         F head = new F(env, Head.head, list).returnAs(Names.head).label("head()");
         F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail()");
@@ -801,13 +838,13 @@ trisum(a,b,c)   trimul(a,b,c)
         filter.addPropagation(predicate, if_listEmpty);
 
         F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("**isEmpty");
-        if_listEmpty.addPropagation(CONDITION, list, isEmpty);
+        if_listEmpty.addPropagation(COND_CONDITION, list, isEmpty);
         F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("**const:emptylist()");
-        if_listEmpty.addPropagation(TRUE_BRANCH, list, ping, constEmptyList);
+        if_listEmpty.addPropagation(COND_TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(env, nop).label("**block_else");
-        if_listEmpty.addPropagation(FALSE_BRANCH, list, block_else);
-        if_listEmpty.addPropagation(FALSE_BRANCH, predicate, block_else);
+        if_listEmpty.addPropagation(COND_FALSE_BRANCH, list, block_else);
+        if_listEmpty.addPropagation(COND_FALSE_BRANCH, predicate, block_else);
 
         F head = new F(env, Head.head, list).returnAs(Names.head).label("**head()");
         F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("**tail()");
@@ -827,14 +864,14 @@ trisum(a,b,c)   trimul(a,b,c)
         // TODO: would be nice to have a remapping somewhere for the remaining 1 parameter, "left" -> "argument" or so
         F callPredicate = new FCallByFunctionalValue(env, predicate, Names.left).returnAs(condition).label("**callPredicateByFVal");
 
-        if_predicate.addPropagation(CONDITION, predicate, callPredicate);
-        if_predicate.addPropagation(CONDITION, Names.head, Names.left, callPredicate);
+        if_predicate.addPropagation(COND_CONDITION, predicate, callPredicate);
+        if_predicate.addPropagation(COND_CONDITION, Names.head, Names.left, callPredicate);
 
         F cons = new F(env, Cons.cons, element, list).label("**cons");
-        if_predicate.addPropagation(TRUE_BRANCH, Names.head, element, cons);
-        if_predicate.addPropagation(TRUE_BRANCH, tailFiltered, Names.list, cons);
+        if_predicate.addPropagation(COND_TRUE_BRANCH, Names.head, element, cons);
+        if_predicate.addPropagation(COND_TRUE_BRANCH, tailFiltered, Names.list, cons);
 
-        if_predicate.addPropagation(FALSE_BRANCH, tailFiltered, new F(env, new Val(), tailFiltered).label("**VAL:tailFiltered"));
+        if_predicate.addPropagation(COND_FALSE_BRANCH, tailFiltered, new F(env, new Val(), tailFiltered).label("**VAL:tailFiltered"));
 
         return filter;
     }

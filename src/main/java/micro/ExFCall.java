@@ -25,7 +25,7 @@ public class ExFCall extends Ex {
     }
 
     @Override
-    protected boolean customEventHandled(ExEvent e) {
+    public boolean customEventHandled(ExEvent e) {
         if (e instanceof DependendExCreatedEvent) {
             acceptExBeingCalled((DependendExCreatedEvent)e);
             return true;

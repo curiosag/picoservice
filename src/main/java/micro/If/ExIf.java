@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static micro.PropagationType.FALSE_BRANCH;
-import static micro.PropagationType.TRUE_BRANCH;
+import static micro.PropagationType.COND_FALSE_BRANCH;
+import static micro.PropagationType.COND_TRUE_BRANCH;
 
 public class ExIf extends Ex {
 
@@ -32,7 +32,7 @@ public class ExIf extends Ex {
         List<FPropagation> propagations =
                 switch (state) {
                     case INITIAL -> template.getPropagations().stream()
-                            .filter(t -> t.propagationType == PropagationType.CONDITION || t.propagationType == PropagationType.INDISCRIMINATE)
+                            .filter(t -> t.propagationType == PropagationType.COND_CONDITION || t.propagationType == PropagationType.COND_INDISCRIMINATE)
                             .collect(Collectors.toList());
                     case CALCULATING_COND -> filterBranchTargets(template.getPropagations(), valueEvent);
                     case CALCULATING_BRANCH -> Collections.emptyList();
@@ -47,7 +47,7 @@ public class ExIf extends Ex {
         };
 
         if (!targets.isEmpty()) {
-            push(new PropagationTargetExsCreatedEvent(this, env.allocatePropagationTargets(this, targets)));
+            push(new PropagationTargetExsCreatedEvent(this, env.createTargets(this, targets)));
             return true;
         } else
             return false;
@@ -115,7 +115,7 @@ public class ExIf extends Ex {
 
         stash.forEach(
                 v -> getPropagations(v.getName()).stream()
-                        .filter(p1 -> p1.getPropagationType() != PropagationType.CONDITION)
+                        .filter(p1 -> p1.getPropagationType() != PropagationType.COND_CONDITION)
                         .forEach(p -> propagate(p, v))
         );
 
@@ -123,11 +123,11 @@ public class ExIf extends Ex {
     }
 
     private boolean isConditioned(ExPropagation p) {
-        return p.getPropagationType().in(FALSE_BRANCH, TRUE_BRANCH);
+        return p.getPropagationType().in(COND_FALSE_BRANCH, COND_TRUE_BRANCH);
     }
 
     private boolean servesBranchChosen(boolean condition, PropagationType pType) {
-        return (condition && pType == TRUE_BRANCH) || (!condition && pType == FALSE_BRANCH);
+        return (condition && pType == COND_TRUE_BRANCH) || (!condition && pType == COND_FALSE_BRANCH);
     }
 
 

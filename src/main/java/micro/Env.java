@@ -27,7 +27,7 @@ public interface Env extends Hydrator {
 
     void start(boolean recover);
 
-    List<_Ex> allocatePropagationTargets(_Ex source, List<_F> targetTemplates);
+    List<_Ex> createTargets(_Ex source, List<_F> targetTemplates);
 
     _Ex createExecution(F f);
 

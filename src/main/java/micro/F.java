@@ -9,7 +9,8 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static micro.PropagationType.INDISCRIMINATE;
+import static micro.PropagationType.COND_INDISCRIMINATE;
+import static micro.PropagationType.UPSTREAM;
 
 public class F implements _F, Id {
 
@@ -88,12 +89,17 @@ public class F implements _F, Id {
         return this;
     }
 
+    public void addUpstreamPropagation(String name) {
+        // an upstream propagation sends stuff to the caller, which otherwise only receives a result
+        addPropagation(UPSTREAM, name, name, ExTop.instance.getTemplate());
+    }
+
     public void addPropagation(String name, _F to) {
-        addPropagation(INDISCRIMINATE, name, name, to);
+        addPropagation(COND_INDISCRIMINATE, name, name, to);
     }
 
     void addPropagation(String nameExpected, String namePropagated, _F to) {
-        addPropagation(INDISCRIMINATE, nameExpected, namePropagated, to);
+        addPropagation(COND_INDISCRIMINATE, nameExpected, namePropagated, to);
     }
 
     @Override

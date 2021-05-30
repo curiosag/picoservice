@@ -30,7 +30,7 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     @Override
-    protected boolean customEventHandled(ExEvent e) {
+    public boolean customEventHandled(ExEvent e) {
         if (e instanceof DependendExCreatedEvent) {
             dependentExCreated = true; // needs to be set in case of recovery
             beingCalled = e.getEx();

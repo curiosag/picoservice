@@ -5,19 +5,45 @@ import micro.event.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 public class ExFCallByFunctionalValue extends Ex {
 
-    FCallByFunctionalValue f;
-    _F baseFunction;
-    _Ex beingCalled;
+    private enum RecoveryState {
+        COLLECTING_PARAMS, LAST_VAL_ENQ
+    }
+
+    private record RecoveryTransition(RecoveryState from,
+                                      RecoveryState to,
+                                      BiFunction<ExEvent, ExFTailRecursive, Boolean> condition,
+                                      BiConsumer<ExEvent, ExFTailRecursive> action) {
+    }
+
+    BiConsumer<ExEvent, ExFTailRecursive> nop = (a, b) -> {
+    };
+
+    private List<RecoveryTransition> recoveryTransitions = List.of(
+            new RecoveryTransition(RecoveryState.COLLECTING_PARAMS, RecoveryState.LAST_VAL_ENQ,
+                    (e, x) -> e instanceof ValueEnqueuedEvent && paramsReceived.size() == template.numParams() - 1, nop),
+            new RecoveryTransition(RecoveryState.LAST_VAL_ENQ, RecoveryState.LAST_VAL_ENQ,
+                    (e, x) -> e instanceof PropagationTargetExsCreatedEvent , nop),
+            new RecoveryTransition(RecoveryState.LAST_VAL_ENQ, RecoveryState.COLLECTING_PARAMS,
+                    (e, x) -> e instanceof ValueProcessedEvent, (e, x) -> x.reset())
+    );
+
+
+    FunctionalValueDefinition fDef;
+
+    _F fValF;
+    _Ex fValEx;
 
     private final List<Value> pendingValues = new ArrayList<>();
     private boolean dependentExCreated;
 
-    ExFCallByFunctionalValue(Env env, long id, FCallByFunctionalValue f, _Ex returnTo) {
-        super(env, id, f, returnTo);
-        this.f = f;
+    ExFCallByFunctionalValue(Env env, long id, FunctionalValueDefinition fDef, _Ex returnTo) {
+        super(env, id, fDef, returnTo);
+        this.fDef = fDef;
     }
 
     @Override
@@ -25,7 +51,7 @@ public class ExFCallByFunctionalValue extends Ex {
         Check.condition(k instanceof AfterlifeEventCanPropagatePendingValues);
         Check.preCondition(dependentExCreated);
 
-        pendingValues.forEach(pv -> deliver(pv.withSender(this), beingCalled));
+        pendingValues.forEach(pv -> deliver(pv.withSender(this), fValEx));
         pendingValues.clear();
     }
 
@@ -33,8 +59,8 @@ public class ExFCallByFunctionalValue extends Ex {
     public boolean customEventHandled(ExEvent e) {
         if (e instanceof DependendExCreatedEvent) {
             dependentExCreated = true; // needs to be set in case of recovery
-            beingCalled = e.getEx();
-            Check.postCondition((isRecovery && baseFunction == null) || beingCalled.getTemplate().equals(baseFunction));
+            fValEx = e.getEx();
+            Check.postCondition((isRecovery && fValF == null) || fValEx.getTemplate().equals(fValF));
             return true;
         }
 
@@ -50,14 +76,14 @@ public class ExFCallByFunctionalValue extends Ex {
     }
 
     private boolean isFunctionalValueParam(ValueEvent e) {
-        return e.value.getName().equals(f.getFunctionalValueParam());
+        return e.value.getName().equals(fDef.getFunctionalValueParam());
     }
 
     @Override
     protected ExEvent getEventTriggeredAfterCurrent(ValueEnqueuedEvent e) {
         if (!dependentExCreated && isFunctionalValueParam(e)) {
             dependentExCreated = true;
-            return env.createDependentExecutionEvent(baseFunction, this, this);
+            return env.createDependentExecutionEvent(fValF, this, this);
         }
         return none;
     }
@@ -65,7 +91,7 @@ public class ExFCallByFunctionalValue extends Ex {
     private void acceptFunctionalValueTemplate(Object value) {
         Check.invariant(value instanceof PartiallyAppliedFunction, "that wasn't expected: " + value);
         @SuppressWarnings("ConstantConditions") PartiallyAppliedFunction f = ((PartiallyAppliedFunction) value);
-        baseFunction = f.baseFunction;
+        fValF = f.baseFunction;
         pendingValues.addAll(f.partialValues);
     }
 
@@ -73,9 +99,9 @@ public class ExFCallByFunctionalValue extends Ex {
     protected void processValueDownstream(Value v) {
         Check.preCondition(isDownstream(v.getName()));
 
-        if (v.getName().equals(f.getFunctionalValueParam())) {
+        if (v.getName().equals(fDef.getFunctionalValueParam())) {
             acceptFunctionalValueTemplate(v.get());
-        } else if (beingCalled == null) {
+        } else if (fValEx == null) {
             pendingValues.add(v);
         } else {
             deliver(v.withSender(this), getFunctionBeingCalled());
@@ -84,16 +110,16 @@ public class ExFCallByFunctionalValue extends Ex {
 
     @Override
     public String getLabel() {
-        return f.getLabel();
+        return fDef.getLabel();
     }
 
     String getNameForReturnValue() {
-        return f.returnAs;
+        return fDef.returnAs;
     }
 
     private _Ex getFunctionBeingCalled() {
-        Check.invariant(beingCalled != null);
-        return beingCalled;
+        Check.invariant(fValEx != null);
+        return fValEx;
     }
 
 }

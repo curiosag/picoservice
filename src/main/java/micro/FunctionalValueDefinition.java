@@ -2,11 +2,11 @@ package micro;
 
 import micro.primitives.Primitive;
 
-public class FCallByFunctionalValue extends F {
+public class FunctionalValueDefinition extends F {
 
     private final String functionalValueParam;
 
-    public FCallByFunctionalValue(Env env, String functionalValueParam, String ... formalParams) {
+    public FunctionalValueDefinition(Env env, String functionalValueParam, String ... formalParams) {
         super(env, Primitive.nop, formalParams);
         this.functionalValueParam = functionalValueParam;
     }

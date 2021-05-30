@@ -1,10 +1,12 @@
 package micro;
 
 import micro.If.If;
+import micro.event.ValueProcessedEvent;
 import micro.event.eventlog.memeventlog.SimpleListEventLog;
 import micro.gateway.Gateway;
 import micro.primitives.*;
 import micro.primitives.Lists.*;
+import micro.visualize.FVisualizer;
 import nano.ingredients.Name;
 import org.junit.Test;
 
@@ -322,7 +324,7 @@ trisum(a,b,c)   trimul(a,b,c)
         }, log, _1);
     }
 
-    private F createCallByFunctionalValue(Env env){
+    private F createCallByFunctionalValue(Env env) {
         F main = f(env, nop, Names.output).label("main");
 
         F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
@@ -331,7 +333,7 @@ trisum(a,b,c)   trimul(a,b,c)
         // a plain functional value is a partially applied function with no partial parameters
         F createSubtract = new FCreatePartiallyAppliedFunction(env, sub).returnAs(paramFVar).label("createSubtract");
 
-        F callSubtract = new FCallByFunctionalValue(env, paramFVar, Names.left, Names.right).label("callSubtract");
+        F callSubtract = new FunctionalValueDefinition(env, paramFVar, Names.left, Names.right).label("callSubtract");
 
         useFVar.addPropagation(Names.a, ping, createSubtract);
         useFVar.addPropagation(paramFVar, callSubtract);
@@ -343,6 +345,30 @@ trisum(a,b,c)   trimul(a,b,c)
 
         return main;
     }
+
+    @Test
+    public void reTestPartialFunctionApplication() {
+
+        ReRun.InitialRun rInit = runAndCheck(_4, n -> {
+            F pfapp = createPFApp(n);
+            Gateway<Integer> sync = getSynchronized(n, pfapp);
+            sync.param(Names.a, 7);
+            sync.param(Names.b, 3);
+            return sync;
+        });
+
+        // truncate log, so that last result will get processed again in any case
+        List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
+
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> {
+            F pfapp = createPFApp(n);
+            Gateway<Integer> sync = getSynchronized(id, n, pfapp);
+            sync.param(Names.a, 7);
+            sync.param(Names.b, 3);
+            return sync;
+        }, log, _4);
+    }
+
     /*
 
         def sub(a: Int, b: Int): Int = a - b
@@ -356,38 +382,24 @@ trisum(a,b,c)   trimul(a,b,c)
 
     */
 
-    @Test
-    public void testPartialFunctionApplication() {
-        try (Node env = createNode()) {
-            ResultCollector result = new ResultCollector();
-            Action resultListener = new Action(i -> result.set(i.values()));
+    private F createPFApp(Env env){
+        F main = f(env, nop, Names.output).label("main");
 
-            F main = f(env, resultListener, Names.output).label("main");
+        F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
+        F usePartial = f(env, nop, Names.a, Names.b).label("usePartial");
 
-            F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
-            F usePartial = f(env, nop, Names.a, Names.b).returnAs(Names.output).label("usePartial");
+        F createDec = new FCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
+        F callDec = new FunctionalValueDefinition(env, paramFVar, Names.left).label("callDec");
 
-            F createDec = new FCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
-            F callDec = new FCallByFunctionalValue(env, paramFVar, Names.left).label("callDec");
+        usePartial.addPropagation(Names.b, Names.right, createDec);
+        usePartial.addPropagation(paramFVar, callDec);
+        usePartial.addPropagation(Name.a, Names.left, callDec);
 
-            usePartial.addPropagation(Names.b, Names.right, createDec);
-            usePartial.addPropagation(paramFVar, callDec);
-            usePartial.addPropagation(Name.a, Names.left, callDec);
-
-            main.addPropagation(Names.a, usePartial);
-            main.addPropagation(Names.b, usePartial);
-
-            _Ex ex = env.createExecution(main);
-
-            env.start();
-
-            ex.receive(Value.of(Names.a, 2, env.getTop()));
-            ex.receive(Value.of(Names.b, 1, env.getTop()));
-
-            Concurrent.await(() -> !result.isEmpty());
-            assertEquals(1, result.get().get(0).get());
-        }
+        main.addPropagation(Names.a, usePartial);
+        main.addPropagation(Names.b, usePartial);
+        return main;
     }
+
 
     @Test
     public void testConst() {
@@ -584,10 +596,16 @@ trisum(a,b,c)   trimul(a,b,c)
             return sync;
         });
 
-        // truncate log, so that last result will get processed again in any case
-        List<Hydratable> log = rInit.events().subList(0, rInit.events().size() - 2);
+        // removal of recursion elements goes on after the recursive function terminated, so nothing will happen if
+        // the log isn't truncated to a state before that termination
+        List<Hydratable> log = new ArrayList<>();
+        for (Hydratable h : rInit.events()) {
+            if (h instanceof ValueProcessedEvent e && e.value.getName().equals(result) && e.ex.getTemplate().isTailRecursive())
+                break;
+            log.add(h);
+        }
 
-        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _1);
+        ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _3);
     }
 
     /* function geo_tailrec(a, cumulated) =
@@ -608,36 +626,34 @@ trisum(a,b,c)   trimul(a,b,c)
         F geo = f(env, nop, Names.a, Names.c)./*tailRecursive().*/label("geo");
         If iff = iff(env).label("if");
 
-        geo.addPropagation(Names.a, iff);
-        geo.addPropagation(Names.c, iff);
+        // one can't use the same names in the body wihout having iff produce a fake return value instantly
+        geo.addPropagation(Names.a, Names._a, iff);
+        geo.addPropagation(Names.c, Names._c, iff);
 
         // condition
         F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
 
-        iff.addPropagation(COND_CONDITION, Names.a, Names.left, eq);
-        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
+        iff.addPropagation(COND_CONDITION, Names._a, Names.left, eq);
+        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero"));
         // onTrue
-        iff.addPropagation(COND_TRUE_BRANCH, Names.c, result, iff);
+        iff.addPropagation(COND_TRUE_BRANCH, Names._c, result, iff);
         // onFalse
-        F block_else = f(env, nop).label("block_else");
-        iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);
-        iff.addPropagation(COND_FALSE_BRANCH, Names.c, block_else);
         // let next_a = a - 1
         String next_a = "next_a";
         String cumulated = "cumulated";
+
         F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
         sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
-        block_else.addPropagation(Names.a, Names.left, sub);
+
+        iff.addPropagation(COND_FALSE_BRANCH, Names._a, Names.left, sub);
         // let cum = cumulated + next_a
         F add = f(env, add(), Names.left, Names.right).returnAs(cumulated).label("add");
-        block_else.addPropagation(next_a, Names.left, add);
-        block_else.addPropagation(Names.c, Names.right, add);
-
-        block_else.addUpstreamPropagation(cumulated);
-        block_else.addUpstreamPropagation(next_a);
+        iff.addPropagation(COND_FALSE_BRANCH, next_a, Names.left, add);
+        iff.addPropagation(COND_FALSE_BRANCH, Names._c, Names.right, add);
 
         iff.addPropagation(PropagationType.COND_INDISCRIMINATE, cumulated, Names.c, geo);
         iff.addPropagation(PropagationType.COND_INDISCRIMINATE, next_a, Names.a, geo);
+        iff.doneOn(next_a, cumulated);
 
         return geo;
     }
@@ -666,10 +682,10 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
 
-    @Test
+    //@Test
     public void testQuickReReReReReSort() {
         for (int i = 0; i < 5; i++) {
-          testQuickReSort();
+            testQuickReSort();
         }
     }
 
@@ -832,25 +848,25 @@ trisum(a,b,c)   trimul(a,b,c)
     private F createFilter(Env env) {
         String tailFiltered = "tailFiltered";
 
-        F filter = new F(env, nop, predicate, list);
+        F filter = new F(env, nop, predicate, list).label("filter");
         If if_listEmpty = iff(env).label("**if:listEmpty");
         filter.addPropagation(list, if_listEmpty);
         filter.addPropagation(predicate, if_listEmpty);
 
-        F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("**isEmpty");
+        F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(COND_CONDITION, list, isEmpty);
-        F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("**const:emptylist()");
+        F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
         if_listEmpty.addPropagation(COND_TRUE_BRANCH, list, ping, constEmptyList);
 
-        F block_else = f(env, nop).label("**block_else");
+        F block_else = f(env, nop).label("block_else");
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, list, block_else);
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, predicate, block_else);
 
-        F head = new F(env, Head.head, list).returnAs(Names.head).label("**head()");
-        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("**tail()");
-        F filterReCall = new FCall(env, filter).returnAs(tailFiltered).label("**filterReCall");
+        F head = new F(env, Head.head, list).returnAs(Names.head).label("head()");
+        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail()");
+        F filterReCall = new FCall(env, filter).returnAs(tailFiltered).label("filterReCall");
 
-        If if_predicate = iff(env).label("**if:predicate");
+        If if_predicate = iff(env).label("if:predicate");
         block_else.addPropagation(list, head);
         block_else.addPropagation(list, tail);
         block_else.addPropagation(Names.tail, Names.list, filterReCall);
@@ -862,16 +878,16 @@ trisum(a,b,c)   trimul(a,b,c)
 
         // underlying partial function takes left/right, right is already applied, left needs to be supplied
         // TODO: would be nice to have a remapping somewhere for the remaining 1 parameter, "left" -> "argument" or so
-        F callPredicate = new FCallByFunctionalValue(env, predicate, Names.left).returnAs(condition).label("**callPredicateByFVal");
+        F callPredicate = new FunctionalValueDefinition(env, predicate, Names.left).returnAs(condition).label("callPredicateByFVal");
 
         if_predicate.addPropagation(COND_CONDITION, predicate, callPredicate);
         if_predicate.addPropagation(COND_CONDITION, Names.head, Names.left, callPredicate);
 
-        F cons = new F(env, Cons.cons, element, list).label("**cons");
+        F cons = new F(env, Cons.cons, element, list).label("cons");
         if_predicate.addPropagation(COND_TRUE_BRANCH, Names.head, element, cons);
         if_predicate.addPropagation(COND_TRUE_BRANCH, tailFiltered, Names.list, cons);
 
-        if_predicate.addPropagation(COND_FALSE_BRANCH, tailFiltered, new F(env, new Val(), tailFiltered).label("**VAL:tailFiltered"));
+        if_predicate.addPropagation(COND_FALSE_BRANCH, tailFiltered, new F(env, new Val(), tailFiltered).label("VAL:tailFiltered"));
 
         return filter;
     }
@@ -903,6 +919,13 @@ trisum(a,b,c)   trimul(a,b,c)
         return list;
     }
 
+
+    @Test
+    public void printf() {
+        try (var v = new FVisualizer(createTailRecSum(createNode()))) {
+            v.render();
+        }
+    }
 
     private void resumeComputation(Supplier<_F> getF) {
         Node env = createNode();

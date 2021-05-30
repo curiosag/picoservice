@@ -42,4 +42,14 @@ public class FGateway implements _F {
     public boolean isTailRecursive() {
         return false;
     }
+
+    @Override
+    public void doneOn(String... params) {
+
+    }
+
+    @Override
+    public String getLabel() {
+        return "Gateway";
+    }
 }

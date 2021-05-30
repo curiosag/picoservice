@@ -22,4 +22,8 @@ public interface _F extends Id {
     }
 
     boolean isTailRecursive();
+
+    void doneOn(String ... params);
+
+    String getLabel();
 }

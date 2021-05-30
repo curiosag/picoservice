@@ -19,4 +19,6 @@ public interface Names {
     String head = "head";
     String tail = "tail";
     String predicate = "predicate";
+    String _a = "_a";
+    String _c = "_c";
 }

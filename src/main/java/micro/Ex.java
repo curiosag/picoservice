@@ -84,6 +84,10 @@ public abstract class Ex implements _Ex, Crank {
         }
 
         if (current instanceof PropagationTargetExsCreatedEvent) {
+            if(recovered && this instanceof ExFTailRecursive && ! propagations.isEmpty())
+            {
+                propagations.clear();
+            }
             addPropagationTargets((PropagationTargetExsCreatedEvent) current);
             exStack.pop();
             return;
@@ -113,18 +117,18 @@ public abstract class Ex implements _Ex, Crank {
             // on recovery ValueEnqueuedEvent would reinitiate x1...xn in the absence of ValueProcessedEvent. So some mechanism is needed
             // to resolve such scenarios). Its relevant for the cases with potentially stashed pending values,
             // ExFCallByFunctionalValue and ExIf
-            getAfterlife(valueEvent).ifPresent(this::extendAfterlife);
+            getAfterlife(valueEvent).ifPresent(this::extendAfterlife); //TODO recovery: sort out afterlife without ValueProcessedEvent
+                                                                       // TODO there will be the testing issues that a valid afterlive must not be
+            // artificially truncated on test
 
             push(new ValueProcessedEvent(this, valueEvent.value));
             return;
         }
 
-        if (current instanceof ValueProcessedEvent) {
-
+        if (current instanceof ValueProcessedEvent e) {
             Value value = ((ValueProcessedEvent) current).value;
-            clearValue(value);
-
-            if (resultOrException(value) || resultOrExceptionFromPrimitive || termSignalConsidered(value)) {
+            clearLists(value);
+            if (resultOrExceptionFromPrimitive || resultOrException(value) || meansDone(namesReceived)) {
                 push(new ExDoneEvent(this));
             }
 
@@ -146,17 +150,8 @@ public abstract class Ex implements _Ex, Crank {
         Check.fail("unhandled event " + current.toString());
     }
 
-    protected boolean termSignalConsidered(Value value) {
-        if (! done && value instanceof Command c && c.is(Command.terminateTailRecursionElements)) {
-            propagations.stream()
-                    .filter(p -> p.getPropagationType() != PropagationType.UPSTREAM)
-                    .filter(p -> ! p.getTo().getTemplate().isTailRecursive())
-                    .map(ExPropagation::getTo)
-                    .distinct()
-                    .forEach(i -> sendCommand(i, Command.terminateTailRecursionElements));
-            return true;
-        }
-        return false;
+    private boolean meansDone(HashSet<String> namesReceived) {
+        return !template.meansDone.isEmpty() && namesReceived.containsAll(template.meansDone);
     }
 
     protected void handleAfterlife(AfterlifeEvent k) {
@@ -199,7 +194,7 @@ public abstract class Ex implements _Ex, Crank {
 
     private boolean eventChainedAfterProcessValue(ValueEnqueuedEvent current) {
         ExEvent triggered = getEventTriggeredAfterCurrent(current);
-        if (triggered != none) {
+        if(triggered != none) {
             push(triggered);
             return true;
         }
@@ -215,9 +210,6 @@ public abstract class Ex implements _Ex, Crank {
     }
 
     protected void processValue(Value v) {
-        if (v instanceof Command c) {
-            return;
-        }
 
         if (namesReceived.contains(v.getName())) {
             // receiving/processValue needs to be idempotent
@@ -258,10 +250,7 @@ public abstract class Ex implements _Ex, Crank {
 
     protected void propagate(ExPropagation p, Value v) {
         if (!isRecovery) {
-            if (p.getPropagationType() == PropagationType.UPSTREAM)
-                returnTo.receive(Value.of(p.getNameToPropagate(), v.get(), this));
-            else
-                p.getTo().receive(Value.of(p.getNameToPropagate(), v.get(), this));
+            p.getTo().receive(Value.of(p.getNameToPropagate(), v.get(), this));
         }
     }
 
@@ -301,7 +290,7 @@ public abstract class Ex implements _Ex, Crank {
                 Value v = ((ValueProcessedEvent) e).value;
                 processValue(v);
                 exStack.push(e);
-                clearValue(v);
+                clearLists(v);
                 return;
             }
 
@@ -361,7 +350,7 @@ public abstract class Ex implements _Ex, Crank {
         exStack.push(e);
     }
 
-    private void clearValue(Value e) {
+    private void clearLists(Value e) {
         Check.condition(e.equals(inBox.poll()));
         Check.condition(exStack.pop() instanceof ValueProcessedEvent);
         Check.condition(exStack.pop() instanceof ValueEnqueuedEvent);
@@ -371,7 +360,7 @@ public abstract class Ex implements _Ex, Crank {
         return template.returnAs;
     }
 
-    private void addPropagationTargets(PropagationTargetExsCreatedEvent e) {
+    protected void addPropagationTargets(PropagationTargetExsCreatedEvent e) {
         Check.invariant(propagations.isEmpty() || this instanceof ExIf);
 
         propagations.addAll(template.getPropagations().stream()
@@ -456,10 +445,6 @@ public abstract class Ex implements _Ex, Crank {
     @Override
     public boolean isDone() {
         return done;
-    }
-
-    protected void sendCommand(_Ex target, String type) {
-        target.receive(new Command(type, this, this));
     }
 
 }

@@ -2,15 +2,11 @@ package micro;
 
 import micro.primitives.Primitive;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static micro.PropagationType.COND_INDISCRIMINATE;
-import static micro.PropagationType.UPSTREAM;
 
 public class F implements _F, Id {
 
@@ -25,6 +21,8 @@ public class F implements _F, Id {
     private final List<FPropagation> propagations = new ArrayList<>();
 
     List<String> formalParameters = new ArrayList<>();
+    List<String> meansDone = new ArrayList<>();
+
     protected boolean isTailRecursive;
 
     private F(Env env, Primitive primitive) {
@@ -87,11 +85,6 @@ public class F implements _F, Id {
     F returnAs(String returnAs) {
         this.returnAs = returnAs;
         return this;
-    }
-
-    public void addUpstreamPropagation(String name) {
-        // an upstream propagation sends stuff to the caller, which otherwise only receives a result
-        addPropagation(UPSTREAM, name, name, ExTop.instance.getTemplate());
     }
 
     public void addPropagation(String name, _F to) {
@@ -169,5 +162,10 @@ public class F implements _F, Id {
     @Override
     public boolean isTailRecursive() {
         return isTailRecursive;
+    }
+
+    @Override
+    public void doneOn(String... params) {
+        meansDone.addAll(Arrays.asList(params));
     }
 }

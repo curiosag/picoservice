@@ -42,7 +42,7 @@ public class Node implements Env, Closeable {
     private boolean recover = false;
     private boolean recovered = false;
     private final boolean useEventLog;
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
         this.address = address;

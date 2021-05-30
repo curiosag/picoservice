@@ -81,6 +81,7 @@ public enum SerioulizedEvent {
         classToSerializedClass.put(ValueProcessedEvent.class, ValueProcessedEvent);
         classToSerializedClass.put(ExDoneEvent.class, ExDoneEvent);
         classToSerializedClass.put(AfterlifeEventCanPropagatePendingValues.class, AfterlifeEventCanPropagatePendingValues);
+
     }
 
 }

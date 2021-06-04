@@ -39,8 +39,8 @@ public class Node implements Env, Closeable {
     private final AtomicLong maxExId = new AtomicLong(TOP_ID);
     private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
+    private int maxExCount = 0;
     private boolean recover = false;
-    private boolean recovered = false;
     private final boolean useEventLog;
     private static final boolean debug = true;
 
@@ -65,7 +65,7 @@ public class Node implements Env, Closeable {
         idToEx.remove(exId);
     }
 
-    private _Ex getReturnTarget(ExCreatedEvent e, _F f) {
+    private _Ex getReturnTarget(ExCreatedEvent e) {
         return getExForId(e.exReturnToId);
     }
 
@@ -86,14 +86,16 @@ public class Node implements Env, Closeable {
         crankRoundRobin(cranks);
     }
 
-    private void crankRoundRobin(ConcurrentLinkedQueue<Crank> cranks) {
+    @SuppressWarnings("ConditionalBreakInInfiniteLoop")
+    private void crankRoundRobin(Queue<Crank> cranks) {
         debug("*** RUN ***");
         while (true) {
             if (stop.get()) {
-                return;
+                break;
             }
             Concurrent.sleep(delay.get());
 
+            maxExCount = Math.max(maxExCount, cranks.size());
             Crank current = cranks.poll();
             if (current != null) {
                 while (current.isMoreToDoRightNow()) {
@@ -123,11 +125,10 @@ public class Node implements Env, Closeable {
                 case ExCreatedEvent, DependendExCreatedEvent -> {
                     ExCreatedEvent e = (ExCreatedEvent) h;
                     _F f = getFForId(e.getFId());
-                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e, f));
+                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e));
                     maxExId = Math.max(maxExId, e.exId);
                     idToEx.put(e.exId, ex);
-                    if (e instanceof DependendExCreatedEvent) {
-                        DependendExCreatedEvent d = (DependendExCreatedEvent) e;
+                    if (e instanceof DependendExCreatedEvent d) {
                         d.ex = ex;
                         idToEx.get(d.dependingOnId).recover(e);
                     }
@@ -148,7 +149,6 @@ public class Node implements Env, Closeable {
                 .forEach(cranks::add);
 
         recover = false;
-        recovered = true;
     }
 
     @Override
@@ -205,7 +205,7 @@ public class Node implements Env, Closeable {
 
     @Override
     public void addF(_F f) {
-        idToF.put(f.getId(), (F) f); //TODO (F)
+        idToF.put(f.getId(), f);
     }
 
     @Override
@@ -258,10 +258,16 @@ public class Node implements Env, Closeable {
     }
 
     @Override
-    public DependendExCreatedEvent createDependentExecutionEvent(_F f, _Ex returnTo, _Ex dependingOn) {
+    public _Ex createExecution(_F f, _Ex returnTo) {
         Check.preCondition(!recover);
-        _Ex ex = f.createExecution(maxExId.addAndGet(1), returnTo);
-        return new DependendExCreatedEvent((Ex) ex, (Ex) dependingOn);
+        if (f.equals(returnTo.getTemplate())) {
+            return returnTo;
+        }
+        if (f.equals(ExTop.instance.getTemplate())) {
+            return ExTop.instance;
+        }
+        _Ex ex = createOrRecycleExecution(f, returnTo);
+        return ex;
     }
 
     @Override
@@ -271,14 +277,32 @@ public class Node implements Env, Closeable {
         return new DependendExCreatedEvent((Ex) ex, (Ex) dependingOn);
     }
 
-    @Override
-    public void relatchExecution(_F f, _Ex returnTo) {
-        idToEx.put(returnTo.getId(), returnTo);
+    private _Ex createOrRecycleExecution(_F f, _Ex returnTo) {
+        if (f.isTailRecursive()) {
+            Check.invariant(f.getAddress() == Address.localhost);
+            Optional<_Ex> ex = getRecursiveF(f, returnTo);
+            if (ex.isPresent())
+                return ex.get();
+        }
+
+        _Ex result = f.createExecution(maxExId.addAndGet(1), returnTo);
+        log(new ExCreatedEvent((Ex) result));
+        return result;
+    }
+
+    private Optional<_Ex> getRecursiveF(_F f, _Ex current) {
+        if (current instanceof Gateway || current instanceof ExTop)
+            return Optional.empty();
+
+        if (current.getTemplate().equals(f))
+            return Optional.of(current);
+        else
+            return getRecursiveF(f, current.returnTo());
     }
 
     @Override
-    public int getMaxDepth() {
-        return 0;
+    public void relatchExecution(_F f, _Ex returnTo) {
+        idToEx.put(returnTo.getId(), returnTo);
     }
 
     public void debugValueEnqueuedEvent(ValueEnqueuedEvent v) {
@@ -298,4 +322,12 @@ public class Node implements Env, Closeable {
         log(from + " -> " + to + ": " + v.value.getName() + " " + v.value.get().toString());
     }
 
+    @Override
+    public int getMaxExCount() {
+        return maxExCount;
+    }
+
+    public int getCrankCount() {
+        return cranks.size();
+    }
 }

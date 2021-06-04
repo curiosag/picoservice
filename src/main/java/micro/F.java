@@ -102,7 +102,7 @@ public class F implements _F, Id {
 
     @Override
     public Ex createExecution(long id, _Ex returnTo) {
-        return /* TODO isTailRecursive ? new ExFTailRecursive(this.env, id, this, returnTo) : */ new ExF(this.env, id, this, returnTo);
+        return isTailRecursive ? new ExFTailRecursive(this.env, id, this, returnTo) : new ExF(this.env, id, this, returnTo);
     }
 
     public String getLabel() {

@@ -504,7 +504,7 @@ trisum(a,b,c)   trimul(a,b,c)
             assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
             assertEquals(Integer.valueOf(11325), Integer.valueOf(i2.get()));
 
-            System.out.println(env.getMaxDepth() + " exs used for recursive geometrical sum");
+            System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");
         }
     }
 
@@ -574,21 +574,29 @@ trisum(a,b,c)   trimul(a,b,c)
     @Test
     public void testTailRecSumAsync() {
         final AtomicInteger i1 = new AtomicInteger(0);
-
-        try (Node env = createNode()) {
-            F main = createTailRecSum(env);
-
+        final AtomicInteger i2 = new AtomicInteger(0);
+        final AtomicInteger i3 = new AtomicInteger(0);
+        SimpleListEventLog log = new SimpleListEventLog();
+        try (Node env = new Node(Address.localhost, log, log)) {
             env.start();
-            Gateway.of(Integer.class, main, env).param(Names.a, 500).param(Names.c, 500).callAsync(i1::addAndGet);
+            F s1 = createTailRecSum(env);
+            F s2 = createTailRecSum(env);
+            F s3 = createTailRecSum(env);
 
-            Concurrent.await(() -> i1.get() > 0);
-            assertEquals(Integer.valueOf(125250), Integer.valueOf(i1.get()));
-            System.out.println(env.getMaxDepth() + " exs used simultaneously for tail recursive geometrical sum of 500");
+            Gateway.of(Integer.class, s1, env).param(Names.a, 153).param(Names.c, 153).callAsync(i1::addAndGet);
+            Gateway.of(Integer.class, s2, env).param(Names.a, 153).param(Names.c, 153).callAsync(i2::addAndGet);
+            Gateway.of(Integer.class, s3, env).param(Names.a, 153).param(Names.c, 153).callAsync(i3::addAndGet);
+
+            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0 && i3.get() > 0);
+            assertEquals(Integer.valueOf(11781), Integer.valueOf(i1.get()));
+            assertEquals(Integer.valueOf(11781), Integer.valueOf(i2.get()));
+            assertEquals(Integer.valueOf(11781), Integer.valueOf(i3.get()));
+            System.out.println(env.getMaxExCount() + " exs used simultaneously for 3 tail recursive geometrical sums of 153");
         }
     }
 
     @Test
-    public void testTailRecSumRecovery() {
+    public void testTailReReReReReRecursion() {
         ReRun.InitialRun rInit = runAndCheck(_3, n -> {
             Gateway<Integer> sync = getSynchronized(n, createTailRecSum(n));
             sync.param(Names.a, 2);
@@ -608,22 +616,23 @@ trisum(a,b,c)   trimul(a,b,c)
         ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _3);
     }
 
-    /* function geo_tailrec(a, cumulated) =
+    /* the same tail recursive
+
+             function geo(a, cumulated) =
                          if (a = 0)
                            cumulated
                          else
                          {
                            let next_a = a - 1
                            let cum = cumulated + next_a
-                           geo_tailrec(next_a, cum);
+                           geo(next_a, cum);
                          }
 
        print(geo(3, 0));
     */
 
     private F createTailRecSum(Env env) {
-        //reIterate() clears out full sets of parameters and resets after each iteration
-        F geo = f(env, nop, Names.a, Names.c)./*tailRecursive().*/label("geo");
+        F geo = f(env, nop, Names.a, Names.c).tailRecursive().label("geo");
         If iff = iff(env).label("if");
 
         // one can't use the same names in the body wihout having iff produce a fake return value instantly
@@ -824,7 +833,8 @@ trisum(a,b,c)   trimul(a,b,c)
 
     private void testFor(Env env, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         assertEquals(expected, getSynchronized(List.class, env, main).param(list, source).call());
-        System.out.printf("Tested %s input size: %d max stack depth:%d\n", main.getLabel(), source.size(), env.getMaxDepth());
+        assertEquals(0, ((Node) env).getCrankCount());
+        System.out.printf("Tested %s input size: %d max executions used simultaneously:%d\n", main.getLabel(), source.size(), env.getMaxExCount());
     }
 
     /*

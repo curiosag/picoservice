@@ -29,7 +29,7 @@ public class ReRun {
         return new InitialRun(exId, log.events);
     }
 
-    public static void reRunAndCheck(long latchOntoExId, BiFunction<Long,Env, Gateway<?>> call, List<Hydratable> events, Object expected) {
+    public static void reRunAndCheck(long latchOntoExId, BiFunction<Long, Env, Gateway<?>> call, List<Hydratable> events, Object expected) {
         SimpleListEventLog log = new SimpleListEventLog(events);
         try (Node env = new Node(address, log, log)) {
             Gateway<?> sync = call.apply(latchOntoExId, env);
@@ -39,21 +39,20 @@ public class ReRun {
         }
     }
 
-    public static void reReReReRunAndCheck(long latchOntoExId, BiFunction<Long,Env, Gateway<?>> call, List<Hydratable> events, Object expected) {
+    @SuppressWarnings("ConstantConditions")
+    public static void reReReReRunAndCheck(long latchOntoExId, BiFunction<Long, Env, Gateway<?>> call, List<Hydratable> events, Object expected) {
         if (true)
-        for (int i = events.size(); i > 2; i--) {
-            //System.out.println("RERUN " + i);
-            ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, i));
-            ReRun.reRunAndCheck(latchOntoExId, call, useEvents, expected);
-            if (i % 10 == 0) {
-                System.out.print("\n");
+            for (int i = events.size(); i > 2; i--) {
+                ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, i));
+                ReRun.reRunAndCheck(latchOntoExId, call, useEvents, expected);
+                if (i % 10 == 0) {
+                    System.out.print("\n");
+                }
+                System.out.printf("[%d]", i);
+                System.out.print(" ");
             }
-            System.out.print(i);
-            System.out.print(" ");
-            //System.out.println("RERUN " + i + " DONE");
-        } else
-        {
-            ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, 310));
+        else {
+            ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, 9));
             ReRun.reRunAndCheck(latchOntoExId, call, useEvents, expected);
         }
         System.out.print("\n");

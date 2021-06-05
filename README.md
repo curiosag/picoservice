@@ -86,7 +86,9 @@ That means, a partially computed function body can't be recovered, as it is poss
 - general serialization for event persistency and remote function calls
 - location transparency for function calls
 - mutability maybe
-- a compiler
+- a compiler, from any language with functional primitives. I guess java might be a candidate
+- integration to source language, there shouldn't be a 2nd form needed to get a picoservice-executed function.   
+- a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever.
 
 ## algorithms
 

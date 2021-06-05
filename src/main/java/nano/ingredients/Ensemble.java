@@ -118,6 +118,7 @@ public class Ensemble {
 
         String id = a.address.id;
         a.setAref(actorSystem.actorOf(Akktor.props(a), id));
+
         return a;
     }
 

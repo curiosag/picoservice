@@ -9,19 +9,9 @@ public interface Name {
     String onFalse = "onFalse";
     String condition = "condition";
     String error = "error";
-    String sum = "sum";
-    String product = "product";
-    String max = "max";
-    String adress = "adress";
     String value = "value";
-    String recipient = "recipient";
-    String ReadWrite = "ReadWrite";
-    String symbol = "symbol";
-    String caller = "scope";
     String a = "a";
     String b = "b";
-    String zero = "zero";
-    String one = "one";
     String kickOff = "kickOff";
     String c = "c";
     String y = "y";
@@ -29,9 +19,7 @@ public interface Name {
     String tail = "tail";
     String list = "list";
     String predicate = "predicate";
-    String func = "func";
     String nop = "nop";
-    String receiver = "receiver";
     String senderReceiverTuple = "senderReceiverTuple";
     String m = "m";
     String l = "l";
@@ -40,9 +28,5 @@ public interface Name {
     String removeState = "removeState";
     String ack = "ack";
     String createFunctionCall = "createFunctionCall";
-    String computationBranch = "computationBranch";
-    String a1 = "a1";
-    String a2 = "a2";
     String stackFrame = "stackFrame";
-    String replayMessages = "replayMessages";
 }

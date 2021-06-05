@@ -1,0 +1,39 @@
+
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+participant       caller       as Caller
+
+Caller -> Node: createEx(F): Ex
+Node --> Node: ** EEXCreated(callerId)  **
+Node -> Caller: Ex
+
+
+Caller -> Ex: sendVal(V) 0..n
+
+Ex --> Node: EValueReceived
+Node --> Ex: ** EValueReceived (0..n) **
+Ex -> ExInBox: Value (0..n))
+Ex -> ExInBox: peekNext(): Val(i)
+ExInBox --> Ex: Val(i)
+
+Ex -> Ex: createTargets (1..m), on \n initial value only
+Ex --> Node: ETargetsCreated (1..m)
+Node --> Ex: ** ETargetsCreated (1..m) **
+Ex -> Ex: build Propagations
+
+Ex -> ExT : propagate/send Val(i)
+Ex --> Node : EValPropagated (Val(i))
+Node --> Ex: ** EValPropagated (Val(i)) **
+Ex --> ExInBox : remove (Val(i))
+
+ExT -> Ex : sendVal(result | error)
+Ex --> Node: EValueReceived(result | error)
+Node --> Ex: ** EValueReceived (result | error) **
+
+Ex -> caller : result | Error
+Ex --> Node : done(result | error)
+Node --> Ex: ** EDone(result | error) **
+
+@enduml

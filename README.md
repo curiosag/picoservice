@@ -1,43 +1,35 @@
 # picoservice
-An execution model for some functional language constructs based on message passing with actors.
+An execution model for some functional language constructs based on message passing with [actors](https://en.wikipedia.org/wiki/Actor_model).
 
-Harks back to Carl Hewitt's papers (e.g. [this one](http://worrydream.com/refs/Hewitt-ActorModel.pdf)) but unlike smalltalk puts functions center stage rather than objects. A remote goal is to create
-something remotely similar to e.g. Spring integration, just with bearable syntax.
+- One inherently parallel model of computation for local and distributed algorithms
+- Persistent, recoverable execution state. 
 
-## pico?
+## ingredients
 
-Now that there are services, micro- and even nanoservices there wasn't much of a choice.
+Constants, immutable values and let-statements.
 
-As of the promotors of [such stuff](https://www.serverlessops.io/blog/rise-of-the-nanoservice) a nanoservice is
+Functions. They may be
+- recursive (optionally tail call optimized)
+- partially applied
+- of higher order, accepting functions as arguments
+- a conditional
 
->- Deployable
->- Reusable
->- Useful
+-  primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time and of money charged.
 
-From that characteristics for a picoservice can be derived.
+## concurrent message passing
 
-A picoservice is:
+A function receives named values as messages and propagates them to subsequent functions as needed. Each function is an actor, so all off them operate concurrently. 
 
->- Deployable
->- Reusable (sometimes)
->- Useless (except in comination with others)
+Message passing happens asap, you could have function A calling function B and B already computing a result while A hasn't received all its parameters yet (but enough for B).
+On the other hand usual conditionals, tail call optimized recusive functions and functions with functional parameters may need to stash parameters until the computation can proceed (until the functional value has been provided and can be applied, the condition has been computed and the chosen branch can execute, the next recursive call can execute).  
 
-## the idea 
+Further, if it is a primitive and got all values to compute a result it does so and propagates the result to the designated recipient. 
+Any non primitive function that receives a result value propagates it to its own designated recipient of a result.
 
-Computations are nested recursive functions. Functions can be a primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time and of money charged.
-   
-A condition is just another somewhat special primitive function. Each function has a dedicated function to return its result to. 
+A [conditional is a function](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) with signature: `if(condition, value_true_branch, value_false_branch)` and comes in two flavors. One is the usual semantics where either the true or false branch get evaluated on
+the condition. The second flavour calculates all 3 elements concurrently and returns the result of one branch as soon as the condition and all necessary parameters are available.
 
-Every function receives named values as messages and propagates them to subsequent functions if needed. Each function is an actor, so all off them operate concurrently.  
-
-Further, if it is a primitive and got all values to compute a result it does so and sends it to the designated recipient. 
-
-If any function f receives a result value, it passes it on the the designated recipient of f's result.
-
-`if` deserves some words: in one version it does just the same as every primitive function: it waits for the necessary parameters (the calculated value of the condition `Vc`, true or false, and the value of both branches, and returns one of them depending on`Vc`). This doesn't limit the evaluation to one of the branches, which is an issue if you want to use it to terminate recursion. So `if` also comes in a second flavor, that only propagates values to a branch, if `Vc` indicates so. 
- So it has kind of this signature: `if(condition, value_true_branch, value_false_branch)` 
-
-Here's an example, a function `C` that takes 2 values (`a`, `b`) and subtracts the smaller one from the bigger one. It consists of 3 primitive functions (`>` and 2 times `-`, say `-t`, `-f`) and one `if`.
+Let's say a function `C` that takes 2 values (`a`, `b`) and subtracts the smaller one from the bigger one. It consists of 3 primitive functions (`>` and 2 times `-`, say `-t`, `-f`) and one `if`.
 
 ![if](./if.png)
 
@@ -79,77 +71,31 @@ Note, that it could as well happen that way.
 14 C -> result -> Γ 
 15 -t -> value_false_branch -> if  
 ```
+## event logging/recovery
 
-## implications, maybe
+A log of events causing state change is used to restore the computation state if needed.
 
-Messages between functions can be logged and used to restore computation states, if the internal state changes of the actors are event sourced too.
-All computations are inherently parallel and transparent regarding their location. 
+## tail call optimization
 
-## experience
-
-It was possible to model
-
-- Recursive functions and function calls
-- Partially applied functions
-- Functions as parameters
-- Conditionals
-
-and to express a [functional version of quicksort](http://learnyouahaskell.com/recursion). Multiple quicksorts could be executed in parallel. 
-
-The approach chosen prevented event sourcing eventually.
-
-The main issue was the decision that a function is one actor, a function call are messages to this actor, several calls go to the same actor.
-So there must be some logic per actor to maintain those messages from different souces, correlate them with results from subsequent actors and send the results to the proper recipients. 
-
-An implementation without event sourcing proved possible, but already too complicated IMHO. Actors became quite complex, making them bad candidates for event sourcing.
-
-It seems more promising to represent the computation as a data structure that grows as the computation progresses, each element representing one execution of a function, as can be seen in [this branch](https://github.com/curiosag/picoservice/tree/MoreMicro).
-Only the recursive sum sample is implemented, but it was way less headache and comes with event sourcing and recovery of the execution state from the event stream. It is single threaded at the moment, but with a few consisderatinos it should scale to an arbitrary number of threads, or it could be backed again by an actor system, with one actor per function, bringing it closer to the first attempt. 
+With the limitation that logging and recovery of the function body happens at the granularity of the whole function call. 
+That means, a partially computed function body can't be recovered, as it is possible otherwise. That should be possible here too actually.
 
 
-### thanks & credits
-[Jörg W Mittag](https://stackoverflow.com/users/2988/j%c3%b6rg-w-mittag) for straightening out [my view on conditional expressions](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) and pointing out the historical relationship between the actor model and Smalltalk.
+## TODO
 
-All the zillion articles about ever more micro microservices which caused my mind to generate this approach one morning in the shower while I picked up some old stockings. It has earned me a few insights and cost me lots of time ever since. 
+- general serialization for event persistency and remote function calls
+- location transparency for function calls
+- mutability maybe
+- a compiler
 
-    java.lang.IllegalArgumentException: invalid ActorSystem name [picosörvis], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-' or '_')
+## algorithms
 
-	at akka.actor.ActorSystemImpl.<init>(ActorSystem.scala:698)
-	at akka.actor.ActorSystem$.apply(ActorSystem.scala:258)
-	at akka.actor.ActorSystem$.apply(ActorSystem.scala:302)
-	at akka.actor.ActorSystem$.apply(ActorSystem.scala:246)
-	at akka.actor.ActorSystem$.create(ActorSystem.scala:176)
-	at akka.actor.ActorSystem.create(ActorSystem.scala)
-	at miso.ingredients.Actresses.<init>(Actresses.java:21)
-	at miso.ingredients.Actresses.instance(Actresses.java:30)
-	at miso.ingredients.Actresses.resolve(Actresses.java:41)
-	at miso.ingredients.Actress.resolveTracer(Actress.java:34)
-	at miso.ingredients.Actress.<init>(Actress.java:20)
-	at miso.ingredients.Function.<init>(Function.java:15)
-	at miso.ingredients.BinOp.<init>(BinOp.java:32)
-	at miso.ingredients.nativeImpl.BinOps.eq(BinOps.java:21)
-	at miso.ServiceTest.getModEqZero(ServiceTest.java:509)
-	at miso.ServiceTest.testgetModEqZero(ServiceTest.java:523)
-	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
-	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-	at java.lang.reflect.Method.invoke(Method.java:498)
-	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
-	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
-	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
-	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
-	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
-	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
-	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
-	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
-	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
-	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
-	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
-	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
-	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
-	at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
-	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
-	at com.intellij.junit4.JUnit4IdeaTestRunner.startRunnerWithArgs(JUnit4IdeaTestRunner.java:68)
-	at com.intellij.rt.execution.junit.IdeaTestRunner$Repeater.startRunnerWithArgs(IdeaTestRunner.java:47)
-	at com.intellij.rt.execution.junit.JUnitStarter.prepareStreamsAndStart(JUnitStarter.java:242)
-	at com.intellij.rt.execution.junit.JUnitStarter.main(JUnitStarter.java:70)
+It is sufficient to express a [functional version of quicksort](http://learnyouahaskell.com/recursion) together with a higher order filter-function for list comprehension. Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
+
+
+    quicksort :: (Ord a) => [a] -> [a]  
+    quicksort [] = []  
+    quicksort (x:xs) =   
+        let smallerSorted = quicksort [a | a <- xs, a <= x]  
+            biggerSorted = quicksort [a | a <- xs, a > x]  
+        in  smallerSorted ++ [x] ++ biggerSorted  

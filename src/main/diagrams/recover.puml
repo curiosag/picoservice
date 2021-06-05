@@ -1,0 +1,21 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+actor       user       as User
+
+User -> Node: recover()
+Node -> LogReader : getEvents
+
+LogReader -> Node: Event(0..n)
+
+Node -> Node: case **EEXCreated**(ExId, FId)\ncreate/enlist Ex(ExId, FId)
+note right: if it was initiated by caller,\n smthg needs to be done here. \n restart callers? wait to be picked up by caller?
+Node -> Ex: default: send **Event** to related Ex\n//PRE: Ex enlisted//
+
+Ex --> Ex: case ** EValueReceived (i) **\n inBox.add(Value(i))\n//PRE: --//
+Ex --> Ex: case ** ETargetsCreated (1..m) **\nbuild propagations\n//PRE: --//
+Ex --> Ex: case ** EValPropagated (Val(i)) **\n inBox.remove(Value(i))\n//PRE: inBox contains//
+Ex --> Ex: case ** EDone (result | error) **\ set status DONE\n//PRE: --//
+
+@enduml

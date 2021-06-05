@@ -92,7 +92,7 @@ That means, a partially computed function body can't be recovered, as it is poss
 
 ## algorithms
 
-It is sufficient to express a [functional version of quicksort](http://learnyouahaskell.com/recursion) together with a higher order filter-function for list comprehension. Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
+It is sufficient to express a [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java) together with a higher order filter-function for list comprehension. Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
 
 
     quicksort :: (Ord a) => [a] -> [a]  

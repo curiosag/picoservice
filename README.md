@@ -20,20 +20,23 @@ Functions. They may be
 
 ## why?
 
-It started with the quest for the smallest possible microservice, like `+` or `!` as a microservice. Really, really micro. Which was also a means to understand actor systems, event sourcing and, as it turned out, different models of computation.
-At the end it looked like it may be suitable for long running processes like you have them in workflow systems, just that you write your workflows in a plain programming language (with quite some annotations).
+- It started with the quest for the smallest possible microservice, like `+` or `!` as a service (I rather won't tell how that came about). Really, really micro. Which was also a means to understand actor systems, event sourcing and, as it turned out, different models of computation.
+
+- A single approach promised to cover 4 issues at once (parallel distributed and local computation, persistent execution state).
+
+- At the end it looked like it may be suitable for long running processes like you have them in workflow systems, just that you write your workflows in a plain programming language (with quite some annotations).
 
 ## concurrent message passing
 
 A function receives named values as messages and propagates them to subsequent functions as needed. Each function is an actor, so all off them operate concurrently. 
 
-Message passing happens asap, you could have function A calling function B and B already computing a result while A hasn't received all its parameters yet (but enough for B).
+Message passing undermines usual function call semantics. You could have function A calling function B and B already computing a result while A hasn't received all its parameters yet (but enough for B).
 On the other hand primitives, usual conditionals, tail call optimized recusive functions and functions with functional parameters may need to stash parameters until the computation can proceed (until all parameters have been received to computa a primitive, until the functional value has been provided and can be applied, the condition has been computed and the chosen branch can execute, the next recursive call can execute).  
 
 Further, if it is a primitive and got all values to compute a result it does so and propagates the result to the designated recipient. 
 Any non primitive function that receives a result value propagates it to its own designated recipient of a result.
 
-A [conditional is a function](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) with signature: `if(condition, value_true_branch, value_false_branch)` and comes in two flavors. One is the usual semantics where either the true or false branch get evaluated on
+A [conditional is a function](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) with signature: `if(condition, value_true_branch, value_false_branch)` and comes in two flavors. One is the usual semantics where either the true- or false-branch get evaluated on
 the condition. The second flavour calculates all 3 elements concurrently and returns the result of one branch as soon as the condition and all necessary parameters are available.
 
 Let's say a function `C` that takes 2 values (`a`, `b`) and subtracts the smaller one from the bigger one. It consists of 3 primitive functions (`>` and 2 times `-`, say `-t`, `-f`) and one `if`.

@@ -6,7 +6,6 @@ import micro.event.eventlog.memeventlog.SimpleListEventLog;
 import micro.gateway.Gateway;
 import micro.primitives.*;
 import micro.visualize.FVisualizer;
-import nano.ingredients.Name;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -336,8 +335,8 @@ trisum(a,b,c)   trimul(a,b,c)
 
         useFVar.addPropagation(Names.a, ping, createSubtract);
         useFVar.addPropagation(paramFVar, callSubtract);
-        useFVar.addPropagation(Name.a, Names.left, callSubtract);
-        useFVar.addPropagation(Name.b, Names.right, callSubtract);
+        useFVar.addPropagation(Names.a, Names.left, callSubtract);
+        useFVar.addPropagation(Names.b, Names.right, callSubtract);
 
         main.addPropagation(Names.a, useFVar);
         main.addPropagation(Names.b, useFVar);
@@ -392,7 +391,7 @@ trisum(a,b,c)   trimul(a,b,c)
 
         usePartial.addPropagation(Names.b, Names.right, createDec);
         usePartial.addPropagation(paramFVar, callDec);
-        usePartial.addPropagation(Name.a, Names.left, callDec);
+        usePartial.addPropagation(Names.a, Names.left, callDec);
 
         main.addPropagation(Names.a, usePartial);
         main.addPropagation(Names.b, usePartial);

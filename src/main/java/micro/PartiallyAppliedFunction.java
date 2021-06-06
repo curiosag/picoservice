@@ -3,7 +3,6 @@ package micro;
 import micro.event.serialization.Incoming;
 import micro.event.serialization.Outgoing;
 import micro.event.serialization.Serioulizable;
-import nano.ingredients.guards.Guards;
 
 import java.io.Serializable;
 import java.util.ArrayList;

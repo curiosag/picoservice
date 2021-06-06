@@ -4,7 +4,6 @@ import micro.F;
 import micro.FPropagation;
 import micro.Names;
 import micro._F;
-import nano.ingredients.Actress;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -27,10 +26,6 @@ public class FVisualizer implements Closeable {
         this.start = f;
         writer = createWriter(f.getLabel());
         writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
-    }
-
-    private String node(Actress f) {
-        return f.getClass().getSimpleName() + (f.address.label.length() > 0 ? f.address.label : f.address.toString());
     }
 
     private String edgeLabel(FPropagation p) {

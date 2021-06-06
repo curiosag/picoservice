@@ -1,6 +1,4 @@
-package nano.ingredients.guards;
-
-import nano.ingredients.ComputationPath;
+package micro;
 
 import java.util.Collection;
 import java.util.Map;
@@ -46,7 +44,4 @@ public class Guards {
         }
     }
 
-    public static void isEmpty(ComputationPath computationPath) {
-        isTrue(computationPath.isEmpty());
-    }
 }

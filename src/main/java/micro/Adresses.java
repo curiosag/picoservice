@@ -1,4 +1,4 @@
-package nano.misc;
+package micro;
 
 public interface Adresses {
     Long DNS = 0L;

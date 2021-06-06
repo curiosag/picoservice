@@ -2,8 +2,8 @@ package micro.gateway;
 
 import micro.*;
 import micro.event.ExEvent;
-import nano.ingredients.Err;
-import nano.ingredients.Name;
+import micro.Err;
+import micro.Name;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -58,7 +58,7 @@ public class Gateway<T> implements _Ex {
                 continue;
             }
 
-            if (getResult().getName().equals(Name.error)) {
+            if (getResult().getName().equals(Names.error)) {
                 Err e = (Err) getResult().get();
                 throw new RuntimeException(e.exception);
             } else {

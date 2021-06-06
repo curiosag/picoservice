@@ -2,7 +2,6 @@ package micro;
 
 import micro.If.ExIf;
 import micro.event.*;
-import nano.ingredients.guards.Guards;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;

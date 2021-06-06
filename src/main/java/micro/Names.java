@@ -21,4 +21,12 @@ public interface Names {
     String predicate = "predicate";
     String _a = "_a";
     String _c = "_c";
+    String leftArg = "leftArg";
+    String rightArg = "rightArg";
+    String arg = "arg";
+    String value = "value";
+    String y = "y";
+    String l = "l";
+    String r = "r";
+    String error = "error";
 }

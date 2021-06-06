@@ -1,8 +1,9 @@
 # picoservice
-An execution model for some functional language constructs based on message passing with [actors](https://en.wikipedia.org/wiki/Actor_model).
+An execution model for some functional language constructs based on asynchronous buffered message passing (along the lines of the [actor](https://en.wikipedia.org/wiki/Actor_model) model).
 
-- One inherently parallel model of computation for local and distributed algorithms
-- Persistent, recoverable execution state. 
+- A single inherently parallel model of computation for local and distributed algorithms
+- Persistent, recoverable execution state using event logging 
+- to be embedded in a host language, avoiding new language constructs
 
 ## ingredients
 
@@ -73,7 +74,7 @@ Note, that it could as well happen that way.
 ```
 ## event logging/recovery
 
-A log of events causing state change is used to restore the computation state if needed.
+A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.
 
 ## tail call optimization
 
@@ -83,16 +84,20 @@ That means, a partially computed function body can't be recovered, as it is poss
 
 ## TODO
 
-- general serialization for event persistency and remote function calls
 - location transparency for function calls
 - mutability maybe
-- a compiler, from any language with functional primitives. I guess java might be a candidate
-- integration to source language, there shouldn't be a 2nd form needed to get a picoservice-executed function.   
-- a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever.
+- value de-duplication in event logs
+- add scatter/gather semantics at least
+- a compiler, from any language with functional primitives
+- integration to a source language, there shouldn't be a 2nd form needed to get a picoservice-executed function   
+- a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
 
 ## algorithms
 
-It is sufficient to express a [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java) together with a higher order filter-function for list comprehension. Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
+...expressed in the elements of the execution model (its byte code, kind of)
+
+A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L37) 
+together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L115). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
 
 
     quicksort :: (Ord a) => [a] -> [a]  
@@ -101,3 +106,13 @@ It is sufficient to express a [functional version of quicksort](https://github.c
         let smallerSorted = quicksort [a | a <- xs, a <= x]  
             biggerSorted = quicksort [a | a <- xs, a > x]  
         in  smallerSorted ++ [x] ++ biggerSorted  
+
+Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L174) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L219) thereof.
+
+    geo(n) = 1 + 2 + ... + n-1 + n
+
+
+## somewhat related
+
+- [propagation systems](https://www.cs.tufts.edu/~nr/cs257/archive/alexey-radul/phd-thesis.pdf)
+- [salsa actor language](http://wcl.cs.rpi.edu/salsa/)

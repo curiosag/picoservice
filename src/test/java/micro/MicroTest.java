@@ -508,50 +508,7 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
 
-    /* This version avoids the use of UPSTREAM propagations, since it sends all parameters to geo bypassing
-       in-between elements.
 
-       function geo(a) = if (a = 0)
-                           0
-                         else
-                         {
-                           let next_a = a - 1
-                           a + geo(next_a);
-                         }
-
-       print(geo(3));
-    */
-
-    private F createRecSum(Env env) {
-        F geo = f(env, nop, Names.a).label("geo");
-        If iff = iff(env).label("if");
-
-        geo.addPropagation(Names.a, iff);
-
-        // condition
-        F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
-
-        iff.addPropagation(COND_CONDITION, Names.a, Names.left, eq);
-        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
-        // onTrue
-        iff.addPropagation(COND_TRUE_BRANCH, Names.a, ping, CONST(env, 0).label("zero:ontrue"));
-        // onFalse
-        F block_else = f(env, nop).label("block_else");
-        iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);
-        // let next_a = a - 1
-        String next_a = "next_a";
-        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
-        block_else.addPropagation(Names.a, Names.left, sub);
-        sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
-        // a + geo(next_a);
-        F add = f(env, add(), Names.left, Names.right).label("add");
-        F geoReCall = new FCall(env, geo).returnAs(Names.right).label("geoCallR");
-
-        block_else.addPropagation(Names.a, Names.left, add);
-        block_else.addPropagation(next_a, add);
-        add.addPropagation(next_a, Names.a, geoReCall);
-        return geo;
-    }
 
     @Test
     public void testTailRecSum() {
@@ -615,56 +572,6 @@ trisum(a,b,c)   trimul(a,b,c)
         ReRun.reReReReRunAndCheck(rInit.exId(), (id, n) -> getSynchronized(id, n, createTailRecSum(n)), log, _3);
     }
 
-    /* the same tail recursive
-
-             function geo(a, cumulated) =
-                         if (a = 0)
-                           cumulated
-                         else
-                         {
-                           let next_a = a - 1
-                           let cum = cumulated + next_a
-                           geo(next_a, cum);
-                         }
-
-       print(geo(3, 0));
-    */
-
-    private F createTailRecSum(Env env) {
-        F geo = f(env, nop, Names.a, Names.c).tailRecursive().label("geo");
-        If iff = iff(env).label("if");
-
-        // one can't use the same names in the body wihout having iff produce a fake return value instantly
-        geo.addPropagation(Names.a, Names._a, iff);
-        geo.addPropagation(Names.c, Names._c, iff);
-
-        // condition
-        F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
-
-        iff.addPropagation(COND_CONDITION, Names._a, Names.left, eq);
-        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero"));
-        // onTrue
-        iff.addPropagation(COND_TRUE_BRANCH, Names._c, result, iff);
-        // onFalse
-        // let next_a = a - 1
-        String next_a = "next_a";
-        String cumulated = "cumulated";
-
-        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
-        sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
-
-        iff.addPropagation(COND_FALSE_BRANCH, Names._a, Names.left, sub);
-        // let cum = cumulated + next_a
-        F add = f(env, add(), Names.left, Names.right).returnAs(cumulated).label("add");
-        iff.addPropagation(COND_FALSE_BRANCH, next_a, Names.left, add);
-        iff.addPropagation(COND_FALSE_BRANCH, Names._c, Names.right, add);
-
-        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, cumulated, Names.c, geo);
-        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, next_a, Names.a, geo);
-        iff.doneOn(next_a, cumulated);
-
-        return geo;
-    }
 
     @Test
     public void testQuicksort() {
@@ -713,28 +620,6 @@ trisum(a,b,c)   trimul(a,b,c)
     }
 
 
-        /*
-        lteq: (u,v) -> boolean
-        lteq: (u,v) -> boolean
-
-        function quicksort(list) = {
-            iff (list == []){
-                []
-            } else {
-                let head = head(list);
-                let tail = tail(list);
-                let testGt = lteq(_, head)
-                let testLteq = lteq(_, head)
-                let filteredGt = filter(tail, testGt)
-                let filteredLteq = filter(tail, testLteq)
-                let sortedGt = quicksort(filteredGt)
-                let sortedLteq = quicksort(filteredLteq)
-                sortedLteq ::  head :: sortedGt
-            }
-        }
-        */
-
-
     @Test
     public void testFilter() {
         Node env = createNode();
@@ -777,34 +662,9 @@ trisum(a,b,c)   trimul(a,b,c)
         System.out.printf("Tested %s input size: %d max executions used simultaneously:%d\n", main.getLabel(), source.size(), env.getMaxExCount());
     }
 
-    /*
-        predicate: arg -> boolean
-
-        function filter(list, predicate) = {
-            iff (list == []){
-                []
-            } else {
-                let head = head(list);
-                let tail = tail(list);
-                let tail_filtered = filter(tail, predicate)
-                iff (predicate(head))
-                    head :: tail_filtered
-                else
-                    tail_filtered
-            }
-        }
-        */
-
-
-
     private Node createNode() {
         return new Node(Address.localhost, false, false);
     }
-
-    private F CONST(Env env, Object i) {
-        return F.f(env, new Constant(i), ping);
-    }
-
 
 
     private ArrayList<Integer> list(Integer... i) {

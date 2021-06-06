@@ -9,9 +9,30 @@ import java.util.Collections;
 import static micro.If.If.iff;
 import static micro.Names.*;
 import static micro.PropagationType.*;
+import static micro.primitives.Add.add;
 import static micro.primitives.Primitive.nop;
 
 public class Algorithm {
+
+    /*
+        given lteq: (u,v) -> boolean
+
+        function quicksort(list) = {
+            iff (list == []){
+                []
+            } else {
+                let head = head(list);
+                let tail = tail(list);
+                let testGt = lteq(_, head) // partially applied function
+                let testLteq = lteq(_, head)  // partially applied function
+                let filteredGt = filter(tail, testGt)
+                let filteredLteq = filter(tail, testLteq)
+                let sortedGt = quicksort(filteredGt)
+                let sortedLteq = quicksort(filteredLteq)
+                sortedLteq ::  head :: sortedGt
+            }
+        }
+        */
 
     public static F createQuicksort(Env env) {
         String predicateTestGt = "predicateTestGt";
@@ -73,6 +94,24 @@ public class Algorithm {
         return quicksort;
     }
 
+    /*
+        given predicate: arg -> boolean
+
+        function filter(list, predicate) = {
+            iff (list == []){
+                []
+            } else {
+                let head = head(list);
+                let tail = tail(list);
+                let tail_filtered = filter(tail, predicate)
+                iff (predicate(head))
+                    head :: tail_filtered
+                else
+                    tail_filtered
+            }
+        }
+        */
+
     public static F createFilter(Env env) {
         String tailFiltered = "tailFiltered";
 
@@ -120,8 +159,108 @@ public class Algorithm {
         return filter;
     }
 
+     /* simple geometrical series geo(n) = 1 + 2 + ... + n-1 + n
+
+       function geo(a) = if (a = 0)
+                           0
+                         else
+                         {
+                           let next_a = a - 1
+                           a + geo(next_a);
+                         }
+
+        Its bit of "legacy code" where some propagations don't follow the function call structure. The tail
+        recursive version below is more canonical.
+
+    */
+
+    public static F createRecSum(Env env) {
+        F geo = f(env, nop, Names.a).label("geo");
+        If iff = iff(env).label("if");
+
+        geo.addPropagation(Names.a, iff);
+
+        // condition
+        F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
+
+        iff.addPropagation(COND_CONDITION, Names.a, Names.left, eq);
+        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
+        // onTrue
+        iff.addPropagation(COND_TRUE_BRANCH, Names.a, ping, CONST(env, 0).label("zero:ontrue"));
+        // onFalse
+        F block_else = f(env, nop).label("block_else");
+        iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);
+        // let next_a = a - 1
+        String next_a = "next_a";
+        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
+        block_else.addPropagation(Names.a, Names.left, sub);
+        sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
+        // a + geo(next_a);
+        F add = f(env, add(), Names.left, Names.right).label("add");
+        F geoReCall = new FCall(env, geo).returnAs(Names.right).label("geoCallR");
+
+        block_else.addPropagation(Names.a, Names.left, add);
+        block_else.addPropagation(next_a, add);
+        add.addPropagation(next_a, Names.a, geoReCall);
+        return geo;
+    }
+
+      /* the same with tail recursion
+
+             function geo(a, cumulated) =
+                         if (a = 0)
+                           cumulated
+                         else
+                         {
+                           let next_a = a - 1
+                           let c = cumulated + next_a
+                           geo(next_a, c);
+                         }
+
+    */
+
+    public static F createTailRecSum(Env env) {
+        F geo = f(env, nop, Names.a, Names.c).tailRecursive().label("geo");
+        If iff = iff(env).label("if");
+
+        // one can't use the same names in the body wihout causing iff to produce a fake return value
+        geo.addPropagation(Names.a, Names._a, iff);
+        geo.addPropagation(Names.c, Names._c, iff);
+
+        // condition
+        F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
+
+        iff.addPropagation(COND_CONDITION, Names._a, Names.left, eq);
+        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero"));
+        // onTrue
+        iff.addPropagation(COND_TRUE_BRANCH, Names._c, result, iff);
+        // onFalse
+        // let next_a = a - 1
+        String next_a = "next_a";
+        String cumulated = "cumulated";
+
+        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
+        sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
+
+        iff.addPropagation(COND_FALSE_BRANCH, Names._a, Names.left, sub);
+        // let cum = cumulated + next_a
+        F add = f(env, add(), Names.left, Names.right).returnAs(cumulated).label("add");
+        iff.addPropagation(COND_FALSE_BRANCH, next_a, Names.left, add);
+        iff.addPropagation(COND_FALSE_BRANCH, Names._c, Names.right, add);
+
+        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, cumulated, Names.c, geo);
+        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, next_a, Names.a, geo);
+        iff.doneOn(next_a, cumulated); // need to define when it is done, since it doesn't follow the usual result mechanism
+
+        return geo;
+    }
+
     public static F f(Env env, Primitive primitive, String... params) {
         return F.f(env, primitive, params);
+    }
+
+    public static F CONST(Env env, Object i) {
+        return F.f(env, new Constant(i), ping);
     }
 
 }

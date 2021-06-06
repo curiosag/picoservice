@@ -96,8 +96,8 @@ That means, a partially computed function body can't be recovered, as it is poss
 
 ...expressed in the elements of the execution model (its byte code, kind of)
 
-A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L37) 
-together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L115). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
+A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L18) 
+together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L98). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
 
 
     quicksort :: (Ord a) => [a] -> [a]  
@@ -107,7 +107,7 @@ together with a higher order [filter-function](https://github.com/curiosag/picos
             biggerSorted = quicksort [a | a <- xs, a > x]  
         in  smallerSorted ++ [x] ++ biggerSorted  
 
-Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L174) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L219) thereof.
+Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L162) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/4eb5f317681b6287787a6a715609b5ea3bdd2c3f/src/test/java/micro/Algorithm.java#L208) thereof.
 
     geo(n) = 1 + 2 + ... + n-1 + n
 

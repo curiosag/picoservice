@@ -17,6 +17,7 @@ Functions. They may be
 - of higher order, accepting functions as arguments
 - a conditional
 - primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time and of money charged.
+- a side effect
 
 ## why?
 
@@ -86,6 +87,10 @@ Note, that it could as well happen that way.
 
 ...expressed in the elements of the execution model (its byte code, kind of)
 
+[max](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L338)
+
+    max(left, right) = if(left > right) left else right
+
 A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L18)
 together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L98). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
 
@@ -108,6 +113,7 @@ Nested functions forming an [arithmetic expression](https://github.com/curiosag/
 ## event logging/recovery
 
 A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.
+The implementation turned out to be a magnitude more messy with event sourcing built in. Perhaps just for the sake of clarity there should be a non-event-sourced version provided. 
 
 ## tail call optimization
 

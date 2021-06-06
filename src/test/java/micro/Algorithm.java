@@ -334,6 +334,27 @@ trisum(a,b,c)   trimul(a,b,c)
         return calc;
     }
 
+    /*
+     * max(left, right) = if(left > right) left else right
+     *
+     * */
+    public static F createMax(Env env) {
+        F max = f(env, nop, Names.left, Names.right).label("max");
+        If iff = iff(env).label("if");
+        F gt = f(env, Gt.gt, Names.left, Names.right).returnAs(Names.condition).label("gt");
+
+        max.addPropagation(Names.left, iff);
+        max.addPropagation(Names.right, iff);
+
+        //TODO possible that nothing is stashed? Also in useFVar?
+        iff.addPropagation(COND_CONDITION, Names.left, gt);
+        iff.addPropagation(COND_CONDITION, Names.right, gt);
+        iff.addPropagation(COND_TRUE_BRANCH, Names.left, Names.result, iff);
+        iff.addPropagation(COND_FALSE_BRANCH, Names.right, Names.result, iff);
+
+        return max;
+    }
+
     public static F f(Env env, Primitive primitive, String... params) {
         return F.f(env, primitive, params);
     }

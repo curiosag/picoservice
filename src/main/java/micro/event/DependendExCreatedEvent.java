@@ -5,7 +5,7 @@ import micro.Hydrator;
 import micro.event.serialization.Incoming;
 import micro.event.serialization.Outgoing;
 
-public class DependendExCreatedEvent extends ExCreatedEvent {
+public class DependendExCreatedEvent extends ExEvent {
 
     public Long dependingOnId;
 

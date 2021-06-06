@@ -325,6 +325,7 @@ public abstract class Ex implements _Ex, Crank {
 
         push(new ValueEnqueuedEvent(this, value));
         process(exStack);
+        Check.postCondition(exStack.isEmpty());
     }
 
     private void process(Stack<ExEvent> exStack) {

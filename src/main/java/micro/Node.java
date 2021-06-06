@@ -13,6 +13,7 @@ import micro.trace.Tracer;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 import static micro.ExTop.TOP_ID;
 
 public class Node implements Env, Closeable {
+
     private final Address address;
 
     private final Tracer tracer = new Tracer(false);
@@ -31,14 +33,16 @@ public class Node implements Env, Closeable {
     private final AtomicInteger delay = new AtomicInteger(0);
     private final AtomicBoolean stop = new AtomicBoolean(true);
 
-    private final Map<Long, _F> idToF = new HashMap<>();
-    private final Map<Long, _Ex> idToEx = new TreeMap<>(); //todo works only single threaded now
-    private final ConcurrentLinkedQueue<Crank> cranks = new ConcurrentLinkedQueue<>();
+    private final Map<Long, _F> idToF = new ConcurrentHashMap<>();
+    private final Map<Long, _Ex> idToEx = new ConcurrentHashMap<>(); //todo works only single threaded now
+    private final Cranks cranks = new Cranks();
 
     private long maxFId = TOP_ID; // TODO AtomicLong at least for maxFId, perhaps compiler-assigned FIds?
     private final AtomicLong maxExId = new AtomicLong(TOP_ID);
+
     private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
+    private static final int maxExecutors = 3;
     private int maxExCount = 0;
     private boolean recover = false;
     private final boolean useEventLog;
@@ -55,6 +59,10 @@ public class Node implements Env, Closeable {
         this.address = address;
         logWriter = useEventLog ? new KryoEventLogWriter(getEventLogFileName(address), clearEventLog) : NullEventLogWriter.instance;
         this.useEventLog = useEventLog;
+    }
+
+    public int getThreadsUsed() {
+        return maxExecutors;
     }
 
     private String getEventLogFileName(Address address) {
@@ -83,11 +91,17 @@ public class Node implements Env, Closeable {
             recover(address);
             debug("*** RECOVERED ***");
         }
-        crankRoundRobin(cranks);
+        startExecutors(maxExecutors);
+    }
+
+    private void startExecutors(int number) {
+        for (int i = 0; i < number; i++) {
+            new Thread(() -> crankRoundRobin(cranks)).start();
+        }
     }
 
     @SuppressWarnings("ConditionalBreakInInfiniteLoop")
-    private void crankRoundRobin(Queue<Crank> cranks) {
+    private void crankRoundRobin(Cranks cranks) {
         debug("*** RUN ***");
         while (true) {
             if (stop.get()) {
@@ -96,6 +110,7 @@ public class Node implements Env, Closeable {
             Concurrent.sleep(delay.get());
 
             maxExCount = Math.max(maxExCount, cranks.size());
+
             Crank current = cranks.poll();
             if (current != null) {
                 while (current.isMoreToDoRightNow()) {
@@ -106,11 +121,14 @@ public class Node implements Env, Closeable {
                 } else {
                     cranks.add(current);
                 }
+
             } else {
-                Concurrent.await(200);
+                Thread.onSpinWait();
             }
+
         }
     }
+
 
     private void recover(Address address) {
         Check.preCondition(recover);
@@ -122,16 +140,17 @@ public class Node implements Env, Closeable {
 
         for (Hydratable h : logReader) {
             switch (SerioulizedEvent.of(h.getClass())) {
-                case ExCreatedEvent, DependendExCreatedEvent -> {
+                case ExCreatedEvent -> {
                     ExCreatedEvent e = (ExCreatedEvent) h;
                     _F f = getFForId(e.getFId());
                     _Ex ex = f.createExecution(e.exId, getReturnTarget(e));
                     maxExId = Math.max(maxExId, e.exId);
                     idToEx.put(e.exId, ex);
-                    if (e instanceof DependendExCreatedEvent d) {
-                        d.ex = ex;
-                        idToEx.get(d.dependingOnId).recover(e);
-                    }
+                }
+                case DependendExCreatedEvent -> {
+                    DependendExCreatedEvent e = (DependendExCreatedEvent) h;
+                    e.ex = idToEx.get(e.exId);
+                    idToEx.get(e.dependingOnId).recover(e);
                 }
                 case AfterlifeEventCanPropagatePendingValues, ValueReceivedEvent, PropagationTargetExsCreatedEvent, ValueEnqueuedEvent, ValueProcessedEvent -> {
                     h.hydrate(this);
@@ -162,13 +181,15 @@ public class Node implements Env, Closeable {
         }
     }
 
-    private void log(Event e) {
+    private synchronized void log(Event e) {
         if (e instanceof ValueEnqueuedEvent)
             debugValueEnqueuedEvent((ValueEnqueuedEvent) e);
-        if (e instanceof ExCreatedEvent) {
-            _Ex ex = ((ExCreatedEvent) e).ex;
-            cranks.add(ex);
-            idToEx.put(ex.getId(), ex);
+        if (e instanceof ExCreatedEvent ee) {
+            _Ex ex = ee.ex;
+            if (!cranks.contains(ex)) {
+                cranks.add(ex);
+                idToEx.put(ex.getId(), ex);
+            }
         }
         logWriter.put(e);
     }
@@ -178,8 +199,23 @@ public class Node implements Env, Closeable {
         return address;
     }
 
+    private Queue<String> logQueue = new ConcurrentLinkedQueue<>();
+
     void log(String msg) {
-        System.out.println(Thread.currentThread().getId() + " " + msg);
+        logQueue.add(msg);
+    }
+
+    private void startLogWriter() {
+        new Thread(() -> {
+            while (true) {
+                String current = logQueue.poll();
+                if (current != null)
+                    System.out.println(current);
+                else {
+                    Thread.onSpinWait();
+                }
+            }
+        }).start();
     }
 
     public void debug(String s) {
@@ -243,6 +279,7 @@ public class Node implements Env, Closeable {
 
     @Override
     public void start(boolean recover) {
+        startLogWriter();
         this.stop.set(false);
         new Thread(() -> run(recover)).start();
     }
@@ -285,7 +322,7 @@ public class Node implements Env, Closeable {
                 return ex.get();
         }
 
-        _Ex result = f.createExecution(maxExId.addAndGet(1), returnTo);
+        _Ex result = f.createExecution(getNextExId(), returnTo);
         log(new ExCreatedEvent((Ex) result));
         return result;
     }

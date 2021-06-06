@@ -1,10 +1,12 @@
 package micro;
 
-import micro.If.If;
 import micro.event.ValueProcessedEvent;
 import micro.event.eventlog.memeventlog.SimpleListEventLog;
 import micro.gateway.Gateway;
-import micro.primitives.*;
+import micro.primitives.Action;
+import micro.primitives.Constant;
+import micro.primitives.Gt;
+import micro.primitives.Sub;
 import micro.visualize.FVisualizer;
 import org.junit.Test;
 
@@ -16,9 +18,7 @@ import java.util.function.Supplier;
 
 import static java.util.Arrays.asList;
 import static micro.Algorithm.*;
-import static micro.If.If.iff;
 import static micro.Names.*;
-import static micro.PropagationType.*;
 import static micro.ReRun.runAndCheck;
 import static micro.primitives.Add.add;
 import static micro.primitives.Mul.mul;
@@ -110,22 +110,6 @@ public class MicroTest {
             ReRun.reReReReRunAndCheck(rInit.exId(), (id, env) -> getSynchronized(id, env, createSimpleFunc_useAddDirectly(env)), log, _3);
         }
 
-    }
-
-    private Gateway<Integer> getSynchronized(Env env, F f) {
-        return getSynchronized(Integer.class, env, f);
-    }
-
-    private Gateway<Integer> getSynchronized(Long relatchToId, Env env, F f) {
-        return getSynchronized(Integer.class, relatchToId, env, f);
-    }
-
-    private <T> Gateway<T> getSynchronized(Class<T> resultType, Env env, F f) {
-        return Gateway.of(resultType, f, env);
-    }
-
-    private <T> Gateway<T> getSynchronized(Class<T> resultType, Long relatchToId, Env env, F f) {
-        return Gateway.of(relatchToId, resultType, f, env);
     }
 
     private F createSimpleFunc_useAddDirectly(Env env) {
@@ -365,27 +349,6 @@ public class MicroTest {
         }, log, _2);
     }
 
-    /*
-     * max(left, right) = if(left > right) left else right
-     *
-     * */
-    private F createMax(Env env) {
-        F max = f(env, nop, Names.left, Names.right).label("max");
-        If iff = iff(env).label("if");
-        F gt = f(env, Gt.gt, Names.left, Names.right).returnAs(Names.condition).label("gt");
-
-        max.addPropagation(Names.left, iff);
-        max.addPropagation(Names.right, iff);
-
-        //TODO possible that nothing is stashed? Also in useFVar?
-        iff.addPropagation(COND_CONDITION, Names.left, gt);
-        iff.addPropagation(COND_CONDITION, Names.right, gt);
-        iff.addPropagation(COND_TRUE_BRANCH, Names.left, Names.result, iff);
-        iff.addPropagation(COND_FALSE_BRANCH, Names.right, Names.result, iff);
-
-        return max;
-    }
-
     @Test
     public void testRecSum() {
         final AtomicInteger i1 = new AtomicInteger(0);
@@ -426,9 +389,6 @@ public class MicroTest {
             System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");
         }
     }
-
-
-
 
     @Test
     public void testTailRecSum() {
@@ -579,7 +539,7 @@ public class MicroTest {
     private void testFor(Env env, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         assertEquals(expected, getSynchronized(List.class, env, main).param(list, source).call());
         assertEquals(0, ((Node) env).getCrankCount());
-        System.out.printf("Tested %s input size: %d max executions used simultaneously:%d\n", main.getLabel(), source.size(), env.getMaxExCount());
+        System.out.printf("Tested %s input size: %d max %d executions used simultaneously by %d threads \n", main.getLabel(), source.size(), env.getMaxExCount(), ((Node)env).getThreadsUsed());
     }
 
     private Node createNode() {
@@ -617,5 +577,21 @@ public class MicroTest {
         env.start(true);
         Concurrent.sleep(50000);
         env.close();
+    }
+
+    private Gateway<Integer> getSynchronized(Env env, F f) {
+        return getSynchronized(Integer.class, env, f);
+    }
+
+    private Gateway<Integer> getSynchronized(Long relatchToId, Env env, F f) {
+        return getSynchronized(Integer.class, relatchToId, env, f);
+    }
+
+    private <T> Gateway<T> getSynchronized(Class<T> resultType, Env env, F f) {
+        return Gateway.of(resultType, f, env);
+    }
+
+    private <T> Gateway<T> getSynchronized(Class<T> resultType, Long relatchToId, Env env, F f) {
+        return Gateway.of(relatchToId, resultType, f, env);
     }
 }

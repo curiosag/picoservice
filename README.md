@@ -81,36 +81,12 @@ Note, that it could as well happen that way.
 14 C -> result -> Γ 
 15 -t -> value_false_branch -> if  
 ```
-## event logging/recovery
-
-A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.
-
-## tail call optimization
-
-With the limitation that logging and recovery of the function body happens at the granularity of the whole function call. 
-That means, a partially computed function body can't be recovered, as it is possible otherwise. That should be possible here too actually.
-
-
-## TODO
-
-Since it is just an explorative prototype all kind of stuff is missing, among that
-
-- a model of the implemantation that allows to derive some charasteristics and guarantees, perhaps [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks#Process_as_a_finite_state_machine) are a field to look at.
-- perhaps restrict message passing to match conventional function call semantics   
-- location transparency for function calls
-- remove restriction to a single functional parameter
-- primitives for sets and maps 
-- mutability maybe
-- value de-duplication in event logs
-- add scatter/gather semantics at least
-- a compiler and integration to a source language. There shouldn't be a 2nd form needed for programs to get a picoservice-executed function   
-- find a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
 
 ## algorithms
 
 ...expressed in the elements of the execution model (its byte code, kind of)
 
-A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L18) 
+A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L18)
 together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L98). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
 
 
@@ -125,9 +101,35 @@ Recursive calculation of [simple geometrical series](https://github.com/curiosag
 
     geo(n) = 1 + 2 + ... + n-1 + n
 
+## event logging/recovery
+
+A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.
+
+## tail call optimization
+
+With the limitation that logging and recovery of the function body happens at the granularity of the whole function call. 
+That means, a partially computed function body can't be recovered, as it is possible otherwise. That should be possible here too actually.
+
+
+## TODO
+
+Since it is just an explorative prototype all kind of stuff is missing, among that
+
+- a model of the implemantation that allows to derive some charasteristics and guarantees, e.g. monotonicity. Perhaps [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks#Process_as_a_finite_state_machine) are a field to look at. As far as it [is stated](http://bloom-lang.net/calm/) for the bloom language that here shouldn't be that far off.
+- perhaps restrict message passing to match conventional function call semantics   
+- location transparency for function calls
+- remove restriction to a single functional parameter
+- primitives for sets and maps 
+- mutability maybe
+- value de-duplication in event logs
+- add scatter/gather semantics at least, see [this](https://dsf.berkeley.edu/papers/cidr11-bloom.pdf) for consistency requirements
+- a compiler and integration to a source language. There shouldn't be a 2nd form needed for programs to get a picoservice-executed function   
+- find a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
+
 
 ## somewhat related
 
 - [propagation systems](https://www.cs.tufts.edu/~nr/cs257/archive/alexey-radul/phd-thesis.pdf)
 - [salsa actor language](http://wcl.cs.rpi.edu/salsa/)
 - [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks)
+- [bloom](http://bloom-lang.net/calm/) programming language, but less so

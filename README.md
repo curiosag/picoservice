@@ -101,6 +101,10 @@ Recursive calculation of [simple geometrical series](https://github.com/curiosag
 
     geo(n) = 1 + 2 + ... + n-1 + n
 
+Nested functions forming an [arithmetic expression](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L259)
+
+    f(a,b,c) = (a*b*c)+(a+b+c)
+
 ## event logging/recovery
 
 A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.

@@ -10,6 +10,7 @@ import static micro.If.If.iff;
 import static micro.Names.*;
 import static micro.PropagationType.*;
 import static micro.primitives.Add.add;
+import static micro.primitives.Mul.mul;
 import static micro.primitives.Primitive.nop;
 
 public class Algorithm {
@@ -253,6 +254,84 @@ public class Algorithm {
         iff.doneOn(next_a, cumulated); // need to define when it is done, since it doesn't follow the usual result mechanism
 
         return geo;
+    }
+
+       /*
+        function add(left,right)=left+right
+        function mul(left,right)=left*right
+        function trisum (a,b,c) = add(add(a, b), c)
+        function trimul (a,b,c) = mul(mul(a, b), c)
+        function calc(a,b,c) = sum(trisum(1,2,3), trimul(1,2,3))
+
+        a   b
+         \ /
+   (add2) +   c
+           \ /
+            + (add1)
+            |
+            trisum (a,b,c)
+
+
+        a   b
+         \ /
+   (mul1) *   c
+           \ /
+            * (mul2)
+            |
+            trimul   (a,b,c)
+
+
+trisum(a,b,c)   trimul(a,b,c)
+           \   /
+             + (add)
+             |
+            calc   (a,b,c)
+
+
+
+    * */
+
+    private static F createTriOp(Env env, F binOp, String label) {
+        F op1 = new FCall(env, binOp).label(label + "_1");
+        F op2 = new FCall(env, binOp).label(label + "_2");
+
+        F triOp = f(env, nop, Names.a, Names.b, Names.c).label(label + "_triop");
+        triOp.addPropagation(Names.a, op1);
+        triOp.addPropagation(Names.b, op1);
+        triOp.addPropagation(Names.c, Names.right, op1);
+
+        op1.addPropagation(Names.a, Names.left, op2);
+        op1.addPropagation(Names.b, Names.right, op2);
+
+        op2.returnAs(Names.left);
+        op1.returnAs(Names.result);
+
+        return triOp;
+    }
+
+    public static F createCalc(Env env) {
+        F calc = f(env, nop, Names.result).label("calc");
+
+        // single instances of add and mul, accessed via FCalls
+        F add = f(env, add(), Names.left, Names.right).label("add").returnAs(Names.result);
+        F mul = f(env, mul(), Names.left, Names.right).label("mul").returnAs(Names.result);
+        F triSum = createTriOp(env, add, "triSum").returnAs(Names.left);
+        F triMul = createTriOp(env, mul, "triMul").returnAs(Names.right);
+
+        F callAdd = new FCall(env, add).returnAs(Names.result);
+        calc.addPropagation(Names.a, callAdd);
+        calc.addPropagation(Names.b, callAdd);
+        calc.addPropagation(Names.c, callAdd);
+
+        //TODO: shouldn't all propagations pass through the called function without being bypassed to triSum/triMul?
+        callAdd.addPropagation(Names.a, triSum);
+        callAdd.addPropagation(Names.b, triSum);
+        callAdd.addPropagation(Names.c, triSum);
+
+        callAdd.addPropagation(Names.a, triMul);
+        callAdd.addPropagation(Names.b, triMul);
+        callAdd.addPropagation(Names.c, triMul);
+        return calc;
     }
 
     public static F f(Env env, Primitive primitive, String... params) {

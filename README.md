@@ -1,9 +1,11 @@
 # picoservice
-An execution model for some functional language constructs based on asynchronous buffered message passing (along the lines of the [actor](https://en.wikipedia.org/wiki/Actor_model) model).
+An execution model for some functional language constructs based on asynchronous buffered message passing (see [actor](https://en.wikipedia.org/wiki/Actor_model) model).
 
 - A single inherently parallel model of computation for local and distributed algorithms
 - Persistent, recoverable execution state using event logging 
-- to be embedded in a host language, avoiding new language constructs
+- To be embedded in a host language, avoiding new language constructs
+
+**_pico_**? Well, micro (obviously) and [nano](https://www.serverlessops.io/blog/rise-of-the-nanoservice) already have been occupied.
 
 ## ingredients
 
@@ -14,15 +16,19 @@ Functions. They may be
 - partially applied
 - of higher order, accepting functions as arguments
 - a conditional
+- primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time and of money charged.
 
--  primitive, this might be on the level of `+`, `-`, `>` or `<=`, but it could be as well a call of a connector to an external data provider, expensive both in terms of time and of money charged.
+## why?
+
+It started with the quest for the smallest possible microservice, like `+` or `!` as a microservice. Really, really micro. Which was also a means to understand actor systems, event sourcing and, as it turned out, different models of computation.
+At the end it looked like it may be suitable for long running processes like you have them in workflow systems, just that you write your workflows in a plain programming language (with quite some annotations).
 
 ## concurrent message passing
 
 A function receives named values as messages and propagates them to subsequent functions as needed. Each function is an actor, so all off them operate concurrently. 
 
 Message passing happens asap, you could have function A calling function B and B already computing a result while A hasn't received all its parameters yet (but enough for B).
-On the other hand usual conditionals, tail call optimized recusive functions and functions with functional parameters may need to stash parameters until the computation can proceed (until the functional value has been provided and can be applied, the condition has been computed and the chosen branch can execute, the next recursive call can execute).  
+On the other hand primitives, usual conditionals, tail call optimized recusive functions and functions with functional parameters may need to stash parameters until the computation can proceed (until all parameters have been received to computa a primitive, until the functional value has been provided and can be applied, the condition has been computed and the chosen branch can execute, the next recursive call can execute).  
 
 Further, if it is a primitive and got all values to compute a result it does so and propagates the result to the designated recipient. 
 Any non primitive function that receives a result value propagates it to its own designated recipient of a result.
@@ -84,13 +90,18 @@ That means, a partially computed function body can't be recovered, as it is poss
 
 ## TODO
 
+Since it is just an explorative prototype all kind of stuff is missing, among that
+
+- a model of the implemantation that allows to derive some charasteristics and guarantees, perhaps [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks#Process_as_a_finite_state_machine) are a field to look at.
+- perhaps restrict message passing to match conventional function call semantics   
 - location transparency for function calls
+- remove restriction to a single functional parameter
+- primitives for sets and maps 
 - mutability maybe
 - value de-duplication in event logs
 - add scatter/gather semantics at least
-- a compiler, from any language with functional primitives
-- integration to a source language, there shouldn't be a 2nd form needed to get a picoservice-executed function   
-- a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
+- a compiler and integration to a source language. There shouldn't be a 2nd form needed for programs to get a picoservice-executed function   
+- find a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
 
 ## algorithms
 
@@ -116,3 +127,4 @@ Recursive calculation of [simple geometrical series](https://github.com/curiosag
 
 - [propagation systems](https://www.cs.tufts.edu/~nr/cs257/archive/alexey-radul/phd-thesis.pdf)
 - [salsa actor language](http://wcl.cs.rpi.edu/salsa/)
+- [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks)

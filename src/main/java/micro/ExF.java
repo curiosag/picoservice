@@ -9,11 +9,11 @@ public class ExF extends Ex {
     @Override
     public void processValueDownstream(Value v) {
         Check.preCondition(isDownstream(v.getName()));
-        Check.invariant(!(template.hasFunctionAtom() && Names.result.equals(v.getName())), "no result as input expected for function atom");
+        Check.invariant(!(template.hasFunctionPrimitive() && Names.result.equals(v.getName())), "no result as input expected for function atom");
 
         propagate(v);
 
-        if (template.hasAtom() && paramsReceived.size() == template.numParams()) {
+        if (template.hasPrimitive() && paramsReceived.size() == template.numParams()) {
             if(! isRecovery) {
                 if (template.getPrimitive().isSideEffect()) {
                     applySideEffect();

@@ -74,12 +74,12 @@ public class F implements _F, Id {
         return primitive;
     }
 
-    boolean hasAtom() {
+    boolean hasPrimitive() {
         return getPrimitive() != Primitive.nop;
     }
 
-    boolean hasFunctionAtom() {
-        return hasAtom() && !getPrimitive().isSideEffect();
+    boolean hasFunctionPrimitive() {
+        return hasPrimitive() && !getPrimitive().isSideEffect();
     }
 
     F returnAs(String returnAs) {

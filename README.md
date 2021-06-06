@@ -110,6 +110,10 @@ Nested functions forming an [arithmetic expression](https://github.com/curiosag/
 
     f(a,b,c) = (a*b*c)+(a+b+c)
 
+
+They're run (then step-wise recovered and re-re-...-re-run) by the project's [unit tests](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/MicroTest.java).
+
+
 ## event logging/recovery
 
 A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.

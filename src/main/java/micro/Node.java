@@ -47,6 +47,7 @@ public class Node implements Env, Closeable {
     private boolean recover = false;
     private final boolean useEventLog;
     private static final boolean debug = false;
+    private AtomicInteger stopped = new AtomicInteger();
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
         this.address = address;
@@ -105,6 +106,7 @@ public class Node implements Env, Closeable {
         debug("*** RUN ***");
         while (true) {
             if (stop.get()) {
+                stopped.incrementAndGet();
                 break;
             }
             Concurrent.sleep(delay.get());
@@ -173,6 +175,7 @@ public class Node implements Env, Closeable {
     @Override
     public void close() {
         stop();
+        Concurrent.await(() -> this.stopped.get() == maxExecutors);
         tracer.close();
         try {
             logWriter.close();
@@ -186,10 +189,10 @@ public class Node implements Env, Closeable {
             debugValueEnqueuedEvent((ValueEnqueuedEvent) e);
         if (e instanceof ExCreatedEvent ee) {
             _Ex ex = ee.ex;
-            if (!cranks.contains(ex)) {
+
                 cranks.add(ex);
                 idToEx.put(ex.getId(), ex);
-            }
+
         }
         logWriter.put(e);
     }
@@ -207,7 +210,7 @@ public class Node implements Env, Closeable {
 
     private void startLogWriter() {
         new Thread(() -> {
-            while (true) {
+            while (stopped.get() != maxExecutors) {
                 String current = logQueue.poll();
                 if (current != null)
                     System.out.println(current);

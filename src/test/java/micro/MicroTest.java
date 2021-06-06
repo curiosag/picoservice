@@ -321,6 +321,7 @@ public class MicroTest {
             dec.addPropagation(Names.a, Names.left, sub);
             _Ex TOP = env.getTop();
             _Ex ex = env.createExecution(main);
+            env.start();
             ex.receive(Value.of(ping, 0, TOP));
             ex.receive(Value.of(Names.a, 1, TOP));
         }
@@ -378,12 +379,12 @@ public class MicroTest {
 
             env.start();
 
-            Gateway.of(Integer.class, main, env).param(Names.a, 3).callAsync(i1::addAndGet);
+            Gateway.of(Integer.class, main, env).param(Names.a, 149).callAsync(i1::addAndGet);
             Gateway.of(Integer.class, main, env).param(Names.a, 150).callAsync(i2::addAndGet);
 
             Concurrent.await(() -> i1.get() > 0 && i2.get() > 0);
 
-            assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
+            assertEquals(Integer.valueOf(11175), Integer.valueOf(i1.get()));
             assertEquals(Integer.valueOf(11325), Integer.valueOf(i2.get()));
 
             System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");

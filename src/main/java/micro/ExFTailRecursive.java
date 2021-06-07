@@ -1,11 +1,13 @@
 package micro;
 
+import micro.event.AfterlifeEvent;
+import micro.event.AfterlifeEventCanPropagatePendingValues;
 import micro.event.ExEvent;
-import micro.event.PropagationTargetExsCreatedEvent;
 import micro.event.ValueEnqueuedEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ExFTailRecursive extends Ex {
 
@@ -17,18 +19,41 @@ public class ExFTailRecursive extends Ex {
     }
 
     @Override
-    protected boolean needsInitialTargets() {
-        return false;
+    protected void handleAfterlife(AfterlifeEvent k) {
+        Check.preCondition(k instanceof AfterlifeEventCanPropagatePendingValues && k.ex.equals(this));
+
+        Check.preCondition((paramsReceived.size() == template.numParams()));
+        Check.preCondition(inBox.isEmpty() || considerRecovery());
+
+        stash.forEach(this::propagate);
+        // ok to reset after propagation. propagation may put new values in the inbox already, but they only get
+        // processed after reset
+        reset();
     }
 
-    @Override
-    protected ExEvent getEventTriggeredAfterCurrent(ValueEnqueuedEvent value) {
-        if (paramsReceived.size() == template.numParams()) {
-            addPropagationTargets(new PropagationTargetExsCreatedEvent(this, env.createTargets(this, template.getTargets())));
-            stash.forEach(this::propagate);
-            reset();
+    private boolean considerRecovery() {
+        if(recovered){
+           if(inBox.size() > 0 && inBox.peek().getName().equals(Names.result)) {
+               stash.clear();
+           } else if(paramsReceived.size() == template.numParams() && ! inBox.isEmpty())
+           {
+               inBox.clear();
+           }
+
         }
-        return none;
+        return recovered;
+    }
+
+    private boolean paramsComplete(String paramName) {
+        return paramsReceived.size() == template.numParams() - 1
+                && template.isParam(paramName)
+                && !paramsReceived.containsKey(paramName);
+    }
+
+    protected Optional<AfterlifeEvent> getAfterlife(ValueEnqueuedEvent valueEvent) {
+        return paramsReceived.size() == template.numParams() ?
+                Optional.of(new AfterlifeEventCanPropagatePendingValues(this)):
+                Optional.empty();
     }
 
     @Override
@@ -40,8 +65,6 @@ public class ExFTailRecursive extends Ex {
     }
 
     protected void reset() {
-        Check.preCondition(exValueAfterlife.isEmpty());
-
         stash.clear();
         propagations.clear();
         namesReceived.clear();
@@ -50,11 +73,24 @@ public class ExFTailRecursive extends Ex {
 
     @Override
     public void recover(ExEvent e) {
-        super.recover(e);
-
-        if (paramsReceived.size() == template.numParams()) {
+        if (e instanceof ValueEnqueuedEvent && ! exValueAfterlife.isEmpty()) {
             reset();
+            exValueAfterlife.clear();
+
         }
+        super.recover(e);
+    }
+
+    @Override
+    protected void straightenOutPostRecovery() {
+        Check.preCondition(recovered);
+        // AfterliveEvent written, but ValueProcessedEvent missing
+        if(exValueAfterlife.size() == 1 && exStack.size() == 1) {
+            Check.preCondition(exValueAfterlife.peek() instanceof AfterlifeEventCanPropagatePendingValues);
+            Check.preCondition(exStack.peek() instanceof ValueEnqueuedEvent);
+            exValueAfterlife.clear();
+        }
+
     }
 
 }

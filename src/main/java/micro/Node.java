@@ -42,11 +42,11 @@ public class Node implements Env, Closeable {
 
     private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
-    private static final int maxExecutors = 3;
+    private static final int maxExecutors = 1;
     private int maxExCount = 0;
     private boolean recover = false;
     private final boolean useEventLog;
-    private static final boolean debug = false;
+    private static final boolean debug = true;
     private AtomicInteger stopped = new AtomicInteger();
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
@@ -167,9 +167,17 @@ public class Node implements Env, Closeable {
         this.maxExId.set(maxExId);
         idToEx.values().stream()
                 .filter(i -> !i.equals(top))
-                .forEach(cranks::add);
+                .forEach(c -> {
+                    straightenOutPostRecovery(c);
+                    cranks.add(c);
+                });
 
         recover = false;
+    }
+
+    private void straightenOutPostRecovery(Crank c) {
+        if(c instanceof Ex ex)
+            ex.straightenOutPostRecovery();
     }
 
     @Override
@@ -190,8 +198,8 @@ public class Node implements Env, Closeable {
         if (e instanceof ExCreatedEvent ee) {
             _Ex ex = ee.ex;
 
-                cranks.add(ex);
-                idToEx.put(ex.getId(), ex);
+            cranks.add(ex);
+            idToEx.put(ex.getId(), ex);
 
         }
         logWriter.put(e);

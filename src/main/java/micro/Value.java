@@ -8,11 +8,16 @@ import java.util.*;
 
 public class Value implements Hydratable, Serioulizable {
 
+    public enum Signal {
+        PROPAGATE_AND_RESET
+    }
+
     private static final int INT = 0;
     private static final int BOOL = 1;
     private static final int LIST = 2;
     private static final int PARTIALLY_APPLIED_F = 3;
     private static final int STRING = 4;
+    private static final int SIGNAL = 5;
     private static final Map<Class<?>, Integer> valueTypes = new HashMap<>();
 
     static {
@@ -114,6 +119,11 @@ public class Value implements Hydratable, Serioulizable {
                 output.writeVarInt(valType, true);
                 ((PartiallyAppliedFunction) value).write(output);
             }
+            case SIGNAL -> {
+                output.writeVarInt(valType, true);
+                output.writeString(((Signal)value).name());
+                ((PartiallyAppliedFunction) value).write(output);
+            }
             default -> throw new IllegalArgumentException("value type not handled " + value.getClass().getSimpleName());
         }
 
@@ -142,6 +152,7 @@ public class Value implements Hydratable, Serioulizable {
                 p.read(input);
                 yield p;
             }
+            case SIGNAL -> Signal.valueOf(input.readString());
             default -> throw new IllegalArgumentException("value type not handled " + valType);
         };
 

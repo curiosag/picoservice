@@ -28,7 +28,7 @@ public abstract class Ex implements _Ex, Crank {
     protected Stack<ExEvent> exStack = new Stack<>();
     protected Queue<AfterlifeEvent> exValueAfterlife = new ArrayDeque<>();
     protected boolean isRecovery;
-    private boolean recovered;
+    protected boolean recovered;
 
     public Ex(Env env, long id, F template, _Ex returnTo) {
         Guards.notNull(template);
@@ -64,6 +64,12 @@ public abstract class Ex implements _Ex, Crank {
         inBox.add(v);
     }
 
+    /**
+     *
+     * proceed() is the whole event/state change machinery built around the central element processValue(valueEvent.value);
+     * which deals with the value as such
+     *
+     * */
     void proceed() {
         if (done) {
             return;
@@ -167,14 +173,14 @@ public abstract class Ex implements _Ex, Crank {
     }
 
     protected boolean triggerPropagationTargetExsCreatedEvent(ValueEnqueuedEvent valueEvent) {
-        if (needsInitialTargets()) {
+        if (needsInitialTargets(valueEvent)) {
             push(new PropagationTargetExsCreatedEvent(this, env.createTargets(this, template.getTargets())));
             return true;
         }
         return false;
     }
 
-    protected boolean needsInitialTargets() {
+    protected boolean needsInitialTargets(ValueEnqueuedEvent e) {
         return template.getTargets().size() > 0 && propagations.size() == 0;
     }
 
@@ -447,4 +453,5 @@ public abstract class Ex implements _Ex, Crank {
         return done;
     }
 
+    protected void straightenOutPostRecovery(){};
 }

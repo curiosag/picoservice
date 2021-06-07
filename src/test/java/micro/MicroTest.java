@@ -477,14 +477,6 @@ public class MicroTest {
         }
     }
 
-
-    //@Test
-    public void testQuickReReReReReSort() {
-        for (int i = 0; i < 5; i++) {
-            testQuickReSort();
-        }
-    }
-
     @Test
     public void testQuickReSort() {
         ArrayList<Integer> initial = randomList(3);

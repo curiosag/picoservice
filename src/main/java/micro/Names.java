@@ -8,9 +8,9 @@ public interface Names {
     String b = "b";
     String c = "c";
     String exception = "exception";
-    String condition = "condition";
-    String onTrue = "onTrue";
-    String onFalse = "onFalse";
+    String condition = "cond";
+    String onTrue = "onT";
+    String onFalse = "onF";
     String ping = "ping";
     String output = "output";
     String paramFVar = "FVar";
@@ -18,7 +18,7 @@ public interface Names {
     String element = "element";
     String head = "head";
     String tail = "tail";
-    String predicate = "predicate";
+    String predicate = "pred";
     String _a = "_a";
     String _c = "_c";
     String leftArg = "leftArg";

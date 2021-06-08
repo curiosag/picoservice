@@ -285,7 +285,7 @@ public class MicroTest {
 
     */
 
-    private F createPFApp(Env env){
+    private F createPFApp(Env env) {
         F main = f(env, nop, Names.output).label("main");
 
         F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
@@ -477,14 +477,6 @@ public class MicroTest {
         }
     }
 
-
-    //@Test
-    public void testQuickReReReReReSort() {
-        for (int i = 0; i < 5; i++) {
-            testQuickReSort();
-        }
-    }
-
     @Test
     public void testQuickReSort() {
         ArrayList<Integer> initial = randomList(3);
@@ -540,7 +532,7 @@ public class MicroTest {
     private void testFor(Env env, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         assertEquals(expected, getSynchronized(List.class, env, main).param(list, source).call());
         assertEquals(0, ((Node) env).getCrankCount());
-        System.out.printf("Tested %s input size: %d max %d executions used simultaneously by %d threads \n", main.getLabel(), source.size(), env.getMaxExCount(), ((Node)env).getThreadsUsed());
+        System.out.printf("Tested %s input size: %d max %d executions used simultaneously by %d threads \n", main.getLabel(), source.size(), env.getMaxExCount(), ((Node) env).getThreadsUsed());
     }
 
     private Node createNode() {
@@ -566,7 +558,16 @@ public class MicroTest {
 
     @Test
     public void printf() {
-        try (var v = new FVisualizer(createTailRecSum(createNode()))) {
+        try (var n = createNode()) {
+            render(createRecSum(n));
+            render(createTailRecSum(n));
+            render(createFilter(n));
+            render(createQuicksort(n));
+        }
+    }
+
+    private void render(F f) {
+        try (var v = new FVisualizer(f)) {
             v.render();
         }
     }

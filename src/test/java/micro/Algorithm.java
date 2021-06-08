@@ -117,21 +117,21 @@ public class Algorithm {
         String tailFiltered = "tailFiltered";
 
         F filter = new F(env, nop, predicate, list).label("filter");
-        If if_listEmpty = iff(env).label("**if:listEmpty");
+        If if_listEmpty = iff(env).label("if:listEmpty");
         filter.addPropagation(list, if_listEmpty);
         filter.addPropagation(predicate, if_listEmpty);
 
         F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(COND_CONDITION, list, isEmpty);
-        F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
+        F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist");
         if_listEmpty.addPropagation(COND_TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(env, nop).label("block_else");
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, list, block_else);
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, predicate, block_else);
 
-        F head = new F(env, Head.head, list).returnAs(Names.head).label("head()");
-        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail()");
+        F head = new F(env, Head.head, list).returnAs(Names.head).label("head");
+        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail");
         F filterReCall = new FCall(env, filter).returnAs(tailFiltered).label("filterReCall");
 
         If if_predicate = iff(env).label("if:predicate");
@@ -221,7 +221,7 @@ public class Algorithm {
     */
 
     public static F createTailRecSum(Env env) {
-        F geo = f(env, nop, Names.a, Names.c).tailRecursive().label("geo");
+        F geo = f(env, nop, Names.a, Names.c).tailRecursive().label("geo tailrec");
         If iff = iff(env).label("if");
 
         // one can't use the same names in the body wihout causing iff to produce a fake return value

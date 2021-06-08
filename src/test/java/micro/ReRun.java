@@ -41,7 +41,7 @@ public class ReRun {
 
     @SuppressWarnings("ConstantConditions")
     public static void reReReReRunAndCheck(long latchOntoExId, BiFunction<Long, Env, Gateway<?>> call, List<Hydratable> events, Object expected) {
-        if (false)
+        if (true)
             for (int i = events.size(); i > 2; i--) {
                 ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, i));
                 ReRun.reRunAndCheck(latchOntoExId, call, useEvents, expected);

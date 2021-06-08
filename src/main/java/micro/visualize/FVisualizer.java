@@ -2,7 +2,6 @@ package micro.visualize;
 
 import micro.F;
 import micro.FPropagation;
-import micro.Names;
 import micro._F;
 
 import java.io.BufferedWriter;
@@ -20,16 +19,27 @@ public class FVisualizer implements Closeable {
     private BufferedWriter writer;
 
     List<_F> covered = new ArrayList<>();
+    List<_F> retcovered = new ArrayList<>();
+
     private final _F start;
+
+    private static final String legend = """
+                      <table cellspacing='40' border='0' cellborder='0'>
+                        <tr><td><font color="blue">condition</font></td>
+                        <td><font color="green">true-branch</font></td>
+                        <td><font color="red">false-branch</font></td></tr>
+                      </table>
+            """;
 
     public FVisualizer(_F f) {
         this.start = f;
         writer = createWriter(f.getLabel());
-        writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
+        writeLn("digraph G {\n label=<"+ legend + ">; labelloc = \"b\"; graph [ranksep=0 rankdir=LR fontsize=\"14\"]; node [shape=circle] edge [fontsize=\"12\"];\n");
     }
 
     private String edgeLabel(FPropagation p) {
-        return '"' + p.nameReceived + "\n" + (p.nameToPropagate.equals(p.nameReceived) ? "" : p.nameToPropagate) + '"';
+        String renamed = p.nameToPropagate.equals(p.nameReceived) ? "" : ("[" + p.nameToPropagate + "]");
+        return "[label=\"" + p.nameReceived + renamed + "\" color=\"" + p.propagationType.color + "\" fontcolor=\"" + p.propagationType.color + "\"]";
     }
 
     public void render() {
@@ -38,28 +48,29 @@ public class FVisualizer implements Closeable {
 
     private void render(_F f) {
         if (!covered.contains(f)) {
+            covered.add(f);
             f.getPropagations().forEach(p -> {
                 printNode(renderNode(f), renderNode(p.target), edgeLabel(p));
 
-                if (p.target instanceof F ff) {
-                    printNode(renderNode(p.target), renderNode(f), '"' + (ff.returnAs.equals(Names.result) ? "R": "R:" + ff.returnAs )+ '"');
+                if (!retcovered.contains(p.target) && p.target instanceof F retFrom) {
+                    retcovered.add(retFrom);
+                    printNode(renderNode(retFrom), renderNode(f), "[label=\"" + "result[" + retFrom.returnAs + "]\"]");
                 }
+                render(p.target);
             });
-
-            covered.add(f);
-            f.getPropagations().stream()
-                    .map(i -> i.target)
-                    .distinct()
-                    .forEach(this::render);
         }
     }
 
-    private void printNode(String from, String to, String edge) {
-        writeLn(String.format("%s -> %s [label=%s];", from, to, edge));
+    private void printNode(String from, String to, String edgeLabel) {
+        writeLn(String.format("%s -> %s %s;", from, to, edgeLabel));
     }
 
     private String renderNode(_F f) {
-        return '"' + f.getClass().getSimpleName() + "/" + f.getLabel() + '"';
+        String params = "";
+        if (f instanceof F ff) {
+            params = String.join(",", ff.formalParameters);
+        }
+        return '"' + f.getLabel() + "(" + params + ")" + '"';
     }
 
     private BufferedWriter createWriter(String name) {

@@ -285,7 +285,7 @@ public class MicroTest {
 
     */
 
-    private F createPFApp(Env env){
+    private F createPFApp(Env env) {
         F main = f(env, nop, Names.output).label("main");
 
         F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
@@ -365,29 +365,7 @@ public class MicroTest {
 
             assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
 
-            System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");
-        }
-    }
-
-    @Test
-    public void testRecSumSimultaneously() {
-        final AtomicInteger i1 = new AtomicInteger(0);
-        final AtomicInteger i2 = new AtomicInteger(0);
-
-        try (Node env = createNode()) {
-            F main = createRecSum(env);
-
-            env.start();
-
-            Gateway.of(Integer.class, main, env).param(Names.a, 149).callAsync(i1::addAndGet);
-            Gateway.of(Integer.class, main, env).param(Names.a, 150).callAsync(i2::addAndGet);
-
-            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0);
-
-            assertEquals(Integer.valueOf(11175), Integer.valueOf(i1.get()));
-            assertEquals(Integer.valueOf(11325), Integer.valueOf(i2.get()));
-
-            System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");
+            System.out.println(env.getMaxExCount() + " exs used max for recursive geometrical sum");
         }
     }
 
@@ -403,32 +381,36 @@ public class MicroTest {
 
             Concurrent.await(() -> i1.get() > 0);
             assertEquals(Integer.valueOf(6), Integer.valueOf(i1.get()));
-            System.out.println(env.getMaxExCount() + " exs used simultaneously for 3 tail recursive geometrical sums of 153");
+            System.out.println(env.getMaxExCount() + " exs used max for tail recursive geometrical sum");
         }
     }
 
-
     @Test
-    public void testTailRecSumAsync() {
+    public void testParallelRecSums() {
         final AtomicInteger i1 = new AtomicInteger(0);
         final AtomicInteger i2 = new AtomicInteger(0);
         final AtomicInteger i3 = new AtomicInteger(0);
-        SimpleListEventLog log = new SimpleListEventLog();
-        try (Node env = new Node(Address.localhost, log, log)) {
+        final AtomicInteger i4 = new AtomicInteger(0);
+
+        try (Node env = createNode()) {
+            F main = createRecSum(env);
+            F mainT = createTailRecSum(env);
+
             env.start();
-            F s1 = createTailRecSum(env);
-            F s2 = createTailRecSum(env);
-            F s3 = createTailRecSum(env);
 
-            Gateway.of(Integer.class, s1, env).param(Names.a, 153).param(Names.c, 153).callAsync(i1::addAndGet);
-            Gateway.of(Integer.class, s2, env).param(Names.a, 153).param(Names.c, 153).callAsync(i2::addAndGet);
-            Gateway.of(Integer.class, s3, env).param(Names.a, 153).param(Names.c, 153).callAsync(i3::addAndGet);
+            Gateway.of(Integer.class, main, env).param(Names.a, 149).callAsync(i1::addAndGet);
+            Gateway.of(Integer.class, main, env).param(Names.a, 150).callAsync(i2::addAndGet);
+            Gateway.of(Integer.class, mainT, env).param(Names.a, 149).param(Names.c, 149).callAsync(i3::addAndGet);
+            Gateway.of(Integer.class, mainT, env).param(Names.a, 150).param(Names.c, 150).callAsync(i4::addAndGet);
 
-            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0 && i3.get() > 0);
-            assertEquals(Integer.valueOf(11781), Integer.valueOf(i1.get()));
-            assertEquals(Integer.valueOf(11781), Integer.valueOf(i2.get()));
-            assertEquals(Integer.valueOf(11781), Integer.valueOf(i3.get()));
-            System.out.println(env.getMaxExCount() + " exs used simultaneously for 3 tail recursive geometrical sums of 153");
+            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0&& i3.get() > 0&& i4.get() > 0);
+
+            assertEquals(Integer.valueOf(11175), Integer.valueOf(i1.get()));
+            assertEquals(Integer.valueOf(11325), Integer.valueOf(i2.get()));
+            assertEquals(Integer.valueOf(11175), Integer.valueOf(i3.get()));
+            assertEquals(Integer.valueOf(11325), Integer.valueOf(i4.get()));
+
+            System.out.println(env.getMaxExCount() + " exs used for recursive geometrical sum");
         }
     }
 
@@ -532,7 +514,7 @@ public class MicroTest {
     private void testFor(Env env, F main, ArrayList<Integer> source, ArrayList<Integer> expected) {
         assertEquals(expected, getSynchronized(List.class, env, main).param(list, source).call());
         assertEquals(0, ((Node) env).getCrankCount());
-        System.out.printf("Tested %s input size: %d max %d executions used simultaneously by %d threads \n", main.getLabel(), source.size(), env.getMaxExCount(), ((Node)env).getThreadsUsed());
+        System.out.printf("Tested %s input size: %d max %d executions used simultaneously by %d threads \n", main.getLabel(), source.size(), env.getMaxExCount(), ((Node) env).getThreadsUsed());
     }
 
     private Node createNode() {
@@ -558,7 +540,16 @@ public class MicroTest {
 
     @Test
     public void printf() {
-        try (var v = new FVisualizer(createTailRecSum(createNode()))) {
+        try (var n = createNode()) {
+            render(createRecSum(n));
+            render(createTailRecSum(n));
+            render(createFilter(n));
+            render(createQuicksort(n));
+        }
+    }
+
+    private void render(F f) {
+        try (var v = new FVisualizer(f)) {
             v.render();
         }
     }

@@ -46,7 +46,7 @@ public class Node implements Env, Closeable {
     private int maxExCount = 0;
     private boolean recover = false;
     private final boolean useEventLog;
-    private static final boolean debug = true;
+    private static final boolean debug = false;
     private AtomicInteger stopped = new AtomicInteger();
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
@@ -183,7 +183,7 @@ public class Node implements Env, Closeable {
     @Override
     public void close() {
         stop();
-        Concurrent.await(() -> this.stopped.get() == maxExecutors);
+        Concurrent.await(() -> this.cranks.size() == 0 || this.stopped.get() == maxExecutors);
         tracer.close();
         try {
             logWriter.close();

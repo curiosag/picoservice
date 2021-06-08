@@ -27,7 +27,7 @@ public class FCall extends F {
 
     @Override
     public String getLabel() {
-        return "fcall:" + super.getLabel() + '/' + called.getLabel();
+        return "fcall:" + super.getLabel() + '\n' + called.getLabel();
     }
 }
 

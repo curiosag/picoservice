@@ -62,41 +62,10 @@
             <version>3.1.0</version>
         </dependency>
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.13.1</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>2.12.7</version>
-        </dependency>
-        <dependency>
-            <groupId>com.safety-data</groupId>
-            <artifactId>akka-persistence-redis_2.12</artifactId>
-            <version>0.4.1</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <version>1.11</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jooq</groupId>
-            <artifactId>jool</artifactId>
-            <version>0.9.10</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.oath.halodb</groupId>
-            <artifactId>halodb</artifactId>
-            <version>0.5.3</version>
         </dependency>
         <dependency>
             <groupId>com.esotericsoftware</groupId>

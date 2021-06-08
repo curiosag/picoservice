@@ -1,10 +1,5 @@
 package micro;
 
-import micro.event.AfterlifeEvent;
-import micro.event.AfterlifeEventCanPropagatePendingValues;
-import micro.event.ExEvent;
-import micro.event.ValueEnqueuedEvent;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,49 +14,31 @@ public class ExFTailRecursive extends Ex {
     }
 
     @Override
-    protected void handleAfterlife(AfterlifeEvent k) {
-        Check.preCondition(k instanceof AfterlifeEventCanPropagatePendingValues && k.ex.equals(this));
-
-        Check.preCondition((paramsReceived.size() == template.numParams()));
-        Check.preCondition(inBox.isEmpty() || considerRecovery());
-
-        stash.forEach(this::propagate);
-        // ok to reset after propagation. propagation may put new values in the inbox already, but they only get
-        // processed after reset
-        reset();
-    }
-
-    private boolean considerRecovery() {
-        if(recovered){
-           if(inBox.size() > 0 && inBox.peek().getName().equals(Names.result)) {
-               stash.clear();
-           } else if(paramsReceived.size() == template.numParams() && ! inBox.isEmpty())
-           {
-               inBox.clear();
-           }
-
-        }
-        return recovered;
-    }
-
-    private boolean paramsComplete(String paramName) {
-        return paramsReceived.size() == template.numParams() - 1
-                && template.isParam(paramName)
-                && !paramsReceived.containsKey(paramName);
-    }
-
-    protected Optional<AfterlifeEvent> getAfterlife(ValueEnqueuedEvent valueEvent) {
-        return paramsReceived.size() == template.numParams() ?
-                Optional.of(new AfterlifeEventCanPropagatePendingValues(this)):
-                Optional.empty();
+    public void receive(Value v) {
+        // there are tighter restrictions on the content of the inbox in order to properly manage successive calls,
+        // so skipping of duplicates has to happen here already
+        if (!inBox.contains(v))
+            super.receive(v);
     }
 
     @Override
     public void processValueDownstream(Value v) {
-        if (!template.isParam(v.getName())) {
-            throw new IllegalStateException("ExFTailRecursive can only handle values that are parameters");
+        if (v.get() instanceof Value.Signal signal) {
+            Check.preCondition(signal == Value.Signal.PARAMS_COMPLETE);
+            Check.preCondition((paramsReceived.size() == template.numParams()));
+            stash.forEach(this::propagate);
+            // ok to reset after propagation. triggered executions may cause new values in the inbox already,
+            // but they only get processed after reset
+            reset();
+        } else {
+            if (!(template.isParam(v.getName()))) {
+                throw new IllegalStateException("ExFTailRecursive can only handle values that are parameters");
+            }
+            stash.add(v);
+            if (paramsReceived.size() == template.numParams()) {
+                deliver(Value.of(Names.signal, Value.Signal.PARAMS_COMPLETE, this), this);
+            }
         }
-        stash.add(v);
     }
 
     protected void reset() {
@@ -72,25 +49,13 @@ public class ExFTailRecursive extends Ex {
     }
 
     @Override
-    public void recover(ExEvent e) {
-        if (e instanceof ValueEnqueuedEvent && ! exValueAfterlife.isEmpty()) {
-            reset();
-            exValueAfterlife.clear();
-
-        }
-        super.recover(e);
-    }
-
-    @Override
     protected void straightenOutPostRecovery() {
         Check.preCondition(recovered);
-        // AfterliveEvent written, but ValueProcessedEvent missing
-        if(exValueAfterlife.size() == 1 && exStack.size() == 1) {
-            Check.preCondition(exValueAfterlife.peek() instanceof AfterlifeEventCanPropagatePendingValues);
-            Check.preCondition(exStack.peek() instanceof ValueEnqueuedEvent);
-            exValueAfterlife.clear();
+        Check.preCondition(inBox.size() <= 2);
+        Optional<Value> sig = inBox.stream().filter(i -> i.get().equals(Value.Signal.PARAMS_COMPLETE)).findAny();
+        if (sig.isPresent() && inBox.size() == 2) {
+            inBox.remove(sig.get());
         }
-
     }
 
 }

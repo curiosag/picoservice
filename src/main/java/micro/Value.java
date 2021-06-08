@@ -9,7 +9,7 @@ import java.util.*;
 public class Value implements Hydratable, Serioulizable {
 
     public enum Signal {
-        PROPAGATE_AND_RESET
+        PARAMS_COMPLETE
     }
 
     private static final int INT = 0;

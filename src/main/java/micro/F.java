@@ -20,7 +20,7 @@ public class F implements _F, Id {
 
     private final List<FPropagation> propagations = new ArrayList<>();
 
-    List<String> formalParameters = new ArrayList<>();
+    public List<String> formalParameters = new ArrayList<>();
     List<String> meansDone = new ArrayList<>();
 
     protected boolean isTailRecursive;

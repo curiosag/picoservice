@@ -117,13 +117,7 @@ They're run (then step-wise recovered and re-re-...-re-run) by the project's [un
 ## event logging/recovery
 
 A log of events causing state change is used to restore the computation state and resume the compuation from the last operations logged.
-The implementation turned out to be a magnitude more messy with event sourcing built in. Perhaps just for the sake of clarity there should be a non-event-sourced version provided. 
-
-## tail call optimization
-
-With the limitation that logging and recovery of the function body happens at the granularity of the whole function call. 
-That means, a partially computed function body can't be recovered, as it is possible otherwise. That should be possible here too actually.
-
+The implementation turned out to be a magnitude more messy with event sourcing built in. Perhaps just for the sake of clarity there should be a non-event-sourced version provided.
 
 ## TODO
 

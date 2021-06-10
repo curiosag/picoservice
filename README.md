@@ -9,9 +9,7 @@ An execution model for some functional language constructs based on asynchronous
 
 ## ingredients
 
-Constants, immutable values and let-statements.
-
-Functions. They may be
+Constants, immutable values and Functions. They may be
 - recursive (optionally tail call optimized)
 - partially applied
 - of higher order, accepting functions as arguments
@@ -111,7 +109,7 @@ Nested functions forming an [arithmetic expression](https://github.com/curiosag/
     f(a,b,c) = (a*b*c)+(a+b+c)
 
 
-They're run (then step-wise recovered and re-re-...-re-run) by the project's [unit tests](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/MicroTest.java).
+They're right now only run (then step-wise recovered and re-run) by the project's [unit tests](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/MicroTest.java).
 
 
 ## event logging/recovery
@@ -133,6 +131,7 @@ Since it is just an explorative prototype all kind of stuff is missing, among th
 - add scatter/gather semantics at least, see [this](https://dsf.berkeley.edu/papers/cidr11-bloom.pdf) for consistency requirements
 - a compiler and integration to a source language. There shouldn't be a 2nd form needed for programs to get a picoservice-executed function   
 - find a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
+- travel backwards in time to the 70ies to find hardware that is actually supportive of this kind of parallelism.
 
 
 ## somewhat related

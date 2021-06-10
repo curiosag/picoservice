@@ -136,11 +136,6 @@ public class Gateway<T> implements _Ex {
     }
 
     @Override
-    public boolean isMoreToDoRightNow() {
-        return false;
-    }
-
-    @Override
     public boolean isDone() {
         return true; // doesn't matter here, but false would cause it to linger in crank list
     }

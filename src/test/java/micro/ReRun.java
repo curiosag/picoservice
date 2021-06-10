@@ -52,7 +52,7 @@ public class ReRun {
                 System.out.print(" ");
             }
         else {
-            ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, 123));
+            ArrayList<Hydratable> useEvents = new ArrayList<>(events.subList(0, 32));
             ReRun.reRunAndCheck(latchOntoExId, call, useEvents, expected);
         }
         System.out.print("\n");

@@ -5,33 +5,8 @@ import micro.event.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 
 public class ExFCallByFunctionalValue extends Ex {
-
-    private enum RecoveryState {
-        COLLECTING_PARAMS, LAST_VAL_ENQ
-    }
-
-    private record RecoveryTransition(RecoveryState from,
-                                      RecoveryState to,
-                                      BiFunction<ExEvent, ExFTailRecursive, Boolean> condition,
-                                      BiConsumer<ExEvent, ExFTailRecursive> action) {
-    }
-
-    BiConsumer<ExEvent, ExFTailRecursive> nop = (a, b) -> {
-    };
-
-    private List<RecoveryTransition> recoveryTransitions = List.of(
-            new RecoveryTransition(RecoveryState.COLLECTING_PARAMS, RecoveryState.LAST_VAL_ENQ,
-                    (e, x) -> e instanceof ValueEnqueuedEvent && paramsReceived.size() == template.numParams() - 1, nop),
-            new RecoveryTransition(RecoveryState.LAST_VAL_ENQ, RecoveryState.LAST_VAL_ENQ,
-                    (e, x) -> e instanceof PropagationTargetExsCreatedEvent , nop),
-            new RecoveryTransition(RecoveryState.LAST_VAL_ENQ, RecoveryState.COLLECTING_PARAMS,
-                    (e, x) -> e instanceof ValueProcessedEvent, (e, x) -> x.reset())
-    );
-
 
     FunctionalValueDefinition fDef;
 

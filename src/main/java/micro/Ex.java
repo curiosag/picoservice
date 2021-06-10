@@ -62,6 +62,7 @@ public abstract class Ex implements _Ex, Crank {
         }
         env.note(new ValueReceivedEvent(this, v));
         inBox.add(v);
+        env.schedule(this);
     }
 
     /**
@@ -311,41 +312,38 @@ public abstract class Ex implements _Ex, Crank {
 
     @Override
     public void crank() {
-        Check.invariant(!isRecovery);
-        Check.invariant(exStack.isEmpty() || recovered);
+        // inBox might be populated in some re-send recovery cases, where a result
+        // already has been produced. Therefore *done* must be considered too
+        // afterlife should be processed immediately after valueProcessed, so should be ok with done-logic here too
+        while ((!(done || (inBox.isEmpty()))) || !exValueAfterlife.isEmpty()) {
+            Check.invariant(!isRecovery);
+            Check.invariant(exStack.isEmpty() || recovered);
 
-        if (recovered && !exStack.isEmpty()) {
+            if (recovered && !exStack.isEmpty()) {
+                process(exStack);
+                continue;
+            }
+
+            if (!exValueAfterlife.isEmpty()) {
+                exStack.addAll(exValueAfterlife);
+                exValueAfterlife.clear();
+                process(exStack);
+                continue;
+            }
+
+            Value value = inBox.peek();
+            Check.invariant(value != null);
+
+            push(new ValueEnqueuedEvent(this, value));
             process(exStack);
-            return;
+            Check.postCondition(exStack.isEmpty());
         }
-
-        if (!exValueAfterlife.isEmpty()) {
-            exStack.addAll(exValueAfterlife);
-            exValueAfterlife.clear();
-            process(exStack);
-            return;
-        }
-
-        Value value = inBox.peek();
-        Check.invariant(value != null);
-
-        push(new ValueEnqueuedEvent(this, value));
-        process(exStack);
-        Check.postCondition(exStack.isEmpty());
     }
 
     private void process(Stack<ExEvent> exStack) {
         while (!exStack.isEmpty()) {
             proceed();
         }
-    }
-
-    @Override
-    public boolean isMoreToDoRightNow() {
-        // inbox might be populated in some re-send recovery cases, where a result
-        // already has been produced. Therefore *done* must be considered too
-        // afterlife should be processed immediately after valueProcessed, so should be ok with done-logic here too
-        return (!(done || (inBox.isEmpty()))) || !exValueAfterlife.isEmpty();
     }
 
     protected void push(ExEvent e) {

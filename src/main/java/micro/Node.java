@@ -35,14 +35,17 @@ public class Node implements Env, Closeable {
 
     private final Map<Long, _F> idToF = new ConcurrentHashMap<>();
     private final Map<Long, _Ex> idToEx = new ConcurrentHashMap<>(); //todo works only single threaded now
-    private final Cranks cranks = new Cranks();
+
+    // performance-wise its detrimental to use more than one executor locally, at least at any hardware I used.
+    // it just shows that the parallel execution of a single program does cope with the indeterminism thus introduced
+    private static final int maxExecutors = 2;
+    private final Cranks cranks = new Cranks(maxExecutors);
 
     private long maxFId = TOP_ID; // TODO AtomicLong at least for maxFId, perhaps compiler-assigned FIds?
     private final AtomicLong maxExId = new AtomicLong(TOP_ID);
 
     private final _Ex top = initializeTop(); // the ultimate begin of every tree of executions
 
-    private static final int maxExecutors = 1;
     private int maxExCount = 0;
     private boolean recover = false;
     private final boolean useEventLog;
@@ -84,6 +87,9 @@ public class Node implements Env, Closeable {
             return;
         }
         log(e);
+        if (e instanceof ValueReceivedEvent ee) {
+            //cranks.schedule(ee.ex);
+        }
     }
 
     public void run(boolean recover) {
@@ -92,17 +98,17 @@ public class Node implements Env, Closeable {
             recover(address);
             debug("*** RECOVERED ***");
         }
-        startExecutors(maxExecutors);
+        startExecutors();
     }
 
-    private void startExecutors(int number) {
-        for (int i = 0; i < number; i++) {
-            new Thread(() -> crankRoundRobin(cranks)).start();
+    private void startExecutors() {
+        for (int i = 0; i < Node.maxExecutors; i++) {
+            new Thread(() -> crank(cranks)).start();
         }
     }
 
     @SuppressWarnings("ConditionalBreakInInfiniteLoop")
-    private void crankRoundRobin(Cranks cranks) {
+    private void crank(Cranks cranks) {
         debug("*** RUN ***");
         while (true) {
             if (stop.get()) {
@@ -111,17 +117,16 @@ public class Node implements Env, Closeable {
             }
             Concurrent.sleep(delay.get());
 
-            maxExCount = Math.max(maxExCount, cranks.size());
+            maxExCount = Math.max(maxExCount, cranks.getCrankCount());
 
             Crank current = cranks.poll();
             if (current != null) {
-                while (current.isMoreToDoRightNow()) {
-                    current.crank();
-                }
+
+                current.crank();
+
                 if (current.isDone()) {
                     idToEx.remove(current.getId());
-                } else {
-                    cranks.add(current);
+                    cranks.done(current);
                 }
 
             } else {
@@ -166,24 +171,29 @@ public class Node implements Env, Closeable {
 
         this.maxExId.set(maxExId);
         idToEx.values().stream()
-                .filter(i -> !i.equals(top))
+                .filter(i -> !(i.equals(top) || i.isDone() || i instanceof Gateway))
                 .forEach(c -> {
                     straightenOutPostRecovery(c);
-                    cranks.add(c);
+                    if (c instanceof Ex ex) {
+                        if (!ex.exValueAfterlife.isEmpty())
+                            cranks.schedule(c);
+                        ex.inBox.forEach(v -> cranks.schedule(ex)); // also a value about to be processed (! exStack.isEmpty()) is still in inBox
+                    }
                 });
 
         recover = false;
     }
 
     private void straightenOutPostRecovery(Crank c) {
-        if(c instanceof Ex ex)
+        if (c instanceof Ex ex)
             ex.straightenOutPostRecovery();
     }
 
     @Override
     public void close() {
         stop();
-        Concurrent.await(() -> this.cranks.size() == 0 || this.stopped.get() == maxExecutors);
+        cranks.stop();
+        Concurrent.await(() -> cranks.getCrankCount() == 0 || this.stopped.get() == maxExecutors);
         tracer.close();
         try {
             logWriter.close();
@@ -196,11 +206,7 @@ public class Node implements Env, Closeable {
         if (e instanceof ValueEnqueuedEvent)
             debugValueEnqueuedEvent((ValueEnqueuedEvent) e);
         if (e instanceof ExCreatedEvent ee) {
-            _Ex ex = ee.ex;
-
-            cranks.add(ex);
-            idToEx.put(ex.getId(), ex);
-
+            idToEx.put(ee.ex.getId(), ee.ex);
         }
         logWriter.put(e);
     }
@@ -376,6 +382,11 @@ public class Node implements Env, Closeable {
     }
 
     public int getCrankCount() {
-        return cranks.size();
+        return cranks.getCrankCount();
+    }
+
+    @Override
+    public void schedule(_Ex ex) {
+        cranks.schedule(ex);
     }
 }

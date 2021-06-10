@@ -14,11 +14,15 @@ public class ExFTailRecursive extends Ex {
     }
 
     @Override
-    public void receive(Value v) {
+    public synchronized void receive(Value v) {
         // there are tighter restrictions on the content of the inbox in order to properly manage successive calls,
-        // so skipping of duplicates has to happen here already
-        if (!inBox.contains(v))
+        // so skipping of duplicates has to happen here already. synchronization isn't necessary, since duplicates
+        // should only occur in case of a recovery
+        if (!inBox.contains(v)) {
             super.receive(v);
+        } else {
+            Check.preCondition(recovered);
+        }
     }
 
     @Override

@@ -105,7 +105,6 @@ public class MicroTest {
 
         // truncate log, so that last result will get processed again in any case
         List<Hydratable> log = new ArrayList<>(rInit.events().subList(0, rInit.events().size() - 2));
-        System.out.println("*** RECOVERY ***");
         for (int i = 0; i < 5; i++) {
             ReRun.reReReReRunAndCheck(rInit.exId(), (id, env) -> getSynchronized(id, env, createSimpleFunc_useAddDirectly(env)), log, _3);
         }

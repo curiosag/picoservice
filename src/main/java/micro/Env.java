@@ -38,4 +38,6 @@ public interface Env extends Hydrator {
     void relatchExecution(_F f, _Ex returnTo);
 
     int getMaxExCount();
+
+    void schedule(_Ex ex);
 }

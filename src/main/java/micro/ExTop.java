@@ -63,11 +63,6 @@ public class ExTop implements  _Ex, Id {
     }
 
     @Override
-    public boolean isMoreToDoRightNow() {
-        return false;
-    }
-
-    @Override
     public boolean isDone() {
         return true;
     }

@@ -77,7 +77,7 @@ public class Tracer implements Closeable, Runnable {
                 + '"';
     }
 
-    private String getLabel(_Ex ex){
+    private String getLabel(_Ex ex) {
         return '"' + ex.getLabel() + '\n' + ex.getId() + '"';
     }
 
@@ -109,10 +109,10 @@ public class Tracer implements Closeable, Runnable {
     @Override
     public void close() {
         try {
-            Concurrent.await(() -> events.isEmpty());
-            terminate.set(true);
-            Thread.yield();
             if (active) {
+                Concurrent.await(() -> events.isEmpty());
+                terminate.set(true);
+
                 writeLn("}");
                 writer.flush();
             }

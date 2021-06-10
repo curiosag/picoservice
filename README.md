@@ -1,5 +1,5 @@
 # picoservice
-A parallel, persistend and distributed execution model for some functional language constructs based on asynchronous buffered message passing
+A parallel, persistent and distributed execution model for some functional language constructs based on asynchronous buffered message passing
 
 - A single inherently parallel model of computation for local and distributed algorithms
 - Persistent, recoverable execution state using event logging 

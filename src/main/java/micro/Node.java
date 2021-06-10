@@ -50,6 +50,7 @@ public class Node implements Env, Closeable {
     private boolean recover = false;
     private final boolean useEventLog;
     private static final boolean debug = false;
+
     private AtomicInteger stopped = new AtomicInteger();
 
     Node(Address address, EventLogReader logReader, EventLogWriter logWriter) {
@@ -86,10 +87,9 @@ public class Node implements Env, Closeable {
         if (recover) {
             return;
         }
+        trace(e);
         log(e);
-        if (e instanceof ValueReceivedEvent ee) {
-            //cranks.schedule(ee.ex);
-        }
+
     }
 
     public void run(boolean recover) {
@@ -389,4 +389,16 @@ public class Node implements Env, Closeable {
     public void schedule(_Ex ex) {
         cranks.schedule(ex);
     }
+
+    @Override
+    public void trace(ExEvent e){
+        tracer.trace(e);
+    }
+
+
+    @Override
+    public void traceOn(){
+        tracer.setTrace(true);
+    }
+
 }

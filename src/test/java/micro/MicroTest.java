@@ -357,6 +357,7 @@ public class MicroTest {
             F main = createRecSum(env);
 
             env.start();
+            env.traceOn();
 
             Gateway.of(Integer.class, main, env).param(Names.a, 3).callAsync(i1::addAndGet);
 
@@ -545,6 +546,7 @@ public class MicroTest {
             render(createFilter(n));
             render(createQuicksort(n));
             render(createMax(n));
+            render(createCalc(n));
         }
     }
 

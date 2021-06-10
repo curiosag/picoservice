@@ -40,4 +40,9 @@ public interface Env extends Hydrator {
     int getMaxExCount();
 
     void schedule(_Ex ex);
+
+    void trace(ExEvent e);
+
+    void traceOn();
+
 }

@@ -185,9 +185,9 @@ public class Algorithm {
         F eq = f(env, Eq.eq, Names.left, Names.right).returnAs(Names.condition).label("eq");
 
         iff.addPropagation(COND_CONDITION, Names.a, Names.left, eq);
-        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero:eq"));
+        eq.addPropagation(Names.left, ping, CONST(env, 0).returnAs(Names.right).label("zero"));
         // onTrue
-        iff.addPropagation(COND_TRUE_BRANCH, Names.a, ping, CONST(env, 0).label("zero:ontrue"));
+        iff.addPropagation(COND_TRUE_BRANCH, Names.a, ping, CONST(env, 0).label("zero"));
         // onFalse
         F block_else = f(env, nop).label("block_else");
         iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);

@@ -2,6 +2,7 @@ package micro.gateway;
 
 import micro.*;
 import micro.event.ExEvent;
+import micro.event.ValueReceivedEvent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -85,7 +86,7 @@ public class Gateway<T> implements _Ex {
 
     @Override
     public _Ex returnTo() {
-        throw new RuntimeException("no call expected");
+        return ExTop.instance;
     }
 
     @Override
@@ -95,6 +96,8 @@ public class Gateway<T> implements _Ex {
 
     @Override
     public void receive(Value v) {
+        env.trace(new ValueReceivedEvent(this, v));
+
         if (!(resultType.isAssignableFrom(v.get().getClass()))) {
             throw new RuntimeException("inconsistent result type " + v.get().getClass().getSimpleName());
         }

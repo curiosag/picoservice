@@ -1,17 +1,18 @@
 package micro.trace;
 
-import micro.Check;
-import micro.Ex;
+import micro.Concurrent;
+import micro._Ex;
+import micro.event.ExEvent;
 import micro.event.ValueEvent;
+import micro.event.ValueReceivedEvent;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,7 +24,7 @@ public class Tracer implements Closeable, Runnable {
     private Queue<ValueEvent> events = new ConcurrentLinkedQueue<>();
     private AtomicBoolean terminate = new AtomicBoolean(false);
 
-    private void setTrace(boolean active) {
+    public void setTrace(boolean active) {
         if (writer != null) {
             close();
         }
@@ -31,7 +32,7 @@ public class Tracer implements Closeable, Runnable {
         this.active = active;
         if (active) {
             writer = createWriter();
-            writeLn("digraph G {\n graph [ranksep=0];\nnode [shape=record];\n");
+            writeLn("digraph G {\n graph [ranksep=0.5]; rankdir=LR; \nnode [shape=record];\n");
             new Thread(this).start();
         }
     }
@@ -70,35 +71,36 @@ public class Tracer implements Closeable, Runnable {
             value = m.value.get().toString();
         }
 
-        Check.argument(m.value.getSender() instanceof Ex, "uh...");
-
-        return '"' + String.format("%s:", ((Ex) m.value.getSender()).template.getLabel()) + value
+        return '"' + value
                 .replace("[", "(")
                 .replace("]", ")")
                 + '"';
     }
 
-    private void write(ValueEvent m) {
-        Check.argument(m.value.getSender() instanceof Ex, "uh...");
+    private String getLabel(_Ex ex){
+        return '"' + ex.getLabel() + '\n' + ex.getId() + '"';
+    }
 
-        String labelSender = ((Ex)m.value.getSender()).getLabel();
-        String labelReceiver = "";//m.target.getLabel();
+    private void write(ValueEvent m) {
+        String labelSender = getLabel(m.value.getSender());
+        String labelReceiver = getLabel(m.ex);
 
         writeLn(String.format("%s -> %s [label=%s];",
                 labelSender, labelReceiver, payload(m)));
     }
 
-    public void trace(ValueEvent m) {
-        events.add(m);
+    public void trace(ExEvent m) {
+        if (m instanceof ValueReceivedEvent r)
+            events.add(r);
     }
 
     private BufferedWriter createWriter() {
-        String traceName = String.format("/trace_%s.dot", LocalDateTime.now().toString());
+        String traceName = "/trace.dot";//String.format("/trace_%s.dot", LocalDateTime.now());
         String tracePath = System.getProperty("user.dir");
         Path path = Paths.get(tracePath + traceName);
-        System.out.println("trace at " + path.toString());
+        System.out.println("trace at " + path);
         try {
-            return Files.newBufferedWriter(path, Charset.forName("UTF-8"));
+            return Files.newBufferedWriter(path, StandardCharsets.UTF_8);
         } catch (IOException ex) {
             throw new IllegalStateException(ex);
         }
@@ -107,6 +109,7 @@ public class Tracer implements Closeable, Runnable {
     @Override
     public void close() {
         try {
+            Concurrent.await(() -> events.isEmpty());
             terminate.set(true);
             Thread.yield();
             if (active) {
@@ -125,11 +128,7 @@ public class Tracer implements Closeable, Runnable {
             if (m != null) {
                 write(m);
             } else {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException();
-                }
+                Concurrent.await(200);
             }
         }
     }

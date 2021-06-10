@@ -111,9 +111,16 @@ Recursive calculation of [simple geometrical series](https://github.com/curiosag
 
 ![geo](./img/geo.dot.svg)
 
+A trace of the execution of geo(3) without tail call optimization.
+
+![geo](./img/traceGeo.dot.svg)
+
+
 Nested functions forming an [arithmetic expression](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L259)
 
     f(a,b,c) = (a*b*c)+(a+b+c)
+
+![calc](./img/calc.dot.svg)
 
 
 They're right now only run (then step-wise recovered and re-run) by the project's [unit tests](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/MicroTest.java).

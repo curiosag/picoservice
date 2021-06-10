@@ -11,11 +11,11 @@ public abstract class ExEvent extends Event {
     public long exId;
     public long exReturnToId;
 
-    public ExEvent(Ex ex) {
+    public ExEvent(_Ex ex) {
         super();
         this.ex = ex;
         this.exId = ex.getId();
-        this.exReturnToId = ex.getReturnTo().getId();
+        this.exReturnToId = ex.returnTo().getId();
     }
 
     protected ExEvent() {

@@ -34,7 +34,7 @@ Receiving of messages is insensitive against duplicates ([idempotent](https://ar
 Message passing undermines usual function call semantics. You could have function A calling function B and B already computing a result while A hasn't received all its parameters yet (but enough for B).
 On the other hand primitives, usual conditionals, tail call optimized recusive functions and functions with functional parameters may need to stash parameters until the computation can proceed (until all parameters have been received to computa a primitive, until the functional value has been provided and can be applied, the condition has been computed and the chosen branch can execute, the next recursive call can execute).  
 
-Further, if it is a primitive and got all values to compute a result it does so and propagates the result to the designated recipient. 
+If a function is a primitive and got all values necessary, it computes a result value and propagates it to the designated recipient. 
 Any non primitive function that receives a result value propagates it to its own designated recipient of a result.
 
 A [conditional is a function](https://stackoverflow.com/questions/58316588/how-to-model-if-expressions-with-actor-systems) with signature: `if(condition, value_true_branch, value_false_branch)` and comes in two flavors. One is the usual semantics where either the true- or false-branch get evaluated on
@@ -141,9 +141,16 @@ The trace of sorting the list (3,1,2).
 ![quicksort](./img/trace.quicksort.dot.svg)
 
 
-Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L162) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L208) thereof.
-
+Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L162).
     geo(n) = 1 + 2 + ... + n-1 + n
+
+    geo(a) = if (a = 0)
+               0
+             else
+             {
+               let next_a = a - 1
+               a + geo(next_a);
+             }
 
 ![geo](./img/geo.dot.svg)
 
@@ -151,7 +158,17 @@ A trace of the execution of geo(3) without tail call optimization.
 
 ![geo](./img/traceGeo.dot.svg)
 
-Tail call optimized it looks less appealing.
+Another [tail recursive version](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L208) thereof, with a less appealing execution trace.
+
+             geo(a, cumulated) =
+                if (a = 0)
+                  cumulated
+                else
+                {
+                  let next_a = a - 1
+                  let c = cumulated + next_a
+                  geo(next_a, c);
+                }
 
 ![geoTR](./img/traceGeoTR.dot.svg)
 
@@ -174,7 +191,7 @@ The implementation turned out to be a magnitude more messy with event sourcing b
 
 A all kind of stuff is missing, among that
 
-- a model of the implemantation that allows to derive some charasteristics and guarantees, e.g. monotonicity. As far as it [is stated](http://bloom-lang.net/calm/) for the bloom language it should be spot-on.
+- a model of the implemantation that allows to derive some charasteristics and guarantees, e.g. monotonicity vs coordination where needed. As far as it [is stated](http://bloom-lang.net/calm/) for the bloom language it should be spot-on.
 - perhaps restrict message passing to match conventional function call semantics   
 - location transparency for function calls
 - remove restriction to a single functional parameter
@@ -184,13 +201,13 @@ A all kind of stuff is missing, among that
 - add scatter/gather semantics at least, see [this](https://dsf.berkeley.edu/papers/cidr11-bloom.pdf) for consistency requirements
 - a compiler and integration to a source language. There shouldn't be a 2nd form needed for programs to get a picoservice-executed function   
 - find a field of application, perhaps long running processes with big chunks as primitives like in a workflow system, just that you write your workflows in plan Java or whatever
-- travel backwards in time to the 70ies to find hardware that is actually supportive of this kind of parallelism.
+- travel backwards in time to the 1980ies to find hardware that is actually supportive of this kind of parallelism.
 
 
 ## somewhat related
 
 - [actor systems](https://en.wikipedia.org/wiki/Actor_model)
 - [propagation systems](https://www.cs.tufts.edu/~nr/cs257/archive/alexey-radul/phd-thesis.pdf)
-- [salsa actor language](http://wcl.cs.rpi.edu/salsa/)
 - [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks)
-- [bloom](http://bloom-lang.net/calm/) programming language, but less so
+- [salsa actor language](http://wcl.cs.rpi.edu/salsa/)
+- [bloom programming language](http://bloom-lang.net/calm/)

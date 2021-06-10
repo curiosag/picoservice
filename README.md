@@ -134,6 +134,11 @@ The filter and quicksort pseudocode follow closely the actual structures, which 
 
 ![quicksort](./img/quicksort.dot.svg)
 
+The trace of sorting the list (3,1,2).
+
+![quicksort](./img/trace.quicksort.dot.svg)
+
+
 Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L162) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L208) thereof.
 
     geo(n) = 1 + 2 + ... + n-1 + n

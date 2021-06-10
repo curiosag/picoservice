@@ -29,8 +29,8 @@ Constants, immutable values and Functions. They may be
 
 A function receives named values as messages and propagates them to subsequent functions as needed. Each function is an actor, so all off them operate concurrently. 
 
-Receiving of messages is insensitive against duplicates ([idempotent](https://arxiv.org/pdf/0909.1788.pdf)), which allows to re-do operations in case of a recovery, avoiding the need of global consistency or snapshotting. The granularity of this is at the processing of a single values. Say operation A actually has processed a value V already and sent a subsequent value V' to operation B in the process, but A(V) wasn't yet marked as completed before failure. In this case after recovery A will process V again and send V' to B a 2nd time.
-
+Receiving of messages is insensitive against duplicates ([idempotent](https://arxiv.org/pdf/0909.1788.pdf)), which allows to re-do operations in case of a recovery, avoiding the need of global consistency or snapshotting. 
+This happens with a granularity of the processing of single values. Say operation A actually has processed value V already and sent a subsequent value V' to operation B in the process, but A(V) wasn't yet marked as completed before failure. In this case after recovery A will process V again and send V' to B for a 2nd time.
 
 Message passing undermines usual function call semantics. You could have function A calling function B and B already computing a result while A hasn't received all its parameters yet (but enough for B).
 On the other hand primitives, usual conditionals, tail call optimized recusive functions and functions with functional parameters may need to stash parameters until the computation can proceed (until all parameters have been received to computa a primitive, until the functional value has been provided and can be applied, the condition has been computed and the chosen branch can execute, the next recursive call can execute).  

@@ -149,6 +149,9 @@ A trace of the execution of geo(3) without tail call optimization.
 
 ![geo](./img/traceGeo.dot.svg)
 
+Tail call optimized it looks less appealing.
+
+![geoTR](./img/traceGeoTR.dot.svg)
 
 Nested functions forming an [arithmetic expression](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L259)
 

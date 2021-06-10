@@ -1,5 +1,5 @@
 # picoservice
-An execution model for some functional language constructs based on asynchronous buffered message passing (see [actor](https://en.wikipedia.org/wiki/Actor_model) model).
+A parallel, persistend and distributed execution model for some functional language constructs based on asynchronous buffered message passing
 
 - A single inherently parallel model of computation for local and distributed algorithms
 - Persistent, recoverable execution state using event logging 
@@ -93,16 +93,45 @@ Note, that it could as well happen that way.
 
 A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L18)
 together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L98). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
+The filter and quicksort pseudocode follow closely the actual structures, which try to keep things straight forward in terms of the chosen model.
 
 
-    quicksort :: (Ord a) => [a] -> [a]  
-    quicksort [] = []  
-    quicksort (x:xs) =   
-        let smallerSorted = quicksort [a | a <- xs, a <= x]  
-            biggerSorted = quicksort [a | a <- xs, a > x]  
-        in  smallerSorted ++ [x] ++ biggerSorted  
+        given predicate: arg -> boolean
+
+        function filter(list, predicate) = {
+            iff (list == []){
+                []
+            } else {
+                let head = head(list);
+                let tail = tail(list);
+                let tail_filtered = filter(tail, predicate)
+                iff (predicate(head))
+                    head :: tail_filtered
+                else
+                    tail_filtered
+            }
+        }
 
 ![filter](./img/filter.dot.svg)
+
+        given lteq: (u,v) -> boolean
+
+        function quicksort(list) = {
+            iff (list == []){
+                []
+            } else {
+                let head = head(list);
+                let tail = tail(list);
+                let testGt = lteq(_, head) // partially applied function
+                let testLteq = lteq(_, head)  // partially applied function
+                let filteredGt = filter(tail, testGt)
+                let filteredLteq = filter(tail, testLteq)
+                let sortedGt = quicksort(filteredGt)
+                let sortedLteq = quicksort(filteredLteq)
+                sortedLteq ::  head :: sortedGt
+            }
+        }
+
 ![quicksort](./img/quicksort.dot.svg)
 
 Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L162) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L208) thereof.
@@ -150,6 +179,7 @@ A all kind of stuff is missing, among that
 
 ## somewhat related
 
+- [actor systems](https://en.wikipedia.org/wiki/Actor_model)
 - [propagation systems](https://www.cs.tufts.edu/~nr/cs257/archive/alexey-radul/phd-thesis.pdf)
 - [salsa actor language](http://wcl.cs.rpi.edu/salsa/)
 - [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks)

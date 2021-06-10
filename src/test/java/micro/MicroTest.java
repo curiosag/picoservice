@@ -544,6 +544,7 @@ public class MicroTest {
             render(createTailRecSum(n));
             render(createFilter(n));
             render(createQuicksort(n));
+            render(createMax(n));
         }
     }
 

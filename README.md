@@ -89,6 +89,8 @@ Note, that it could as well happen that way.
 
     max(left, right) = if(left > right) left else right
 
+![max](./img/max.dot.svg)
+
 A [functional version of quicksort](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L18)
 together with a higher order [filter-function](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L98). Multiple quicksorts could be executed in parallel. The execution can be recovered and resumed from every point of its event log.
 
@@ -100,9 +102,13 @@ together with a higher order [filter-function](https://github.com/curiosag/picos
             biggerSorted = quicksort [a | a <- xs, a > x]  
         in  smallerSorted ++ [x] ++ biggerSorted  
 
+![filter](./img/filter.dot.svg)
+
 Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L162) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L208) thereof.
 
     geo(n) = 1 + 2 + ... + n-1 + n
+
+![geo](./img/geo.dot.svg)
 
 Nested functions forming an [arithmetic expression](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L259)
 

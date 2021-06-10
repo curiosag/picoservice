@@ -103,6 +103,7 @@ together with a higher order [filter-function](https://github.com/curiosag/picos
         in  smallerSorted ++ [x] ++ biggerSorted  
 
 ![filter](./img/filter.dot.svg)
+![quicksort](./img/quicksort.dot.svg)
 
 Recursive calculation of [simple geometrical series](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L162) with another [tail recursive version](https://github.com/curiosag/picoservice/blob/master/src/test/java/micro/Algorithm.java#L208) thereof.
 
@@ -125,9 +126,9 @@ The implementation turned out to be a magnitude more messy with event sourcing b
 
 ## TODO
 
-Since it is just an explorative prototype all kind of stuff is missing, among that
+A all kind of stuff is missing, among that
 
-- a model of the implemantation that allows to derive some charasteristics and guarantees, e.g. monotonicity. Perhaps [process networks](https://en.wikipedia.org/wiki/Kahn_process_networks#Process_as_a_finite_state_machine) are a field to look at. As far as it [is stated](http://bloom-lang.net/calm/) for the bloom language that here shouldn't be that far off.
+- a model of the implemantation that allows to derive some charasteristics and guarantees, e.g. monotonicity. As far as it [is stated](http://bloom-lang.net/calm/) for the bloom language it should be spot-on.
 - perhaps restrict message passing to match conventional function call semantics   
 - location transparency for function calls
 - remove restriction to a single functional parameter

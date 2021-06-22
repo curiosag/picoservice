@@ -11,14 +11,14 @@ public class FCall extends F {
 
     Map<String, String> paramNameMapping = new HashMap<>();
 
-    public FCall(Env env, F called) {
-        super(env, Primitive.nop, called.formalParameters);
+    private FCall(F called) {
+        super(Primitive.nop, called.formalParameters);
         this.called = called;
     }
 
     @Override
-    public Ex createExecution(long exId, _Ex returnTo) {
-        return new ExFCall(this.env, exId, this, returnTo);
+    public Ex createExecution(long exId, _Ex returnTo, Env env) {
+        return new ExFCall(env, exId, this, returnTo);
     }
 
     public F getCalled() {
@@ -28,6 +28,12 @@ public class FCall extends F {
     @Override
     public String getLabel() {
         return "fcall:" + super.getLabel() + '\n' + called.getLabel();
+    }
+
+    public static FCall fCall(Env env, F called){
+        FCall result = new FCall(called);
+        env.register(result);
+        return result;
     }
 }
 

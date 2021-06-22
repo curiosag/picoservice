@@ -6,8 +6,8 @@ public class FunctionalValueDefinition extends F {
 
     private final String functionalValueParam;
 
-    public FunctionalValueDefinition(Env env, String functionalValueParam, String ... formalParams) {
-        super(env, Primitive.nop, formalParams);
+    public FunctionalValueDefinition(String functionalValueParam, String ... formalParams) {
+        super(Primitive.nop, formalParams);
         this.functionalValueParam = functionalValueParam;
     }
 
@@ -16,8 +16,15 @@ public class FunctionalValueDefinition extends F {
     }
 
     @Override
-    public Ex createExecution(long id, _Ex returnTo) {
-        return new ExFCallByFunctionalValue(this.env, id,this, returnTo);
+    public Ex createExecution(long id, _Ex returnTo, Env env) {
+        return new ExFCallByFunctionalValue(env, id,this, returnTo);
+    }
+
+    public static FunctionalValueDefinition functionalValueDefinition(Env env, String functionalValueParam, String ... formalParams){
+        FunctionalValueDefinition result = new FunctionalValueDefinition(functionalValueParam, formalParams);
+        result.setId(env.getNextFId());
+        env.addF(result);
+        return result;
     }
 
 }

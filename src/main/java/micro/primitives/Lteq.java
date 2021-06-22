@@ -15,4 +15,7 @@ public class Lteq implements Primitive {
         return Library.lteq(As.Comparable(params, Names.left),(As.Comparable(params, Names.right)));
     }
 
+    public static Primitive lteq() {
+        return lteq;
+    }
 }

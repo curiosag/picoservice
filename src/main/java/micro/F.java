@@ -3,17 +3,14 @@ package micro;
 import micro.primitives.Primitive;
 
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static micro.PropagationType.COND_INDISCRIMINATE;
 
 public class F implements _F, Id {
 
-    private final Supplier<Long> nextPropagationId;
-    private final long id;
-    protected final Env env;
-    public int icnt; // a debug thing
+    private long id;
+
     private String label;
     public String returnAs = Names.result;
     private Primitive primitive;
@@ -25,21 +22,17 @@ public class F implements _F, Id {
 
     protected boolean isTailRecursive;
 
-    private F(Env env, Primitive primitive) {
-        this.env = env;
-        this.id = env.getNextFId();
-        env.addF(this);
-        this.nextPropagationId = env::getNextExId;
+    public F(Primitive primitive) {
         this.primitive = primitive;
     }
 
-    public F(Env env, Primitive primitive, List<String> formalParams) {
-        this(env, primitive);
+    public F(Primitive primitive, List<String> formalParams) {
+        this(primitive);
         this.formalParameters.addAll(formalParams);
     }
 
-    public F(Env env, Primitive primitive, String... formalParams) {
-        this(env, primitive);
+    public F(Primitive primitive, String... formalParams) {
+        this(primitive);
         Collections.addAll(formalParameters, formalParams);
     }
 
@@ -55,7 +48,7 @@ public class F implements _F, Id {
 
     @Override
     public void setId(long value) {
-        Check.fail("no call expected");
+        this.id = value;
     }
 
     int numParams() {
@@ -82,7 +75,7 @@ public class F implements _F, Id {
         return hasPrimitive() && !getPrimitive().isSideEffect();
     }
 
-    F returnAs(String returnAs) {
+    public F returnAs(String returnAs) {
         this.returnAs = returnAs;
         return this;
     }
@@ -97,12 +90,12 @@ public class F implements _F, Id {
 
     @Override
     public void addPropagation(PropagationType type, String nameExpected, String namePropagated, _F to) {
-        propagations.add(new FPropagation(nextPropagationId.get(), type, nameExpected, namePropagated, to));
+        propagations.add(new FPropagation(type, nameExpected, namePropagated, to));
     }
 
     @Override
-    public Ex createExecution(long id, _Ex returnTo) {
-        return isTailRecursive ? new ExFTailRecursive(this.env, id, this, returnTo) : new ExF(this.env, id, this, returnTo);
+    public Ex createExecution(long id, _Ex returnTo, Env env) {
+        return isTailRecursive ? new ExFTailRecursive( env,id, this, returnTo) : new ExF(env, id, this, returnTo);
     }
 
     public String getLabel() {
@@ -135,7 +128,13 @@ public class F implements _F, Id {
         if (primitive == null) {
             throw new IllegalArgumentException();
         }
-        return new F(env, primitive, params);
+        F result = new F(primitive, params);
+        env.register(result);
+        return result;
+    }
+
+    public static F f(Env env, String... params) {
+        return f(env, Primitive.nop, params);
     }
 
     @Override

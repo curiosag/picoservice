@@ -150,7 +150,7 @@ public class Node implements Env, Closeable {
                 case ExCreatedEvent -> {
                     ExCreatedEvent e = (ExCreatedEvent) h;
                     _F f = getFForId(e.getFId());
-                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e));
+                    _Ex ex = f.createExecution(e.exId, getReturnTarget(e), this);
                     maxExId = Math.max(maxExId, e.exId);
                     idToEx.put(e.exId, ex);
                 }
@@ -339,7 +339,7 @@ public class Node implements Env, Closeable {
                 return ex.get();
         }
 
-        _Ex result = f.createExecution(getNextExId(), returnTo);
+        _Ex result = f.createExecution(getNextExId(), returnTo, this);
         log(new ExCreatedEvent((Ex) result));
         return result;
     }
@@ -399,6 +399,12 @@ public class Node implements Env, Closeable {
     @Override
     public void traceOn(){
         tracer.setTrace(true);
+    }
+
+    @Override
+    public void register(F f) {
+        f.setId(getNextFId());
+        addF(f);
     }
 
 }

@@ -15,4 +15,7 @@ public class Gt implements Primitive {
         return Library.gt(As.Comparable(params, Names.left), As.Comparable(params, Names.right));
     }
 
+    public static Primitive gt() {
+        return gt;
+    }
 }

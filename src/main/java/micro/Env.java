@@ -45,4 +45,5 @@ public interface Env extends Hydrator {
 
     void traceOn();
 
+    void register(F f);
 }

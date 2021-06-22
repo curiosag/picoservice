@@ -1,0 +1,31 @@
+Identify all functions and values
+
+e.g. max:
+
+    public static int max(int a, int b)
+    {
+        if (a > b)
+            return a;
+        else
+            return b;
+    }
+
+concrete            prototype
+max(a,b)
+if(c, t, f)
+gt(a,b)             gt(left, right)
+
+
+            use parse tree, values have to pass from 'max' to 'gt' via 'if', identified by their name in the source (a, b)
+
+            go to the highes level where name x is defined
+            add propagation for each intermediary node (or not?)
+
+                max
+                 |
+                 |
+                 if
+                 |
+                 |
+                 gt
+

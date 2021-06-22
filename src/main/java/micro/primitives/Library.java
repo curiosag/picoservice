@@ -25,7 +25,7 @@ public class Library {
         return result;
     }
 
-    public static <T> List<T> concat(List<T> l1, List<T>  l2) {
+    public static <T> List<T> concat(List<T> l1, List<T> l2) {
         ArrayList<T> result = new ArrayList<>();
         result.addAll(l1);
         result.addAll(l2);
@@ -34,34 +34,37 @@ public class Library {
 
     /**
      * a > b ?
-     *
-     * */
+     */
     public static <T extends Comparable<T>> Boolean gt(T a, T b) {
         return a.compareTo(b) > 0;
     }
 
     /**
      * a < b ?
-     *
-     * */
+     */
     public static <T extends Comparable<T>> Boolean lt(T a, T b) {
         return a.compareTo(b) < 0;
     }
 
     /**
      * a = b ?
-     *
-     * */
+     */
     public static <T extends Comparable<T>> Boolean eq(T a, T b) {
         return a.compareTo(b) == 0;
     }
 
     /**
      * a <= b ?
-     *
-     * */
+     */
     public static <T extends Comparable<T>> Boolean lteq(T a, T b) {
         return a.compareTo(b) <= 0;
     }
 
+
+    /**
+     * a >= b ?
+     */
+    public static <T extends Comparable<T>> Boolean gteq(T a, T b) {
+        return a.compareTo(b) >= 0;
+    }
 }

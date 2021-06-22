@@ -6,7 +6,7 @@ import micro.gateway.Gateway;
 import micro.primitives.Action;
 import micro.primitives.Constant;
 import micro.primitives.Gt;
-import micro.primitives.Sub;
+import micro.primitives.Minus;
 import micro.visualize.FVisualizer;
 import org.junit.Test;
 
@@ -18,10 +18,13 @@ import java.util.function.Supplier;
 
 import static java.util.Arrays.asList;
 import static micro.Algorithm.*;
+import static micro.FCall.fCall;
+import static micro.FCreatePartiallyAppliedFunction.fCreatePartiallyAppliedFunction;
+import static micro.FunctionalValueDefinition.functionalValueDefinition;
 import static micro.Names.*;
 import static micro.ReRun.runAndCheck;
-import static micro.primitives.Add.add;
 import static micro.primitives.Mul.mul;
+import static micro.primitives.Plus.plus;
 import static micro.primitives.Primitive.nop;
 import static micro.primitives.Print.print;
 import static org.junit.Assert.assertEquals;
@@ -58,7 +61,7 @@ public class MicroTest {
 
             F f = f(env, nop, Names.a).returnAs(Names.output).label("f");
             F mul = f(env, mul(), Names.left, Names.right).label("mul").returnAs(Names.b);
-            F add = f(env, add(), Names.left, Names.right).label("add");
+            F add = f(env, plus(), Names.left, Names.right).label("add");
 
             f.addPropagation(ping, CONST(env, 2).returnAs(Names.a).label("const:2"));
             f.addPropagation(Names.a, Names.left, mul);
@@ -113,7 +116,7 @@ public class MicroTest {
 
     private F createSimpleFunc_useAddDirectly(Env env) {
         F main = f(env, print, Names.result).label("main");
-        F add = f(env, add(), Names.left, Names.right).label("add");
+        F add = f(env, plus(), Names.left, Names.right).label("add");
 
         main.addPropagation(Names.a, Names.left, add);
         main.addPropagation(Names.b, Names.right, add);
@@ -139,10 +142,10 @@ public class MicroTest {
 
     private F createSimpleFuncByFCall(Env env) {
         F main = f(env, print, Names.result).label("main");
-        F add = f(env, add(), Names.left, Names.right).label("add");
+        F add = f(env, plus(), Names.left, Names.right).label("add");
 
         // FCall is redundant here, main could interact with add directly
-        F callAdd = new FCall(env, add).returnAs(result);
+        F callAdd = fCall(env, add).returnAs(result);
 
         main.addPropagation(Names.a, Names.left, callAdd);
         main.addPropagation(Names.b, Names.right, callAdd);
@@ -229,13 +232,13 @@ public class MicroTest {
     private F createCallByFunctionalValue(Env env) {
         F main = f(env, nop, Names.output).label("main");
 
-        F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
+        F sub = f(env, Minus.minus, Names.left, Names.right).label("sub");
         F useFVar = f(env, nop, Names.a, Names.b).label("useFVar").returnAs(result);
 
         // a plain functional value is a partially applied function with no partial parameters
-        F createSubtract = new FCreatePartiallyAppliedFunction(env, sub).returnAs(paramFVar).label("createSubtract");
+        F createSubtract = fCreatePartiallyAppliedFunction(env, sub).returnAs(paramFVar).label("createSubtract");
 
-        F callSubtract = new FunctionalValueDefinition(env, paramFVar, Names.left, Names.right).label("callSubtract");
+        F callSubtract = functionalValueDefinition(env, paramFVar, Names.left, Names.right).label("callSubtract");
 
         useFVar.addPropagation(Names.a, ping, createSubtract);
         useFVar.addPropagation(paramFVar, callSubtract);
@@ -287,11 +290,11 @@ public class MicroTest {
     private F createPFApp(Env env) {
         F main = f(env, nop, Names.output).label("main");
 
-        F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
+        F sub = f(env, Minus.minus, Names.left, Names.right).label("sub");
         F usePartial = f(env, nop, Names.a, Names.b).label("usePartial");
 
-        F createDec = new FCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
-        F callDec = new FunctionalValueDefinition(env, paramFVar, Names.left).label("callDec");
+        F createDec = fCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
+        F callDec =  functionalValueDefinition(env, paramFVar, Names.left).label("callDec");
 
         usePartial.addPropagation(Names.b, Names.right, createDec);
         usePartial.addPropagation(paramFVar, callDec);
@@ -309,7 +312,7 @@ public class MicroTest {
 
             F main = f(env, print, Names.result).label("main");
             F dec = f(env, nop, Names.a).label("dec");
-            F sub = f(env, Sub.sub, Names.left, Names.right).label("sub");
+            F sub = f(env, Minus.minus, Names.left, Names.right).label("sub");
             F one = f(env, new Constant(1)).returnAs(Names.right).label("const:one");
 
             main.addPropagation(ping, dec);
@@ -498,13 +501,13 @@ public class MicroTest {
 
         String const3 = "const:3";
         F gt = f(env, Gt.gt, Names.left, Names.right).label("gt?");
-        F createPredicate = new FCreatePartiallyAppliedFunction(env, gt, Names.right).returnAs(predicate).label("createPredicate");
+        F createPredicate = fCreatePartiallyAppliedFunction(env, gt, Names.right).returnAs(predicate).label("createPredicate");
 
         main.addPropagation(list, ping, createPredicate);
         createPredicate.addPropagation(ping, CONST(env, 3).returnAs(Names.right).label(const3));
 
         F filter = createFilter(env);
-        F callFilter = new FCall(env, filter).label("callFilter initially");
+        F callFilter = fCall(env, filter).label("callFilter initially");
 
         main.addPropagation(predicate, callFilter);
         main.addPropagation(list, callFilter);

@@ -6,11 +6,14 @@ import micro.primitives.Lists.*;
 
 import java.util.Collections;
 
+import static micro.FCall.fCall;
+import static micro.FCreatePartiallyAppliedFunction.fCreatePartiallyAppliedFunction;
+import static micro.FunctionalValueDefinition.functionalValueDefinition;
 import static micro.If.If.iff;
 import static micro.Names.*;
 import static micro.PropagationType.*;
-import static micro.primitives.Add.add;
 import static micro.primitives.Mul.mul;
+import static micro.primitives.Plus.plus;
 import static micro.primitives.Primitive.nop;
 
 public class Algorithm {
@@ -44,50 +47,50 @@ public class Algorithm {
         String sortedLteq = "sortedLteq";
         String consed = "consed";
 
-        F quicksort = new F(env, nop, list).label("quicksort");
+        F quicksort = f(env, nop, list).label("quicksort");
         If if_listEmpty = iff(env).label("if:listEmpty");
         quicksort.addPropagation(list, if_listEmpty);
 
-        F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
+        F isEmpty = f(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(COND_CONDITION, list, isEmpty);
-        F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
+        F constEmptyList = f(env, new Constant(Collections.emptyList()), ping).label("const:emptylist()");
         if_listEmpty.addPropagation(COND_TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(env, nop).label("block_else");
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, list, block_else);
 
-        F head = new F(env, Head.head, list).returnAs(Names.head).label("head()");
-        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail()");
+        F head = f(env, Head.head, list).returnAs(Names.head).label("head()");
+        F tail = f(env, Tail.tail, list).returnAs(Names.tail).label("tail()");
         block_else.addPropagation(list, head);
         block_else.addPropagation(list, tail);
 
         F gt = f(env, Gt.gt, Names.left, Names.right).label("gt?");
-        F createTestGt = new FCreatePartiallyAppliedFunction(env, gt, Names.right).returnAs(predicateTestGt).label("createTestGt");
+        F createTestGt = fCreatePartiallyAppliedFunction(env, gt, Names.right).returnAs(predicateTestGt).label("createTestGt");
         block_else.addPropagation(Names.head, right, createTestGt);
 
         F lteq = f(env, Lteq.lteq, Names.left, Names.right).label("lteq?");
-        F createTestLteq = new FCreatePartiallyAppliedFunction(env, lteq, Names.right).returnAs(predicateTestLteq).label("createTestLteq");
+        F createTestLteq = fCreatePartiallyAppliedFunction(env, lteq, Names.right).returnAs(predicateTestLteq).label("createTestLteq");
         block_else.addPropagation(Names.head, right, createTestLteq);
 
         F filter = createFilter(env);
-        F filterCallGt = new FCall(env, filter).returnAs(filteredGt).label("filterCallGt");
-        F filterCallLteq = new FCall(env, filter).returnAs(filteredLteq).label("filterCallLteq");
+        F filterCallGt = fCall(env, filter).returnAs(filteredGt).label("filterCallGt");
+        F filterCallLteq = fCall(env, filter).returnAs(filteredLteq).label("filterCallLteq");
 
         block_else.addPropagation(predicateTestGt, predicate, filterCallGt);
         block_else.addPropagation(predicateTestLteq, predicate, filterCallLteq);
         block_else.addPropagation(Names.tail, list, filterCallGt);
         block_else.addPropagation(Names.tail, list, filterCallLteq);
 
-        F qsortRecallGt = new FCall(env, quicksort).returnAs(sortedGt).label("qsortRecallGt");
-        F qsortRecallLteq = new FCall(env, quicksort).returnAs(sortedLteq).label("qsortRecallLteq");
+        F qsortRecallGt = fCall(env, quicksort).returnAs(sortedGt).label("qsortRecallGt");
+        F qsortRecallLteq = fCall(env, quicksort).returnAs(sortedLteq).label("qsortRecallLteq");
         block_else.addPropagation(filteredGt, Names.list, qsortRecallGt);
         block_else.addPropagation(filteredLteq, Names.list, qsortRecallLteq);
 
-        F cons = new F(env, Cons.cons, element, list).returnAs(consed).label("cons");
+        F cons = f(env, Cons.cons, element, list).returnAs(consed).label("cons");
         block_else.addPropagation(Names.head, Names.element, cons);
         block_else.addPropagation(sortedGt, list, cons);
 
-        F concat = new F(env, Concat.concat, left, right).label("concat");
+        F concat = f(env, Concat.concat, left, right).label("concat");
         block_else.addPropagation(consed, right, concat);
         block_else.addPropagation(sortedLteq, Names.left, concat);
 
@@ -116,23 +119,23 @@ public class Algorithm {
     public static F createFilter(Env env) {
         String tailFiltered = "tailFiltered";
 
-        F filter = new F(env, nop, predicate, list).label("filter");
+        F filter = f(env, nop, predicate, list).label("filter");
         If if_listEmpty = iff(env).label("if:listEmpty");
         filter.addPropagation(list, if_listEmpty);
         filter.addPropagation(predicate, if_listEmpty);
 
-        F isEmpty = new F(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
+        F isEmpty = f(env, IsEmpty.isEmpty, list).returnAs(condition).label("isEmpty");
         if_listEmpty.addPropagation(COND_CONDITION, list, isEmpty);
-        F constEmptyList = new F(env, new Constant(Collections.emptyList()), ping).label("const:emptylist");
+        F constEmptyList = f(env, new Constant(Collections.emptyList()), ping).label("const:emptylist");
         if_listEmpty.addPropagation(COND_TRUE_BRANCH, list, ping, constEmptyList);
 
         F block_else = f(env, nop).label("block_else");
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, list, block_else);
         if_listEmpty.addPropagation(COND_FALSE_BRANCH, predicate, block_else);
 
-        F head = new F(env, Head.head, list).returnAs(Names.head).label("head");
-        F tail = new F(env, Tail.tail, list).returnAs(Names.tail).label("tail");
-        F filterReCall = new FCall(env, filter).returnAs(tailFiltered).label("filterReCall");
+        F head = f(env, Head.head, list).returnAs(Names.head).label("head");
+        F tail = f(env, Tail.tail, list).returnAs(Names.tail).label("tail");
+        F filterReCall = fCall(env, filter).returnAs(tailFiltered).label("filterReCall");
 
         If if_predicate = iff(env).label("if:predicate");
         block_else.addPropagation(list, head);
@@ -146,16 +149,16 @@ public class Algorithm {
 
         // underlying partial function takes left/right, right is already applied, left needs to be supplied
         // TODO: would be nice to have a remapping somewhere for the remaining 1 parameter, "left" -> "argument" or so
-        F callPredicate = new FunctionalValueDefinition(env, predicate, Names.left).returnAs(condition).label("callPredicateByFVal");
+        F callPredicate = functionalValueDefinition(env, predicate, Names.left).returnAs(condition).label("callPredicateByFVal");
 
         if_predicate.addPropagation(COND_CONDITION, predicate, callPredicate);
         if_predicate.addPropagation(COND_CONDITION, Names.head, Names.left, callPredicate);
 
-        F cons = new F(env, Cons.cons, element, list).label("cons");
+        F cons = f(env, Cons.cons, element, list).label("cons");
         if_predicate.addPropagation(COND_TRUE_BRANCH, Names.head, element, cons);
         if_predicate.addPropagation(COND_TRUE_BRANCH, tailFiltered, Names.list, cons);
 
-        if_predicate.addPropagation(COND_FALSE_BRANCH, tailFiltered, new F(env, new Val(), tailFiltered).label("VAL:tailFiltered"));
+        if_predicate.addPropagation(COND_FALSE_BRANCH, tailFiltered, f(env, new Val(), tailFiltered).label("VAL:tailFiltered"));
 
         return filter;
     }
@@ -193,12 +196,12 @@ public class Algorithm {
         iff.addPropagation(COND_FALSE_BRANCH, Names.a, block_else);
         // let next_a = a - 1
         String next_a = "next_a";
-        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
+        F sub = f(env, Minus.minus, Names.left, Names.right).returnAs(next_a).label("sub");
         block_else.addPropagation(Names.a, Names.left, sub);
         sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
         // a + geo(next_a);
-        F add = f(env, add(), Names.left, Names.right).label("add");
-        F geoReCall = new FCall(env, geo).returnAs(Names.right).label("geoCallR");
+        F add = f(env, plus(), Names.left, Names.right).label("add");
+        F geoReCall = fCall(env, geo).returnAs(Names.right).label("geoCallR");
 
         block_else.addPropagation(Names.a, Names.left, add);
         block_else.addPropagation(next_a, add);
@@ -240,12 +243,12 @@ public class Algorithm {
         String next_a = "next_a";
         String cumulated = "cumulated";
 
-        F sub = f(env, Sub.sub, Names.left, Names.right).returnAs(next_a).label("sub");
+        F sub = f(env, Minus.minus, Names.left, Names.right).returnAs(next_a).label("sub");
         sub.addPropagation(Names.left, ping, CONST(env, 1).returnAs(Names.right).label("one"));
 
         iff.addPropagation(COND_FALSE_BRANCH, Names._a, Names.left, sub);
         // let cum = cumulated + next_a
-        F add = f(env, add(), Names.left, Names.right).returnAs(cumulated).label("add");
+        F add = f(env, plus(), Names.left, Names.right).returnAs(cumulated).label("add");
         iff.addPropagation(COND_FALSE_BRANCH, next_a, Names.left, add);
         iff.addPropagation(COND_FALSE_BRANCH, Names._c, Names.right, add);
 
@@ -292,8 +295,8 @@ trisum(a,b,c)   trimul(a,b,c)
     * */
 
     private static F createTriOp(Env env, F binOp, String label) {
-        F op1 = new FCall(env, binOp).label(label + "_1");
-        F op2 = new FCall(env, binOp).label(label + "_2");
+        F op1 = fCall(env, binOp).label(label + "_1");
+        F op2 = fCall(env, binOp).label(label + "_2");
 
         F triOp = f(env, nop, Names.a, Names.b, Names.c).label(label + "_triop");
         triOp.addPropagation(Names.a, op1);
@@ -313,12 +316,12 @@ trisum(a,b,c)   trimul(a,b,c)
         F calc = f(env, nop, Names.result).label("calc");
 
         // single instances of add and mul, accessed via FCalls
-        F add = f(env, add(), Names.left, Names.right).label("add").returnAs(Names.result);
+        F add = f(env, plus(), Names.left, Names.right).label("add").returnAs(Names.result);
         F mul = f(env, mul(), Names.left, Names.right).label("mul").returnAs(Names.result);
         F triSum = createTriOp(env, add, "triSum").returnAs(Names.left);
         F triMul = createTriOp(env, mul, "triMul").returnAs(Names.right);
 
-        F callAdd = new FCall(env, add).returnAs(Names.result);
+        F callAdd = fCall(env, add).returnAs(Names.result);
         calc.addPropagation(Names.a, callAdd);
         calc.addPropagation(Names.b, callAdd);
         calc.addPropagation(Names.c, callAdd);

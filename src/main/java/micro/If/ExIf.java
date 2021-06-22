@@ -85,22 +85,11 @@ public class ExIf extends Ex {
             Check.preCondition(condition == null);
             Check.invariant(v.get() instanceof Boolean, "condition value must be boolean");
             this.condition = (Boolean) v.get();
-            echoIfCount();
         } else {
             if (condition == null) {
                 stash.add(v);
             }
             propagateConditionally(v);
-        }
-    }
-
-    private void echoIfCount() {
-        if (debugIfCount) {
-            ((F) getTemplate()).icnt++;
-            System.out.print(".");
-            if (((F) getTemplate()).icnt % 50 == 0) {
-                System.out.print("\n" + ((F) getTemplate()).icnt);
-            }
         }
     }
 

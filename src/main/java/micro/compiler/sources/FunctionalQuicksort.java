@@ -1,4 +1,4 @@
-package micro.app;
+package micro.compiler.sources;
 
 import java.util.List;
 import java.util.function.Function;
@@ -26,6 +26,7 @@ public class FunctionalQuicksort {
             var head = head(list);
             var tail = tail(list);
             var left = filter(tail, i -> lt(i, head));
+            var smthg = filter(tail(list), i -> lt(i, head));
             var right = filter(tail, i -> gt(i, head));
             return concat(qsort(left), cons(head, qsort(right)));
         }

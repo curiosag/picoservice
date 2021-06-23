@@ -2,6 +2,7 @@ package micro.visualize;
 
 import micro.F;
 import micro.FPropagation;
+import micro.PropagationType;
 import micro._F;
 
 import java.io.BufferedWriter;
@@ -12,9 +13,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static micro.PropagationType.*;
 
 public class FVisualizer implements Closeable {
+
+    private static final Map<PropagationType, String> colors = new HashMap<>() {{
+        put(INDISCRIMINATE, "black");
+        put(COND_CONDITION, "blue");
+        put(COND_TRUE_BRANCH, "green");
+        put(COND_FALSE_BRANCH, "red");
+    }};
 
     private BufferedWriter writer;
 
@@ -24,45 +36,58 @@ public class FVisualizer implements Closeable {
     private final _F start;
 
     private static final String legend = """
-                      <table cellspacing='40' border='0' cellborder='0'>
-                        <tr><td><font color="blue">condition</font></td>
-                        <td><font color="green">true-branch</font></td>
-                        <td><font color="red">false-branch</font></td></tr>
-                      </table>
+            
+            <<table cellspacing='40' border='0' cellborder='0'>
+              <tr><td><font color="blue">condition</font></td>
+              <td><font color="green">true-branch</font></td>
+              <td><font color="red">false-branch</font></td></tr>
+            </table>>; labelloc = "b";
+            
             """;
 
     public FVisualizer(_F f) {
         this.start = f;
         writer = createWriter(f.getLabel());
-        writeLn("digraph G {\n label=<"+ legend + ">; labelloc = \"b\"; graph [ranksep=0 rankdir=LR fontsize=\"14\"]; node [shape=circle] edge [fontsize=\"12\"];\n");
+        writeLn("digraph G {\nlabel=" + legend + "graph [ranksep=0 rankdir=LR fontsize=\"14\"];\nnode [shape=circle];\nedge [fontsize=\"12\"];\n");
     }
 
     private String edgeLabel(FPropagation p) {
         String renamed = p.nameToPropagate.equals(p.nameReceived) ? "" : ("[" + p.nameToPropagate + "]");
-        return "[label=\"" + p.nameReceived + renamed + "\" color=\"" + p.propagationType.color + "\" fontcolor=\"" + p.propagationType.color + "\"]";
+        return String.format("[label=\"%s\" color=\"%s\" fontcolor=\"%s\"]",  p.nameReceived + renamed,  colors.get(p.propagationType), colors.get(p.propagationType));
     }
 
     public void render() {
-        render(start);
+        renderNodes(start);
+        covered.clear();
+        writeLn("");
+        renderEdges(start);
     }
 
-    private void render(_F f) {
+    private void renderEdges(_F f) {
         if (!covered.contains(f)) {
             covered.add(f);
             f.getPropagations().forEach(p -> {
-                printNode(renderNode(f), renderNode(p.target), edgeLabel(p));
+                edge(f, p.target, edgeLabel(p));
 
                 if (!retcovered.contains(p.target) && p.target instanceof F retFrom) {
                     retcovered.add(retFrom);
-                    printNode(renderNode(retFrom), renderNode(f), "[label=\"" + "result[" + retFrom.returnAs + "]\"]");
+                    edge(retFrom, f, "[label=\"" + "result[" + retFrom.returnAs + "]\"]");
                 }
-                render(p.target);
+                renderEdges(p.target);
             });
         }
     }
 
-    private void printNode(String from, String to, String edgeLabel) {
-        writeLn(String.format("%s -> %s %s;", from, to, edgeLabel));
+    private void edge(_F from, _F to, String edgeLabel) {
+        writeLn(String.format("N%d -> N%d %s;", from.getId(), to.getId(), edgeLabel));
+    }
+
+    private void renderNodes(_F f) {
+        if (!covered.contains(f)) {
+            covered.add(f);
+            writeLn(renderNode(f));
+            f.getPropagations().forEach(p -> renderNodes(p.target));
+        }
     }
 
     private String renderNode(_F f) {
@@ -70,7 +95,7 @@ public class FVisualizer implements Closeable {
         if (f instanceof F ff) {
             params = String.join(",", ff.formalParameters);
         }
-        return '"' + f.getLabel() + "(" + params + ")" + '"';
+        return String.format("N%d [label= \"%s\"];", f.getId(), f.getLabel() + "(" + params + ")");
     }
 
     private BufferedWriter createWriter(String name) {

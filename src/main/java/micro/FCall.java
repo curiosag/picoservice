@@ -2,16 +2,11 @@ package micro;
 
 import micro.primitives.Primitive;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class FCall extends F {
 
     private final F called;
 
-    Map<String, String> paramNameMapping = new HashMap<>();
-
-    private FCall(F called) {
+    public FCall(F called) {
         super(Primitive.nop, called.formalParameters);
         this.called = called;
     }
@@ -27,10 +22,10 @@ public class FCall extends F {
 
     @Override
     public String getLabel() {
-        return "fcall:" + super.getLabel() + '\n' + called.getLabel();
+        return "call:" + super.getLabel();
     }
 
-    public static FCall fCall(Env env, F called){
+    public static FCall fCall(Env env, F called) {
         FCall result = new FCall(called);
         env.register(result);
         return result;

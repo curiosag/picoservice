@@ -49,4 +49,9 @@ public class FTop implements _F{
     public String getLabel() {
         return "TOP";
     }
+
+    @Override
+    public boolean isNative() {
+        return false;
+    }
 }

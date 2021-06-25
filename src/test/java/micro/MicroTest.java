@@ -7,9 +7,11 @@ import micro.primitives.Action;
 import micro.primitives.Constant;
 import micro.primitives.Gt;
 import micro.primitives.Minus;
-import micro.visualize.FVisualizer;
+import micro.visualize.ToDot;
 import org.junit.Test;
 
+import java.net.URI;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -294,7 +296,7 @@ public class MicroTest {
         F usePartial = f(env, nop, Names.a, Names.b).label("usePartial");
 
         F createDec = fCreatePartiallyAppliedFunction(env, sub, Names.right).returnAs(paramFVar).label("createDec");
-        F callDec =  functionalValueDefinition(env, paramFVar, Names.left).label("callDec");
+        F callDec = functionalValueDefinition(env, paramFVar, Names.left).label("callDec");
 
         usePartial.addPropagation(Names.b, Names.right, createDec);
         usePartial.addPropagation(paramFVar, callDec);
@@ -406,7 +408,7 @@ public class MicroTest {
             Gateway.of(Integer.class, mainT, env).param(Names.a, 149).param(Names.c, 149).callAsync(i3::addAndGet);
             Gateway.of(Integer.class, mainT, env).param(Names.a, 150).param(Names.c, 150).callAsync(i4::addAndGet);
 
-            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0&& i3.get() > 0&& i4.get() > 0);
+            Concurrent.await(() -> i1.get() > 0 && i2.get() > 0 && i3.get() > 0 && i4.get() > 0);
 
             assertEquals(Integer.valueOf(11175), Integer.valueOf(i1.get()));
             assertEquals(Integer.valueOf(11325), Integer.valueOf(i2.get()));
@@ -554,9 +556,7 @@ public class MicroTest {
     }
 
     private void render(F f) {
-        try (var v = new FVisualizer(f)) {
-            v.render();
-        }
+        new ToDot("?", f, Paths.get(URI.create(System.getProperty("user.dir")))).render();
     }
 
     private void resumeComputation(Supplier<_F> getF) {

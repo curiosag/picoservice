@@ -32,7 +32,7 @@ public class ExIf extends Ex {
         List<FPropagation> propagations =
                 switch (state) {
                     case INITIAL -> template.getPropagations().stream()
-                            .filter(t -> t.propagationType == PropagationType.COND_CONDITION || t.propagationType == PropagationType.COND_INDISCRIMINATE)
+                            .filter(t -> t.propagationType == PropagationType.COND_CONDITION || t.propagationType == PropagationType.INDISCRIMINATE)
                             .collect(Collectors.toList());
                     case CALCULATING_COND -> filterBranchTargets(template.getPropagations(), valueEvent);
                     case CALCULATING_BRANCH -> Collections.emptyList();

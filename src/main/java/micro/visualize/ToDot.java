@@ -1,12 +1,8 @@
 package micro.visualize;
 
-import micro.F;
-import micro.FPropagation;
-import micro.PropagationType;
-import micro._F;
+import micro.*;
 
 import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -19,7 +15,7 @@ import java.util.Map;
 
 import static micro.PropagationType.*;
 
-public class FVisualizer implements Closeable {
+public class ToDot {
 
     private static final Map<PropagationType, String> colors = new HashMap<>() {{
         put(INDISCRIMINATE, "black");
@@ -36,46 +32,58 @@ public class FVisualizer implements Closeable {
     private final _F start;
 
     private static final String legend = """
-            
+                        
             <<table cellspacing='40' border='0' cellborder='0'>
               <tr><td><font color="blue">condition</font></td>
               <td><font color="green">true-branch</font></td>
               <td><font color="red">false-branch</font></td></tr>
             </table>>; labelloc = "b";
-            
+                        
             """;
 
-    public FVisualizer(_F f) {
+    public ToDot(String className, _F f, Path dest) {
         this.start = f;
-        writer = createWriter(f.getLabel());
-        writeLn("digraph G {\nlabel=" + legend + "graph [ranksep=0 rankdir=LR fontsize=\"14\"];\nnode [shape=circle];\nedge [fontsize=\"12\"];\n");
+        writer = createWriter(className + '.' + f.getLabel(), dest);
     }
 
-    private String edgeLabel(FPropagation p) {
-        String renamed = p.nameToPropagate.equals(p.nameReceived) ? "" : ("[" + p.nameToPropagate + "]");
-        return String.format("[label=\"%s\" color=\"%s\" fontcolor=\"%s\"]",  p.nameReceived + renamed,  colors.get(p.propagationType), colors.get(p.propagationType));
+    private String edgeLabel(String nameReceived, String nameToPropagate, PropagationType propagationType) {
+        String renamed = nameReceived.equals(nameToPropagate) ? "" : ("[" + nameToPropagate + "]");
+        return String.format("[label=\"%s\" color=\"%s\" fontcolor=\"%s\"]", nameReceived + renamed, getColor(propagationType), getColor(propagationType));
+    }
+
+    private String getColor(PropagationType propagationType) {
+        return colors.get(propagationType);
     }
 
     public void render() {
+        writeLn("digraph G {\nlabel=" + legend + "graph [ranksep=0 rankdir=LR fontsize=\"14\"];\nnode [shape=circle];\nedge [fontsize=\"12\"];\n");
         renderNodes(start);
         covered.clear();
         writeLn("");
         renderEdges(start);
+        writeLn("}");
+        close();
     }
 
     private void renderEdges(_F f) {
         if (!covered.contains(f)) {
             covered.add(f);
             f.getPropagations().forEach(p -> {
-                edge(f, p.target, edgeLabel(p));
-
-                if (!retcovered.contains(p.target) && p.target instanceof F retFrom) {
+                edge(f, p.target, edgeLabel(p.nameReceived, p.nameToPropagate, p.propagationType));
+                if (p.nameToPropagate.equals(Names.result)) {
+                    retcovered.add(f);
+                }
+                if (!retcovered.contains(p.target) && p.target instanceof F retFrom && !isSelfPropagation(f, p)) {
                     retcovered.add(retFrom);
-                    edge(retFrom, f, "[label=\"" + "result[" + retFrom.returnAs + "]\"]");
+                    edge(retFrom, f, edgeLabel(Names.result, retFrom.returnAs, p.propagationType));
                 }
                 renderEdges(p.target);
             });
         }
+    }
+
+    private boolean isSelfPropagation(_F f, FPropagation p) {
+        return p.target.equals(f);
     }
 
     private void edge(_F from, _F to, String edgeLabel) {
@@ -92,16 +100,25 @@ public class FVisualizer implements Closeable {
 
     private String renderNode(_F f) {
         String params = "";
-        if (f instanceof F ff) {
-            params = String.join(",", ff.formalParameters);
+        if (f instanceof F ff && ff.formalParameters.size() > 0) {
+            params = "\n(" + String.join(",", ff.formalParameters) + ")";
         }
-        return String.format("N%d [label= \"%s\"];", f.getId(), f.getLabel() + "(" + params + ")");
+
+        String color = f.isNative() ? "gray90" : "black";
+        String displayName;
+        if (f.isNative() || f instanceof FCall) {
+            String[] parts = f.getLabel().split("\\.");
+            Check.condition(parts.length >= 2);
+            displayName = parts[parts.length -2] + ".\n" + parts[parts.length -1] + params;
+        } else {
+            displayName = f.getLabel() + params;
+        }
+        return String.format("N%d [label= \"%s\" color=\"%s\" fontcolor=\"%s\" fullName=\"%s\" params=\"%s\"];", f.getId(), displayName, color, "black", f.getLabel(), params);
     }
 
-    private BufferedWriter createWriter(String name) {
-        String traceName = String.format("/%s.dot", name);
-        String tracePath = System.getProperty("user.dir");
-        Path path = Paths.get(tracePath + traceName);
+    private BufferedWriter createWriter(String name, Path dest) {
+        String dotName = String.format("/%s.dot", name);
+        Path path = Paths.get(dest.toString() + dotName);
         System.out.println("visualization at " + path);
         try {
             return Files.newBufferedWriter(path, StandardCharsets.UTF_8);
@@ -128,9 +145,7 @@ public class FVisualizer implements Closeable {
         }
     }
 
-    @Override
-    public void close() {
-        writeLn("}");
+    private void close() {
         try {
             writer.flush();
             writer.close();

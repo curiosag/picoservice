@@ -52,4 +52,9 @@ public class FGateway implements _F {
     public String getLabel() {
         return "Gateway";
     }
+
+    @Override
+    public boolean isNative() {
+        return false;
+    }
 }

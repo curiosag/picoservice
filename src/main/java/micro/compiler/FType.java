@@ -22,6 +22,7 @@
 package micro.compiler;
 
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.expr.LiteralExpr;
 
 
 import java.util.ArrayList;
@@ -37,23 +38,28 @@ public enum FType {
     TIfStmt(com.github.javaparser.ast.stmt.IfStmt.class),
     TConditionalExpr(com.github.javaparser.ast.expr.ConditionalExpr.class),
     TMethodCallExpr(com.github.javaparser.ast.expr.MethodCallExpr.class),
-    TUnknown(null),
-    TCompilationUnit(com.github.javaparser.ast.CompilationUnit.class);
+    TLiteralExpr(com.github.javaparser.ast.expr.LiteralExpr.class),
+    TUnknown(null);
 
-    public final Class<? extends Node> metatype;
+    public final Class<? extends Node> type;
 
-    FType(Class<? extends Node> metatype) {
-        this.metatype = metatype;
+    FType(Class<? extends Node> type) {
+        this.type = type;
     }
 
     public static FType decode(Class<? extends Node> c){
         return Arrays.stream(FType.values())
-                .filter(i -> c.equals(i.metatype))
+                .filter(i -> c.equals(i.type))
                 .findAny()
-                .orElse(TUnknown);
+                .orElse(maybeLiteralExpr(c));
     }
 
-
+    private static FType maybeLiteralExpr(Class<? extends Node> c) {
+        if (LiteralExpr.class.isAssignableFrom(c))
+            return TLiteralExpr;
+        else
+            return TUnknown;
+    }
 
     private static final List<Class<? extends Node>> ALL_NODE_CLASSES = new ArrayList<Class<? extends Node>>() {{
 

@@ -1,54 +1,49 @@
 package micro.compiler.sources;
 
-import java.util.ArrayList;
-import java.util.List;
+import micro.compiler.Undermine;
 
+@Undermine
 public class Functions {
 
-    public void varDeclarationsAssignments(){
-        int a = 1;
-        int b = a;
-        int c = a + b + 1;
-        int f = Math.max(a, 1);
-        a = a + 1; // illegal, reassignment
-        int d;
-        d = 0; // ok
-        List<String> l1 = new ArrayList<>();
-    }
+    /*     private static final int cnst = 0;
 
- /*   public static int bong(int v) {
+        public int literalsAndConst(){
+            return cnst + Constants.a + 1;
+        }
+      */
+    public static int pong(int v) {
         return v;
     }
 
+    @Undermine
+    public static void assignments() {
+        int v0;
+        int v1;
+        v0 = 1;
+        int v2 = v0;
+        if (true)
+            v1 = pong(1);
+        else {
+            v1 = 0;
+        }
 
-    @Churn
-    public static void ifStuff() {
-        {
-            int v1;
+    }
 
-            if (true)
-                v1 = 1;
-            else {
-                v1 = 0;
-            }
+/*
+    @Undermine
+    public static int max(int a, long b, int huhu) {
+        var v1 = 1;
+        var v2 = a;
+        var v3 = micro.compiler.sources.sub.Sub.sub(a, Math.toIntExact(b));
+        var v4 = a + b;
+
+        if (a > b)
+            return huhu;
+        else {
+            return Math.toIntExact(b - pong(a) + pong(Math.toIntExact(a + b)));
         }
     }
 
-    @Churn
-    public static int max(int a, long b) {
-        {
-            var v1 = 1;
-            var v2 = a;
-            var v3 = micro.compiler.sources.sub.Sub.sub(a, Math.toIntExact(b));
-            var v4 = a + b;
-
-            if (a > b)
-                return a;
-            else {
-                return Math.toIntExact(b - bong(a) + bong(Math.toIntExact(a + b)));
-            }
-        }
-    }
 */
 
 }

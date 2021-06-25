@@ -26,4 +26,6 @@ public interface _F extends Id {
     void doneOn(String ... params);
 
     String getLabel();
+
+    public boolean isNative();
 }

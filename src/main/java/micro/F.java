@@ -1,11 +1,12 @@
 package micro;
 
+import micro.primitives.CallByReflection;
 import micro.primitives.Primitive;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static micro.PropagationType.COND_INDISCRIMINATE;
+import static micro.PropagationType.INDISCRIMINATE;
 
 public class F implements _F, Id {
 
@@ -81,11 +82,11 @@ public class F implements _F, Id {
     }
 
     public void addPropagation(String name, _F to) {
-        addPropagation(COND_INDISCRIMINATE, name, name, to);
+        addPropagation(INDISCRIMINATE, name, name, to);
     }
 
     void addPropagation(String nameExpected, String namePropagated, _F to) {
-        addPropagation(COND_INDISCRIMINATE, nameExpected, namePropagated, to);
+        addPropagation(INDISCRIMINATE, nameExpected, namePropagated, to);
     }
 
     @Override
@@ -100,6 +101,11 @@ public class F implements _F, Id {
 
     public String getLabel() {
         return label;
+    }
+
+    @Override
+    public boolean isNative() {
+        return primitive instanceof CallByReflection;
     }
 
     public F label(String label) {

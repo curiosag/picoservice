@@ -3,7 +3,6 @@ package micro.primitives;
 import java.util.ArrayList;
 import java.util.List;
 
-@Lib
 public class Library {
 
     public static <T> boolean empty(List<T> values) {

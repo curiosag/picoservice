@@ -252,8 +252,8 @@ public class Algorithm {
         iff.addPropagation(COND_FALSE_BRANCH, next_a, Names.left, add);
         iff.addPropagation(COND_FALSE_BRANCH, Names._c, Names.right, add);
 
-        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, cumulated, Names.c, geo);
-        iff.addPropagation(PropagationType.COND_INDISCRIMINATE, next_a, Names.a, geo);
+        iff.addPropagation(PropagationType.INDISCRIMINATE, cumulated, Names.c, geo);
+        iff.addPropagation(PropagationType.INDISCRIMINATE, next_a, Names.a, geo);
         iff.doneOn(next_a, cumulated); // need to define when it is done, since it doesn't follow the usual result mechanism
 
         return geo;
